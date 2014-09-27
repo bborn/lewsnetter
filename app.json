@@ -1,0 +1,12 @@
+{
+  "name": "LewsNetter",
+  "description": "An e-mail marketing application.",
+  "repository": "https://github.com/bborn/lewsnetter",
+  "logo": "http://upload.wikimedia.org/wikipedia/commons/c/c3/Ruby_on_Rails_logo.svg",
+  "scripts": {
+    "postdeploy": "bundle exec rake db:migrate"
+  },
+  "env": {
+    "RAILS_ENV": "production"
+  },
+  "addons": ["heroku-postgresql"]
