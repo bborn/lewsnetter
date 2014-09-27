@@ -163,6 +163,7 @@ group :test do
 end
 
 group :production do
+  gem "pg"
   gem "mysql2"
   gem 'dalli'                   # memcached
   gem 'memcachier'              # heroku add-on for auto config of dalli
