@@ -1,0 +1,12 @@
+= simple_form_for(@subscription, html: { class: "form"} ) do |f|
+  = f.error_notification
+
+  .form-inputs
+    = f.input :email
+
+    = f.input :name
+
+    = f.association :mailing_lists, as: :check_boxes
+
+  .form-actions
+    = f.button :submit

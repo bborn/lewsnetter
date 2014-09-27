@@ -1,0 +1,107 @@
+%h1= @campaign.name
+
+-if @campaign.sent? || @campaign.sending?
+  .row
+    .col-md-9
+
+      .panel.panel-default
+        .panel-heading
+          .panel-title
+            =@campaign.subject
+            -if @campaign.deliveries.any?
+              .pull-right
+                =link_to 'View', webview_campaign_path(@campaign.deliveries.last.key), target: '_blank'
+          -if @campaign.deliveries.any?
+            Sent on #{@campaign.deliveries.maximum(:sent_at).to_s(:long)}
+          to #{@campaign.sent_mails_count} unique subscribers in #{@campaign.mailing_list.name}
+
+        .panel-body
+          .row
+            .col-md-9#opens-chart
+              = line_chart campaign_path(@campaign, format: :json), library: {title: 'Opens over time'}
+
+
+          .row
+            .col-md-6
+              %ul.list-unstyled
+                %li
+                  %h1 #{@campaign.opened_mails_count}
+                  Opens so far
+                %li
+                  %h1 #{@campaign.unopened_count}
+                  Not opened yet
+
+            .col-md-3
+              %ul.list-unstyled
+                %li
+                  %h1 #{number_to_percentage ((@campaign.hit_rate||0)*100), precision: 2, strip_insignificant_zeros: true}
+                  Open rate
+                %li
+                  %h1 #{@campaign.complaints_count}
+                  Complaints
+          .row
+            %h1 Who Opened
+            %table.table.table-striped
+              %thead
+                %tr
+                  %th Who
+                  %th Opened Count
+
+              %tbody
+                -@campaign.deliveries.where(opened: true).order('opens_count DESC').limit(50).each do |sub|
+                  %tr
+                    %td= sub.to
+                    %td= sub.opens_count
+
+
+-else
+  .row
+    .col-md-3
+      .panel.panel-default
+        .panel-heading
+          Send a test campaign to...
+
+        .panel-body
+          = simple_form_for(@campaign, url: send_preview_campaign_path(@campaign), html: { class: "form"} ) do |f|
+            =f.input :preview_recipients, hint: 'Enter e-mail addresses, separated by a comma'
+
+            .form-actions
+              =f.button :submit, "Send Preview Campaign"
+
+      .btn-group
+        -if @campaign.created? || @campaign.drafted?
+          = link_to 'Edit Campaign', edit_campaign_path(@campaign), class: 'btn btn-primary'
+          -if @campaign.drafted? && !@campaign.queueing?
+            = link_to 'Queue', queue_campaign_path(@campaign), class: 'btn btn-warning', data: {confirm: "Queue this to #{@campaign.mailing_list.subscribers.count} subscribers?" }
+        -elsif @campaign.queueing?
+          =link_to 'Queuing ...', @campaign, class: 'btn btn-default'
+        -elsif @campaign.queued?
+          = link_to 'Send', send_campaign_path(@campaign), class: 'btn btn-danger', data: {confirm: "Send this to #{@campaign.mailing_list.subscribers.count} subscribers?" }
+
+        = link_to 'Back', campaigns_path, class: 'btn btn-default'
+
+    .col-md-9
+      -if @campaign.content_json
+        .panel.panel-default
+          .panel-heading HTML E-mail
+          .panel-body
+            %iframe{src: edit_content_iframe_campaign_path(@campaign), width: '100%', height: '500px', style:"height: 500px; width: 100%; ", frameborder:"0" }
+
+        .panel.panel-default
+          .panel-heading Plain Text
+          .panel-body
+            %pre
+              =@campaign.body_text
+
+        -content_for :on_ready do
+          :plain
+            editor_iframe = $('iframe')[0];
+
+            $(editor_iframe).load(function(){
+              content_json = #{@campaign.content_json}
+
+              editor = this.contentWindow.window.editor;
+
+              editor.loadContents(content_json);
+            })
+

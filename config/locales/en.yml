@@ -1,0 +1,174 @@
+# Files in the config/locales directory are used for internationalization
+# and are automatically loaded by Rails. If you want to use locales other
+# than English, add the necessary files in this directory.
+#
+# To use the locales, use `I18n.t`:
+#
+#     I18n.t 'hello'
+#
+# In views, this is aliased to just `t`:
+#
+#     <%= t('hello') %>
+#
+# To use a different locale, set it with `I18n.locale`:
+#
+#     I18n.locale = :es
+#
+# This would use the information in config/locales/es.yml.
+#
+# To learn more, please read the Rails Internationalization guide
+# available at http://guides.rubyonrails.org/i18n.html.
+
+
+#
+# TODO: Replace instances of 'LewsNetter' in this file with your app brand name.
+#
+
+en:
+  brand:
+    name: 'LewsNetter'
+
+  emails:
+    welcome:
+      subject: 'Welcome to LewsNetter'
+    confirmation_email:
+      subject: 'Thanks for signing up!'
+    welcome_email:
+      subject: 'Your newsletter subscription has been confirmed'
+
+  auth:
+    login:
+      title: 'Please Log In, or %{signup_link}'
+      link: 'Log In'
+      link_with: 'Log In with %{provider}'
+    signup:
+      title: 'Sign Up'
+      link: 'Sign Up'
+      help: 'Already registered? %{login_link}'
+      email_taken: 'An account with your email already exists. %{login_link}'
+    logout:
+      link: 'Logout'
+    forgot:
+      link: 'I forgot my password'
+      prompt: 'Forgot password?'
+      submit: 'Send forgot password instructions'
+    reset:
+      link: 'Change your password'
+      submit: 'Reset Password'
+      invalid_title: 'Unable to reset password'
+      invalid_message: 'Your account token expired. To protect your security, please resend password instructions and try again.'
+    confirm:
+      link: 'I need to confirm my account'
+      submit: 'Resend confirmation instructions'
+    unlock:
+      link: 'My account is locked'
+      submit: 'Resend unlock instructions'
+    links:
+      title: 'Account Help'
+    edit:
+      link: 'Social'
+    destroy:
+      link: 'Disconnect'
+      prompt: 'Disconnect this social account?'
+      tooltip: 'Disconnect social account and remove related data'
+      warning: ''
+      notice: 'Your social account will be disconnected form your LewsNetter account. You can reconnect the social account at any time.'
+      submit: 'Yes, disconnect the account'
+      cancel: 'Cancel'
+    reconnect:
+      link: 'Update'
+      tooltip: 'Update your social data'
+
+  account:
+    edit:
+      link: 'Account'
+    destroy:
+      link: 'Delete my account'
+      prompt: 'Delete your account?'
+      warning: 'Your account will be permanently deleted. This cannot be undone.'
+      notice: ''
+      submit: 'Yes, delete my account'
+      cancel: 'Cancel'
+
+  accounts:
+    connected: 'Success! Your social account is now connected.'
+    updated: 'Success! Your social account is up-to-date.'
+    edit:
+      link: 'Social'
+
+  campaign:
+    send:
+      link: 'Send'
+      prompt: 'Are you sure?'
+
+  # See rails_admin locale file for more settings
+  admin:
+    link: 'Admin'           # Name of admin link in application drop down menu
+    home:
+      name: 'Application'   # Name of link back to app in admin dashboard
+    dashboard:
+      name: 'Admin'         # Title of admin dashboard on the left
+
+  errors:
+    unknown: 'Oops! Something went wrong. Please try again.'
+
+  unauthorized:
+    default: 'Sorry, you are not authorized to access the requested page.'
+
+  activerecord:
+    errors:
+      models:
+        user:
+          attributes:
+            email:
+              taken: 'is used by another account'
+
+  helpers:
+    submit:
+      user:
+        # Submit button used by simple_form in users/registrations#edit
+        update: 'Update Account'
+        create: 'Sign Up'
+
+  simple_form:
+    # Collections: selects, radios
+    'yes': 'Yes'
+    'no': 'No'
+
+    required:
+      text: 'required'
+      mark: '*'
+      # You can uncomment the line below if you need to overwrite the whole required html.
+      # When using html, text and mark won't be used.
+      # html: '<abbr title="required">*</abbr>'
+    error_notification:
+      default_message: "Please review the problems below:"
+
+    placeholders:
+      user:
+        email: 'you@example.com'
+        password: 'password'
+
+    labels:
+      user:
+        edit:
+          password: 'New password'
+
+    hints:
+      user:
+        edit:
+          password: 'Leave blank unless updating password'
+
+    # Labels and hints examples
+    # labels:
+    #   defaults:
+    #     password: 'Password'
+    #   user:
+    #     new:
+    #       email: 'E-mail to sign in.'
+    #     edit:
+    #       email: 'E-mail.'
+    # hints:
+    #   defaults:
+    #     username: 'User name to sign in.'
+    #     password: 'No special characters, please.'

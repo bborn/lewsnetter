@@ -1,0 +1,29 @@
+%h1=@mailing_list.name
+
+.btn-group
+  = link_to 'Edit', edit_mailing_list_path(@mailing_list), class: 'btn btn-default'
+  = link_to 'Import Subscribers', import_mailing_list_path(@mailing_list), class: 'btn btn-default'
+  = link_to 'Back', mailing_lists_path, class: 'btn btn-default'
+
+
+%table.table.table-striped
+  %thead
+    %tr
+      %th Name
+      %th E-mail
+      %th Status
+
+  %tbody
+
+    - @subscriptions.each do |sub|
+      %tr
+        %td= sub.name
+        %td= sub.email
+        %td
+          =sub.subscribed? ? 'Subscribed' : 'Unsubscribed'
+          %br
+          =sub.confirmed? ? 'Confirmed' : 'Unconfirmed'
+
+.row
+  .col-md-12
+    = paginate @subscriptions, theme: 'twitter-bootstrap-3'

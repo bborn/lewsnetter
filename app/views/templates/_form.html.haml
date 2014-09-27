@@ -1,0 +1,10 @@
+= simple_form_for(@template) do |f|
+  = f.error_notification
+
+  .form-inputs
+    = f.input :name
+    = f.input :html, input_html: {class: "codemirror"}
+
+  .form-actions
+    = f.button :submit, class: 'btn-primary'
+    = link_to 'Cancel', templates_path, class: 'btn btn-default'

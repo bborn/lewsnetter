@@ -1,0 +1,17 @@
+-if @subscription
+  .panel.panel-default
+    .panel-heading
+      =@subscription.email
+
+    .panel-body
+      You are #{@subscription.subscribed? ? 'subscribed to' : 'unsubscribed from'} the following mailing lists:
+
+      %ul
+      - @subscription.mailing_lists.each do |list|
+        %li=list.name
+
+  .well
+    -if @subscription.subscribed?
+      =link_to 'Unsubscribe', unsubscribe_subscription_path(@subscription.mail_key), :class => 'btn btn-warning'
+    -else
+      =link_to 'Re-subscribe', subscribe_subscription_path(@subscription.mail_key), :class => 'btn btn-default'

@@ -1,0 +1,44 @@
+= simple_form_for(@campaign, html: { class: "form-horizontal"} ) do |f|
+  = f.error_notification
+
+  .row
+    .col-md-4
+      .form-inputs
+        = f.input :subject
+
+        = f.input :from, as: :select, collection: SenderAddress.all.map(&:email)
+        = f.association :mailing_list, as: :select
+
+        = f.association :template, as: :select
+
+        .hidden
+          = f.input :content_json
+
+        -if @campaign.content_json
+          =f.input :body_text, input_html: {value: strip_tags(@campaign.body_text_from_json) }
+
+      .form-actions
+        = f.button :submit, class: 'btn-primary'
+        = link_to 'Cancel', campaigns_path, class: 'btn btn-default'
+
+    -if @campaign.persisted?
+      .col-md-8
+        %iframe{src: edit_content_iframe_campaign_path(@campaign, editable: true), width: '100%', height: '1000px', style:"height: 1000px; width: 100%; ", frameborder:"0" }
+
+
+
+-content_for :on_ready do
+  :plain
+    editor_iframe = $('iframe')[0];
+
+    $(editor_iframe).load(function(){
+      content_json = #{@campaign.content_json}
+
+      editor = this.contentWindow.window.editor;
+
+      editor.loadContents(content_json);
+
+      textarea = $("#campaign_content_json")[0];
+      editor.bindToTextArea(textarea);
+    })
+

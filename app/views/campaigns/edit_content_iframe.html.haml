@@ -1,0 +1,29 @@
+#email_content
+  =raw @template_content
+
+-content_for :on_ready do
+  :plain
+    $(function() {
+      window.editor = new Editor("#email_content .editable");
+      window.editor.initMedium()
+    });
+
+  -if params[:editable].blank?
+    :plain
+      $(function() {
+        window.editor.medium.deactivate();
+      });
+
+
+  :plain
+    $(function() {
+      $('#email_content').click(function(e){
+        if($(e.target).hasClass('editable')){
+
+        } else {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+      })
+    });

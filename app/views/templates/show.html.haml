@@ -1,0 +1,10 @@
+%h1= @template.name
+
+.btn-group
+  = link_to 'Edit', edit_template_path(@template), class: 'btn btn-default'
+  = link_to 'Back', templates_path, class: 'btn btn-default'
+
+%br
+
+%textarea.codemirror{data: {disabled: 'true'}}=@template.html
+

@@ -1,0 +1,4 @@
+o: ActiveSupport::Cache::Entry:@value{I"user_return_to:EF"0/campaigns/e7443c1a05a5ba9c405d6c28cc41c3f3I"
+flash;T{I"discard;T[I"
+alert;FI"flashes;T{I"
+alert;FI"…This action failed the check_authorization because it does not authorize_resource. Add skip_authorization_check to bypass this check.;TI"_csrf_token;FI"15VcrzpULBlAMEXgHb8UJx7FEKXSrFRF9D2oFRwknIN8=;F:@created_atf1411059612.514282:@expires_inf2.592e6

@@ -1,0 +1,39 @@
+%h1 Campaigns
+
+%table.table.table-striped
+  %thead
+    %tr
+      %th Name
+      %th Subject
+      %th Status
+      %th
+
+  %tbody
+    - @campaigns.each do |campaign|
+      %tr
+        %td.col-md-2
+          = campaign.name
+        %td.col-md-2
+          = campaign.subject
+        %td.col-md-5
+          = campaign.state.capitalize
+          to #{campaign.mailing_list.active_subscriptions.count} recipients
+          -case campaign.state
+            -when 'sent'
+              (#{number_to_percentage (campaign.hit_rate*100), precision: 2, strip_insignificant_zeros: true} opened)
+            -when 'sending' || 'queued'
+              (#{campaign.sent_mails_count} delivered)
+          -if campaign.sent? || campaign.sending?
+            =link_to 'view stats', campaign_path(campaign)
+
+        %td
+          .btn-group
+            = link_to 'Show', campaign, class: "btn btn-default"
+            -if !campaign.sent?
+              = link_to 'Edit', edit_campaign_path(campaign), class: "btn btn-default"
+            -if can? :destroy, campaign
+              = link_to 'Destroy', campaign, :method => :delete, :data => { :confirm => 'Are you sure?' }, class: "btn btn-danger"
+
+%br
+
+= link_to 'New Campaign', new_campaign_path

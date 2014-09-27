@@ -1,0 +1,36 @@
+#authentications-index.auth__form
+  = render 'layouts/account_tabs'
+
+  - if @failed
+    = render 'auth/failed', provider: @provider
+
+  - disconnect_modal_id = 'disconnect-oauth-modal'
+
+  - Authentication.providers(:featured).each do |provider|
+    .auth__group
+      %h3
+        %i.sico-fixed{class: "sico-#{provider}"}
+        = Authentication.provider_name(provider)
+
+      %ul
+        - auths = @authentications[provider]
+        - if auths.present?
+          - auths.each do |authentication|
+            %li
+              = render 'authentications/card', authentication: authentication, size: :thumb, disconnect_modal: "##{disconnect_modal_id}", return_to: @return_to
+
+        - if auths.blank? or Authentication.allow_multiple_for?(provider)
+          %li
+            - another = auths.present? ? 'Another ' : ''
+            = link_to provider_auth_path(provider, origin: @return_to), class: 'btn btn-primary btn-sm', data: {flow: 'connect'} do
+              %i{class: "sico-#{provider} sico-fixed"}
+              Connect #{another}#{Authentication.provider_name(provider)}
+            - if auths.present? && provider == 'twitter'
+              .help-block
+                You may need to first
+                = link_to 'sign out of Twitter', Authentication.logout_url(:twitter), target: '_blank'
+
+= render 'layouts/destroy_modal', id: disconnect_modal_id, i18n_prefix: 'auth.destroy'
+
+- content_for :on_ready do
+  $('#authentications-index [title]').tooltip({container: 'body', placement: 'bottom'})

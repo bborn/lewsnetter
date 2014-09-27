@@ -1,0 +1,23 @@
+
+.feed-preview {
+  height: 600px;
+  width: 100%;
+  overflow: auto;
+  padding: 0;
+  margin: 0;
+
+  h2 {
+    font-family: Georgia;
+    font-size: 18px;
+    font-weight: 400;
+    color: #000;
+    margin: 20px 0 8px;
+    padding: 0;
+  }
+
+  img {
+    width: 100% !important;
+    height: auto !important;
+  }
+
+}

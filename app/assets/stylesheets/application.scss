@@ -1,0 +1,59 @@
+//
+// Prefer imports over require
+// http://pivotallabs.com/structure-your-sass-files-with-import/
+//
+
+//= require_self
+
+
+// Core
+@import "variables";
+@import "bootstrap";
+@import "icons_social";
+@import "auth";
+@import "avatar";
+@import "cards";
+@import "footer";
+@import "hacks";
+@import "campaigns";
+
+// Plugins
+@import 'nprogress';
+@import 'nprogress-bootstrap';
+
+@import 'medium-editor/medium-editor';
+@import 'medium-editor/themes/default';
+@import 'codemirror';
+@import 'codemirror/themes/night';
+.CodeMirror {
+  border: 1px solid #eee;
+  min-height: 300px;
+  height: auto;
+}
+.CodeMirror-scroll {
+  overflow-y: hidden;
+  overflow-x: auto;
+}
+
+
+//
+// Minor Tweaks
+//
+
+// Padding to clear fixed nav
+body {
+  padding-top: 70px;
+}
+
+// Make sure alerts are nicely formatted
+.alert {
+  a {
+    white-space: nowrap;
+  }
+}
+
+// Postion loading spinner at bottom right
+#nprogress .spinner {
+  bottom: 15px;
+  top: auto;
+}

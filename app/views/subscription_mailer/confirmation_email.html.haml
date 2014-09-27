@@ -1,0 +1,15 @@
+-# Be sure to also modify confirmation_email.text.haml whenever editing this file
+
+- @image_url = 'http://placehold.it/580x300'
+
+- content_for :title do
+  Thanks for subscribing to our newsletter!
+
+- content_for :callout do
+  %p
+    You need to confirm your e-mail address before we'll start sending you e-mails!
+
+- content_for :action_button do
+  = link_to 'Confirm my e-mail address', confirm_subscription_url(@subscription.mail_key)
+
+%p If you didn't sign up for our list, please ignore this e-mail.

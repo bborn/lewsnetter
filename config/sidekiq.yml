@@ -1,0 +1,16 @@
+# See also config/initializers/sidekiq.rb
+
+# default concurrency
+:concurrency:  2
+
+# :pidfile: ./tmp/pids/sidekiq.pid
+:verbose: false
+:queues:
+  - [default, 1]
+  - [mailer, 1]
+  - [campaigns, 1]
+  - [queued_mails, 1]
+
+:development:
+  :concurrency:  1
+

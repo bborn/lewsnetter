@@ -1,0 +1,10 @@
+%h1 Import Subscribers
+
+= simple_form_for(@mailing_list, url: import_mailing_list_path(@mailing_list)) do |f|
+  = f.error_notification
+
+  .form-inputs
+    =f.input :csv_file, as: :file
+
+  .form-actions
+    = f.button :submit

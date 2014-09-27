@@ -1,0 +1,24 @@
+%h1 Mailing Lists
+
+%table.table.table-striped
+  %thead
+    %tr
+      %th Name
+      %th Subscribers
+      %th
+
+  %tbody
+
+    - @mailing_lists.each do |mailing_list|
+      %tr
+        %td= mailing_list.name
+        %td= mailing_list.subscriptions.count
+        %td
+          .btn-group
+            = link_to 'Show', mailing_list, class: 'btn btn-default'
+            -if can? :destroy, mailing_list
+              = link_to 'Destroy', mailing_list, :method => :delete, :data => { :confirm => 'Are you sure?' }, class: "btn btn-danger"
+
+%br
+
+= link_to 'New Mailing list', new_mailing_list_path

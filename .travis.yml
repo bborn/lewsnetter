@@ -1,0 +1,12 @@
+language: ruby
+rvm:
+  - 2.1.2
+services:
+  - postgresql
+  - redis
+env:
+  - RAILS_ENV=test
+before_script:
+  - bundle exec rake db:create db:schema:load
+script:
+  - bundle exec rspec spec

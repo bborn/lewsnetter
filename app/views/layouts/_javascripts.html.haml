@@ -1,0 +1,18 @@
+-# JavaScripts included in <body> for initializing Backbone views, etc.
+
+-# Immediately executable javascript
+- if content_for? :javascript
+  = yield :javascript
+
+-# Document ready javascript
+- if content_for? :on_ready
+  :javascript
+    head.ready(function(){
+      #{yield :on_ready}
+    })
+
+- if content_for? :charts_js
+  :javascript
+    head.ready(function(){
+      #{yield(:charts_js).gsub('<script type="text/javascript">', '').gsub('</script>','')}
+    })

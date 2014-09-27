@@ -1,0 +1,8 @@
+%h3
+  =@subscription.email
+
+You are #{@subscription.subscribed? ? 'subscribed' : 'not subscribed'}:
+
+%ul
+- @subscription.mailing_lists.each do |list|
+  %li=list.name

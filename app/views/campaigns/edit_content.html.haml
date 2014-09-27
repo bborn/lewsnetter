@@ -1,0 +1,39 @@
+.row
+  .col-md-2
+
+    = simple_form_for(@campaign, :url => update_content_campaign_path(@campaign), html: {class: "form-horizontal"} ) do |f|
+      = f.error_notification
+
+      .form-inputs.hidden
+        = f.input :content_json
+      .form-actions
+
+        = f.submit "Save", class: 'btn-primary btn'
+        = link_to "Cancel", @campaign
+
+  .col-md-10
+    %iframe{src: edit_content_iframe_campaign_path(@campaign), width: '100%', height: '1000px', style:"height: 1000px; width: 100%; ", frameborder:"0" }
+
+
+-content_for :on_ready do
+  :plain
+    editor_iframe = $('iframe')[0];
+
+    $(editor_iframe).load(function(){
+      content_json = #{@campaign.content_json}
+
+      editor = this.contentWindow.window.editor;
+
+      $(editor.elements).each(function(){
+        //load the contents into the template
+        $(this).html(content_json[$(this).attr('id')].value);
+
+        //listen for changes and update the form
+        $(this).on('input', function(){
+          json_string = JSON.stringify(editor.serialize());
+          $('#campaign_content_json').val(json_string);
+        })
+      })
+
+    })
+

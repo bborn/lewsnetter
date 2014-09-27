@@ -1,0 +1,127 @@
+-# Ink v1.0.5 - Copyright 2013 ZURB Inc
+-# http://zurb.com/ink/downloads/templates/hero.html
+!!! Strict
+%html{xmlns: "http://www.w3.org/1999/xhtml"}
+  %head
+    %meta{content: "text/html; charset=utf-8", "http-equiv" => "Content-Type"}/
+    %meta{content: "width=device-width", name: "viewport"}/
+    :css
+      #{Rails.application.assets.find_asset('emails/inline').to_s.html_safe}
+    %style{type: 'text/css', 'data-premailer' => 'ignore'}
+      #{Rails.application.assets.find_asset('emails/include').to_s.html_safe}
+  %body
+    %table.body
+      %tr
+        %td.center{align: "center", valign: "top"}
+          %center
+            %table.row.header
+              %tr
+                %td.center{align: "center"}
+                  %center
+                    %table.container
+                      %tr
+                        %td.wrapper.last
+                          %table.twelve.columns
+                            %tr
+                              %td.six.sub-columns
+                                %img{src: "http://placehold.it/200x50"}/
+                              %td.six.sub-columns.last{align: "right", style: "text-align:right; vertical-align:middle;"}
+                                %span.template-label= I18n.t 'brand.name'
+                              %td.expander
+            %br/
+            %table.container
+              %tr
+                %td
+                  / content start
+                  %table.row
+                    %tr
+                      %td.wrapper.last
+                        %table.twelve.columns
+                          %tr
+                            %td
+                              %h1= yield :title
+                              - if content_for? :lead
+                                %p.lead= yield :lead
+                              - if @image_url
+                                %img{src: @image_url, width: "580", height: "300"}/
+                            %td.expander
+                  - if content_for? :callout
+                    %table.row.callout
+                      %tr
+                        %td.wrapper.last
+                          %table.twelve.columns
+                            %tr
+                              %td.panel
+                                = yield :callout
+                              %td.expander
+                  %table.row
+                    %tr
+                      %td.wrapper.last
+                        %table.twelve.columns
+                          %tr
+                            %td
+                              = yield
+                            %td.expander
+                  - if content_for? :action_button
+                    %table.row
+                      %tr
+                        %td.wrapper.last
+                          %table.three.columns
+                            %tr
+                              %td
+                                %table.button
+                                  %tr
+                                    %td
+                                      = yield :action_button
+                              %td.expander
+                  %table.row.footer
+                    %tr
+                      %td.wrapper
+                        %table.six.columns
+                          %tr
+                            %td.left-text-pad
+                              - if Rails.application.config.settings.social.facebook
+                                %table.tiny-button.facebook
+                                  %tr
+                                    %td
+                                      %a{href: Rails.application.config.settings.social.facebook} Facebook
+                                %br/
+                              - if Rails.application.config.settings.social.twitter
+                                %table.tiny-button.twitter
+                                  %tr
+                                    %td
+                                      %a{href: Rails.application.config.settings.social.twitter} Twitter
+                                %br/
+                              - if Rails.application.config.settings.social.google_plus
+                                %table.tiny-button.google-plus
+                                  %tr
+                                    %td
+                                      %a{href: Rails.application.config.settings.social.google_plus} Google +
+                            %td.expander
+                      %td.wrapper.last
+                        %table.six.columns
+                          %tr
+                            %td.last.right-text-pad
+                              %p
+                                Phone:
+                                = Rails.application.config.settings.contact.phone
+                              %p
+                                Email:
+                                %a{href: "mailto:#{Rails.application.config.settings.contact.email}"}= Rails.application.config.settings.contact.email
+                            %td.expander
+                  %table.row
+                    %tr
+                      %td.wrapper.last
+                        %table.twelve.columns
+                          %tr
+                            %td{align: "center"}
+                              %center
+                                %p{style: "text-align:center;"}
+                                  %a{href: terms_url} Terms
+                                  |
+                                  %a{href: privacy_url} Privacy
+                                  - if @unsubscribe_url
+                                    |
+                                    %a{href: @unsubscribe_url}
+                                      %unsubscribe Unsubscribe
+                            %td.expander

@@ -1,0 +1,66 @@
+-# This view is the heart of the registration page...
+-# Multiple actions render this view
+
+-# States:
+-#    User has connected an auth provider but has not yet completed registration
+-#    User has clicked on the Sign up link
+-#    User submitted registration form but there was an error
+
+- if resource.email.present?
+  - login_link = link_to I18n.t('auth.login.link'), add_to_url(new_user_session_path, email: resource.email)
+- else
+  - login_link = link_to I18n.t('auth.login.link'), new_user_session_path
+
+- if @failed
+  = render 'users/registrations/failed', provider: @provider
+
+.auth__form
+  - unless @auth
+    %h3.title
+      = I18n.t('auth.signup.title').html_safe
+      .help-block
+        = I18n.t('auth.signup.help', login_link: login_link).html_safe
+
+    / = render 'authentications/providers', flow: 'signup', icons: true, color: true
+    / .auth__or
+    /   %hr/
+    /   %span or
+
+  - else # @auth
+    %h2
+      = render 'users/avatar', size: :thumb, user: @auth
+      Hi,
+      = @auth.display_name
+    %p
+      Not you?
+      = link_to 'Reset', destroy_user_session_path, rel: :nofollow, class: 'btn btn-default btn-xs'
+
+    - unless @existing_account
+      %p
+        We filled in some of your details from
+        = succeed '.' do
+          = @auth.provider_name
+        Please confirm and sign up.
+
+  - if @existing_account
+    -if provider = @existing_account.authentications.first.try(:provider)
+      - url = provider_auth_path(provider, flow: 'login')
+      - login_with_link = link_to I18n.t('auth.login.link_with', provider: Authentication.provider_name(provider)), url
+    - else
+      - login_with_link = login_link
+    .alert.alert-warning
+      = I18n.t('auth.signup.email_taken', login_link: login_with_link).html_safe
+
+  = render 'users/registrations/form', hide_password: @auth.present?
+
+  .auth__links
+    By signing up, you agree to the
+    = link_to 'Terms', terms_path
+    and
+    = succeed '.' do
+      = link_to 'Privacy', privacy_path
+
+  = render 'users/social/facepile'
+
+- content_for :on_ready do
+  $('input[name="user[email]"]').on('click keydown', function(){$(this).closest('form').find('.collapse').addClass('in')});

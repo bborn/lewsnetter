@@ -1,0 +1,340 @@
+= Rails 4.1 Starter Kit
+
+Bootstrap 3 / Foundation 5 + CoffeeScript + Sass + Devise + everything else you need to get into production, fast.
+
+= Overview
+
+Rails 4.1 Starter Kit is a starter app with production ready performance, security, and authentication.
+
+This project was extracted from several apps running in production over the past couple of years and upgraded to Rails 4.1.
+
+Unlike most starter apps that focus on kick starting development, Rails 4.1 Starter Kit is opinionated and production ready.
+It combines the best gems, best practices, and optimized configuration to minimize common mistakes and repetitious
+framework setup.
+
+Beyond configuration and tests, the bulk of Rails 4.1 Starter Kit code is the authentication flows.
+The app provides well designed UX flows for social logins (Facebook, Twitter, etc.) as well as connecting additional
+accounts after sign up.
+
+
+== Demo
+
+{Demo}[https://rails4-LewsNetter.herokuapp.com] — Bootstrap 3
+
+{Email Template Preview}[https://rails4-LewsNetter.herokuapp.com/p/email?premail=true&layout=email] — with inline CSS via Premailer
+
+
+== Status
+
+* *Configuration*: excellent — all configuration keys are in one file and overridable with ENV vars
+* *Development*: good — support for Zeus and Spring
+* *Test*: fair — 65% code coverage; auth flows need more tests
+* *Production*: good — used in several production apps
+
+
+== Features
+
+<b>UI/UX</b>
+* Turbolinks[https://github.com/rails/turbolinks] — fast page rendering; configured to place nice with HeadJS, AJAX, etc.
+* HeadJS[http://headjs.com/] — fast and flexible JavaScript loading
+* NProgress[https://github.com/rstacruz/nprogress] — mobile app style loading indicator for AJAX requests
+* Fully baked authentication flows
+  * Devise[https://github.com/plataformatec/devise] + Omniauth[https://github.com/intridea/omniauth] — password and OAuth logins
+  * Intelligent handling of login, sign up and connect account flows
+  * Pre-filling of registration forms from social data
+  * Extracted from several years of production apps and real world UX testing
+  * Stubbed out code for merging accounts; common social login UX problem
+
+<b>Configuration</b>
+* All app settings are in config/application.yml with automatic overriding by ENV vars
+* Development secrets are checked into git for convenience
+* Production secrets are configured via server ENV vars
+
+<b>BDD/TDD</b>
+* Spring[https://github.com/rails/spring] / Zeus[https://github.com/burke/zeus] — fast development and testing startup; Spring is enabled by default
+* Rspec[http://rspec.info/] — tests, somewhat following BetterSpecs[http://betterspecs.org/]
+* SimpleCov[https://github.com/colszowka/simplecov] — code coverage
+* Guard[https://github.com/guard/guard] — automatically run tests on code change
+
+<b>Admin</b>
+* RailsAdmin[https://github.com/sferik/rails_admin] — admin interface for app data
+
+<b>Background Jobs</b>
+* Sidekiq[https://github.com/mperham/sidekiq] — fast, memory efficient background jobs
+
+<b>Error Reporting</b>
+* Airbrake[https://github.com/airbrake/airbrake] or Errbit[https://github.com/errbit/errbit]
+
+<b>Maintainable CSS</b>
+* Bootstrap3[http://getbootstrap.com/] enabled — master[https://github.com/LewsNetters/rails4-LewsNetter/tree/master] branch
+* Foundation5[http://foundation.zurb.com/] enabled — foundation[https://github.com/LewsNetters/rails4-LewsNetter/tree/foundation] branch
+* BEM[http://bem.info/method/] class names — prevents class name collision
+* SASS @extend[http://sass-lang.com/documentation/file.SASS_REFERENCE.html#extend] — keeps Bootstrap specific class names out of the views, making it easier to switch CSS frameworks
+
+<b>Emails</b>
+* Ink[http://zurb.com/ink/] — Zurb's email templates for maximum email client compatibility
+* Premailer[http://premailer.dialect.ca/] — automatically inlines CSS styles, making it easy to customize email templates without sacrificing compatibility
+* Previewable — easily preview emails in development
+* Scalable — User and Devise are configured to send emails via background jobs
+
+<b>Databases</b>
+* PostgreSQL[http://www.postgresql.org/] — app data; switchable to MySQL, MongoDB, etc.
+* Redis[http://redis.io/] — background job queues
+* Memcached[http://memcached.org/] — session data; only required in production
+
+<b>Production Ready</b>
+* Heroku[https:/www.heroku.com] ready — git clone, configure, git push heroku master and you're done
+* Free hosting — configured to run web and job processes in single Heroku dyno to get started
+* Unicorn[http://unicorn.bogomips.org/] — web server
+
+
+
+= Installation
+
+Gemfile is configured for OSX development. See comments in Gemfile for Linux.
+
+  git clone https://github.com/LewsNetters/rails4-LewsNetter.git
+  cd rails4-LewsNetter
+
+  # For Bootstrap 3, stay in master branch
+  # For Foundation 5, check out foundation branch
+  git checkout foundation
+
+  bundle install
+
+  # Make sure postgresql and redis are running locally, then
+  rake db:setup
+
+Modify vars in config/application.yml. Generate new secret tokens or your app will be hackable!
+
+Modify config/locales/en.yml. Replace references to LewsNetter.
+
+Modify config/application.rb. Replace references to LewsNetter.
+
+
+
+= Development
+
+Spring is enabled by default. To use Zeus, comment out spring gems in Gemfile and
+uncomment zeus.
+
+  # Spring
+  rails server
+  bundle exec guard
+
+  # Zeus
+  zeus start
+  zeus server
+  bundle exec guard
+
+Open in browser: http://0.0.0.0:3000
+
+Running `rails server` will start WEBrick. To run unicorn in development, use `unicorn -c config/unicorn.rb` or foreman[https://github.com/ddollar/foreman].
+
+Twitter and Facebook demo app credentials use callback urls for http://0.0.0.0:3000
+
+= Debugging
+
+Ruby 2.0+ uses byebug instead of debugger. Starter Kit is configured to use pry or byebug.
+
+  # Add pry or byebug to code
+  binding.pry
+  byebug
+
+To debug a background worker, start the rails server and sidekiq in separate processes.
+
+  rails server
+  bundle exec sidekiq -C config/sidekiq.yml
+
+  # Add byebug to worker code to debug
+
+Use Sidekiq's web UI to restart jobs if needed: http://0.0.0.0:3000/admin/sidekiq/jobs/retries
+
+
+= Testing
+
+{<img src="https://travis-ci.org/LewsNetters/rails4-LewsNetter.png?branch=master" alt="Build Status" />}[https://travis-ci.org/LewsNetters/rails4-LewsNetter]
+
+For BDD/TDD, just keep guard running in the background. The relevant tests will automatically run when code is added or modified.
+
+To run the full test suite without guard...
+
+  # Spring
+  rspec spec
+
+  # Without Spring
+  DISABLE_SPRING=true rspec spec
+
+  # Zeus
+  zeus test spec
+
+
+Note that Sidekiq does not process jobs in tests.
+
+
+
+= Production
+
+<b>Setup Heroku</b>
+
+  heroku create [app name]
+
+  # Copy and paste
+  heroku addons:add heroku-postgresql
+  heroku addons:add memcachier
+  heroku addons:add newrelic
+  heroku addons:add pgbackups
+  heroku addons:add redistogo
+  heroku addons:add sendgrid
+  heroku config:add DEVISE_SECRET_KEY="$(bundle exec rake secret)"
+  heroku config:add DEVISE_PEPPER="$(bundle exec rake secret)"
+  heroku config:add SECRET_KEY_BASE="$(bundle exec rake secret)"
+  heroku config:set REDIS_URL=`heroku config:get REDISTOGO_URL`
+
+  # Needs customization
+  heroku config:add MAIL_HOST=[YOUR APP URL]
+
+  git push heroku master
+
+  heroku run rake db:migrate
+  heroku open
+
+  # Be sure to configure social login keys to get Facebook/Twitter/etc. login to work.
+
+
+<b>Install Errbit</b>
+
+Starter Kit is setup to use Airbrake or Errbit for error tracking and reporting. Errbit is an
+open source alternative to Airbrake that can be hosted for free on Heroku.
+
+See https://github.com/errbit/errbit for installation.
+
+After setting up Airbrake or Errbit, update your server ENV vars.
+
+  # In rails4-LewsNetter dir
+  heroku config:add AIRBRAKE_API_KEY=[YOUR KEY]
+  heroku config:add AIRBRAKE_HOST=[YOUR-ERRBIT-APP.herokuapp.com]
+
+  # Send test
+  rake airbrake:test
+
+
+<b>Additional Steps</b>
+
+LewsNetter is pre-configured to make it easy to deploy apps into production environments.
+However, it's a good idea to consider the following steps to make your app production ready:
+
+* split worker and web processes into separate servers or dynos
+* add SSL with CloudFlare, Heroku SSL, or similar
+* add Pingdom or other monitoring service with HTML parsing to analyze page content
+* setup Errbit or Airbrake and configure LewsNetter to track errors
+* send syslogs to a central logger that supports searching and filtering
+* use a security service to analyze site for common security holes (XSS, etc.)
+
+
+
+
+= Updating
+
+Starter Kit Gemfile does not specify gem versions in order to make upgrading easier.
+
+  bundle update
+
+To merge changes from Starter Kit
+
+  git remote add upstream https://github.com/LewsNetters/rails4-LewsNetter.git
+
+  # Fetch latest upstream changes
+  git fetch upstream
+
+  git merge upstream/master
+  # or
+  git cherry-pick [COMMIT REF]
+
+
+
+= Compatibility
+
+* IE 8+ unless additional shims are added
+  * See app/assets/stylesheets/icons_social.scss
+
+
+
+= Auth Flows
+
+There are three hard coded auth flows:
+1. signup — new user registration flow
+2. login — returning user authentication flow
+3. connect — authenticated user social account connection flow
+
+In each flow, the user is returned to the page he/she was on at the beginning of the flow
+if appropriate.
+
+Signup and login flows have an intermediate step (RegistrationsController#after_auth) that
+prompts the user for any missing required information. This is useful when new required fields
+are added to User, terms of service updates, etc. It's also useful for minimizing
+input fields on the first sign up page. For instance, the app might just ask for the
+user's desired username on the first page and then use the intermediate page to
+get first name, email, etc.
+
+
+== Sign Up
+
+Start at /a/signup
+
+*OAuth*
+
+1. RegistrationsController#after_auth
+2. If user.valid? redirect to origin or user_root_path
+3. If user.invalid? show intermediate page so user can add additional info
+  1. Post to RegistrationsController#create
+
+If user already had an account via the OAuth provider, he/she is simply logged in.
+
+*Username/Password*
+
+1. Post to RegistrationsController#create
+2. Show intermediate page if additional info is needed
+2. Redirect to origin or user_root_path
+
+
+== Login
+
+*OAuth*
+
+If user does not already have an account via the OAuth provider, redirect to sign up page.
+
+Otherwise, login user and redirect to either...
+
+1. RegistrationsController#after_auth if additional account info is needed
+2. Origin page if specified
+3. user_root_path
+
+*Username/Password*
+
+Same as OAuth flow above.
+
+
+= Mail Previews
+
+Rails 4.1 introduced mailer previews. Starter Kit now has two ways to preview emails:
+
+* http://localhost:3000/rails/mailers – Rails 4.1 built-in method
+* http://0.0.0.0:3000/p/email?premail=true&layout=email – Starter Kit method with query param configs
+
+Mail previews are only available in development by default. To make Starter Kit previews
+available in other environments, set the ALLOW_EMAIL_PREVIEW='1'.
+
+
+= TODO
+
+* Add code comments for rdoc
+* Add examples for adding User#username field
+* Setup Rack::Cache https://devcenter.heroku.com/articles/rack-cache-memcached-rails31
+* Install Devise Security Extension https://github.com/phatworx/devise_security_extension
+* Review config/initializers/devise.rb in detail
+* Convert to lazy registration https://github.com/mwlang/lazy_registration_demos
+* Use decorators https://github.com/drapergem/draper
+* Make sure rspecs follow best practices: http://betterspecs.org/
+* Run should_clean -d spec/
+

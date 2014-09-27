@@ -1,0 +1,19 @@
+%h1 Listing templates
+
+%table.table.table-striped
+  %tr
+    %th Name
+    %th Actions
+
+  - @templates.each do |template|
+    %tr
+      %td.col-md-9= template.name
+      %td
+        .btn-group
+          = link_to 'Show', template, class: 'btn btn-default'
+          = link_to 'Edit', edit_template_path(template), class: "btn btn-default"
+          = link_to 'Destroy', template, :method => :delete, :data => { :confirm => 'Are you sure?', modal: true }, class: "btn btn-danger"
+
+%br
+
+= link_to 'New Template', new_template_path

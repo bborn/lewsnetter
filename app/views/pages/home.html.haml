@@ -1,0 +1,6 @@
+/ %h1= I18n.t('brand.name')
+
+-if user_signed_in?
+  %ul
+    %li=link_to 'Campaigns', campaigns_path
+    %li=link_to 'Mailing Lists', mailing_lists_path

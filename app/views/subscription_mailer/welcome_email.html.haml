@@ -1,0 +1,14 @@
+-# Be sure to also modify confirmation_email.text.haml whenever editing this file
+
+- @image_url = 'http://placehold.it/580x300'
+
+- content_for :title do
+  Your e-mail has been confirmed!
+
+- content_for :callout do
+  %p
+    You will now start receiving our newsletter
+
+%p
+  If you've changed your mind, you can
+  =link_to 'unsubscribe', unsubscribe_subscription_url(@subscription.mail_key)
