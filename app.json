@@ -21,11 +21,6 @@
       "value" : "",
       "required" : true
     },
-    "REDIS_URL" : {
-      "description" : "The URL to your redis instance. If using RedisToGo, this is `heroku config:get REDISTOGO_URL`",
-      "value" : "",
-      "required" : true
-    },
     "SES_SECRET_KEY" : {
       "description" : "Your SES secret key",
       "value" : "",

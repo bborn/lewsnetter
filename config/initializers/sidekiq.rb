@@ -4,7 +4,7 @@
 
 if defined? Sidekiq
 
-  redis_url = ENV['REDIS_URL']
+  redis_url = ENV['REDIS_URL'] || ENV['REDISTOGO_URL']
 
   Sidekiq.configure_server do |config|
     config.redis = {
