@@ -2,11 +2,56 @@
   "name": "LewsNetter",
   "description": "An e-mail marketing application.",
   "repository": "https://github.com/bborn/lewsnetter",
-  "logo": "http://upload.wikimedia.org/wikipedia/commons/c/c3/Ruby_on_Rails_logo.svg",
   "scripts": {
     "postdeploy": "bundle exec rake db:migrate"
   },
   "env": {
-    "RAILS_ENV": "production"
+    "RAILS_ENV": "production",
+    "DEVISE_PEPPER": {
+      "description" : "A secret",
+      "generator": "secret",
+      "required": true
+    },
+    "DEVISE_SECRET_KEY": {
+      "description" : "A secret",
+      "generator": "secret",
+      "required": true
+    },
+    "MAIL_HOST" : {
+      "description" : "From address to use when sending email",
+      "value" : "",
+      "required" : true
+    },
+    "REDIS_URL" : {
+      "description" : "The URL to your redis instance. If using RedisToGo, this is `heroku config:get REDISTOGO_URL`",
+      "value" : "",
+      "required" : true
+    },
+    "SES_SECRET_KEY" : {
+      "description" : "Your SES secret key",
+      "value" : ""
+      "required" : true
+    },
+    "SES_ACCESS_KEY" : {
+      "description" : "Your SES access key",
+      "value" : "",
+      "required" : true
+    },
+    "SES_SMTP_PASSWORD" : {
+      "description" : "Your SES smtp password",
+      "value" : "",
+      "required" : true
+    },
+    "SES_SMTP_USERNAME" : {
+      "description" : "Your SES smtp username",
+      "value" : "",
+      "required" : true
+    }
   },
-  "addons": ["heroku-postgresql"]
+  "addons": [
+    "heroku-postgresql",
+    "memcachier:dev",
+    "newrelic:wayne",
+    "pgbackups:plus",
+    "redistogo:nano"
+  ]
