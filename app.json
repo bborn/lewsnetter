@@ -29,7 +29,7 @@
     },
     "SES_SECRET_KEY" : {
       "description" : "Your SES secret key",
-      "value" : ""
+      "value" : "",
       "required" : true
     },
     "SES_ACCESS_KEY" : {
