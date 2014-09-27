@@ -11578,3 +11578,26 @@ color: #000; text-decoration: underline;
 [09/27/14 13:52:47 -0500 carlos (13191)] INFO : Installing Rails 4 view instrumentation
 [09/27/14 13:52:47 -0500 carlos (13191)] INFO : Installing Rails4 Error instrumentation
 [09/27/14 13:52:47 -0500 carlos (13191)] INFO : Finished instrumentation
+[09/27/14 15:05:51 -0500 carlos (21792)] INFO : Starting the New Relic agent in "development" environment.
+[09/27/14 15:05:51 -0500 carlos (21792)] INFO : To prevent agent startup add a NEWRELIC_AGENT_ENABLED=false environment variable or modify the "development" section of your newrelic.yml.
+[09/27/14 15:05:51 -0500 carlos (21792)] INFO : Reading configuration from config/newrelic.yml
+[09/27/14 15:05:51 -0500 carlos (21792)] ERROR : Failed to read or parse configuration file at config/newrelic.yml: (<unknown>): mapping values are not allowed in this context at line 45 column 32
+[09/27/14 15:05:51 -0500 carlos (21792)] INFO : Environment: development
+[09/27/14 15:05:51 -0500 carlos (21792)] INFO : Dispatcher: webrick
+[09/27/14 15:05:51 -0500 carlos (21792)] INFO : Application: development
+[09/27/14 15:05:51 -0500 carlos (21792)] WARN : No license key found. This often means your newrelic.yml file was not found, or it lacks a section for the running environment, 'development'.
+[09/27/14 15:05:51 -0500 carlos (21792)] INFO : Installing ActiveRecord 4 instrumentation
+[09/27/14 15:05:51 -0500 carlos (21792)] INFO : Installing Curb instrumentation
+[09/27/14 15:05:51 -0500 carlos (21792)] INFO : Installing Net instrumentation
+[09/27/14 15:05:51 -0500 carlos (21792)] INFO : Installing deferred Rack instrumentation
+[09/27/14 15:05:51 -0500 carlos (21792)] INFO : Installing Rack::Builder middleware instrumentation
+[09/27/14 15:05:51 -0500 carlos (21792)] INFO : Installing Rails 3+ middleware instrumentation
+[09/27/14 15:05:51 -0500 carlos (21792)] INFO : Installing Sidekiq instrumentation
+[09/27/14 15:05:51 -0500 carlos (21792)] INFO : Installing Rails 4 Controller instrumentation
+[09/27/14 15:05:51 -0500 carlos (21792)] INFO : Installing Rails 4 view instrumentation
+[09/27/14 15:05:51 -0500 carlos (21792)] INFO : Installing Rails4 Error instrumentation
+[09/27/14 15:05:51 -0500 carlos (21792)] INFO : Finished instrumentation
+[09/27/14 15:05:53 -0500 carlos (21792)] INFO : Doing deferred dependency-detection before Rack startup
+[09/27/14 15:05:53 -0500 carlos (21792)] INFO : Installing Sinatra instrumentation
+[09/27/14 15:06:06 -0500 carlos (21792)] ERROR : Invalid license key, please contact support@newrelic.com
+[09/27/14 15:06:06 -0500 carlos (21792)] ERROR : Visit NewRelic.com to obtain a valid license key, or to upgrade your account.

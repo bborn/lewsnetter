@@ -6,6 +6,7 @@
     "postdeploy": "bundle exec rake db:migrate"
   },
   "env": {
+    "RAILS_ENV": "production",
     "SECRET_KEY_BASE": {
       "description": "A secret",
       "generator": "secret",
@@ -24,27 +25,27 @@
     "MAIL_HOST": {
       "description": "From address to use when sending email",
       "value": "",
-      "required": true
+      "required": false
     },
     "SES_SECRET_KEY": {
       "description": "Your SES secret key",
       "value": "",
-      "required": true
+      "required": false
     },
     "SES_ACCESS_KEY": {
       "description": "Your SES access key",
       "value": "",
-      "required": true
+      "required": false
     },
     "SES_SMTP_PASSWORD": {
       "description": "Your SES smtp password",
       "value": "",
-      "required": true
+      "required": false
     },
     "SES_SMTP_USERNAME": {
       "description": "Your SES smtp username",
       "value": "",
-      "required": true
+      "required": false
     }
   },
   "addons": [
