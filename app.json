@@ -6,7 +6,6 @@
     "postdeploy": "bundle exec rake db:migrate"
   },
   "env": {
-    "RAILS_ENV": "production",
     "DEVISE_PEPPER": {
       "description" : "A secret",
       "generator": "secret",
