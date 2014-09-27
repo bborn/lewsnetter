@@ -6,6 +6,11 @@
     "postdeploy": "bundle exec rake db:migrate"
   },
   "env": {
+    "SECRET_KEY_BASE": {
+      "description" : "A secret",
+      "generator": "secret",
+      "required": true
+    },
     "DEVISE_PEPPER": {
       "description" : "A secret",
       "generator": "secret",
