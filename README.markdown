@@ -2,10 +2,12 @@
 
 E-mail marketing application. Send e-mails via SES. Subscription management, delivery, bounce, and complaint notifications. Templates.
 
-
 ## Deploy
 
 [![Deploy](https://www.herokucdn.com/deploy/button.png)](https://heroku.com/deploy)
+
+You'll need to enter you SES credentials and your SES SMTP credentials in order to send mail ([http://docs.aws.amazon.com/ses/latest/DeveloperGuide/smtp-credentials.html](http://docs.aws.amazon.com/ses/latest/DeveloperGuide/smtp-credentials.html)). For more info on setting up SES in general, see [here](http://docs.aws.amazon.com/ses/latest/DeveloperGuide/setting-up-ses.html).
+
 
 ## Getting Started
 
