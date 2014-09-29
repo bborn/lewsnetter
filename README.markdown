@@ -102,7 +102,9 @@ TODO - better docs on this
 [http://docs.aws.amazon.com/ses/latest/DeveloperGuide/improve-deliverability.html](http://docs.aws.amazon.com/ses/latest/DeveloperGuide/improve-deliverability.html)
 
 
+## Workers
 
+TODO - something about managing and scaling workers correctly
 
 
 
