@@ -17,7 +17,7 @@ Using the console, turn that account into an admin user (`user.is_admin = true`)
 
 ### Creating a mailing list
 
-To create a mailing list go to `/mailing_lists/new`. To import users into the list, upload a CSV file with headings for `email`, `name`, and `created_at ('created_at' is the date when the user subscribed).
+To create a mailing list go to `/mailing_lists/new`. To import users into the list, upload a CSV file with headings for `email`, `name`, and `created_at` ('created_at' is the date when the user subscribed).
 
 CSV import (and lots of other things) happen asynchronously in [Sidekiq](http://sidekiq.org/). Make sure you have workers running, or use [Hirefire.io](http://hirefire.io) (or some other method) to auto scale your workers.
 
