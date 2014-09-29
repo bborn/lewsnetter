@@ -27,9 +27,9 @@ While your mailing list is importing, create an e-mail template `/templates/new`
 To make a section of the template editable, give the DOM node the 'editable' and give it a unique id. For example:
 
 ```html
-&lt;div class=&#039;editable&#039; id=&#039;main_content&#039;&gt;
+<div class='editable' id='main_content'>
   This text will be editable
-&lt;/div&gt;
+</div>
 ```
 
 There are some interpolations you can use within your template:
