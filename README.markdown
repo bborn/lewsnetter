@@ -24,7 +24,7 @@ CSV import (and lots of other things) happen asynchronously in [Sidekiq](http://
 
 ### Templates
 
-While your mailing list is importing, create an e-mail template `/templates/new`. A template should be a complete HTML document with edtiable regions. The template will be used as the layout for your e-mail campaigns, and will be run through Premailer (so CSS will be inlined).
+While your mailing list is importing, create an e-mail template `/templates/new`. A template should be a complete HTML document with editable regions. The template will be used as the layout for your e-mail campaigns, and will be run through Premailer (so CSS will be inlined).
 
 To make a section of the template editable, give the DOM node the 'editable' class and give it a unique id. For example:
 
