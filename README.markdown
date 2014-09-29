@@ -75,6 +75,11 @@ You can monitor Sidekiq at `/admin/sidekiq/jobs`.
 
 Once the campaign begins sending you'll start to see stats (again, on the campaign show page, i.e. `/campaigns/CAMPAIGN_ID`). If you have SNS notifications set up (see below) you'll see deliveries, complaints, bounces, and opens. If not, you'll just see opens (LewsNetter inserts a tracking pixel image into every e-mail).
 
+### Subscriber management
+
+TODO
+- Subscription confirmation e-mails are still crap.
+
 
 ### Setting up notifications
 
