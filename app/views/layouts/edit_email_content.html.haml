@@ -16,7 +16,6 @@
     = headjs_include_tag 'content-editor', 'data-turbolinks-track' => true
     = csrf_meta_tags
     = yield :head
-    = render 'layouts/airbrake'
   %body{class: "controller__#{controller_name} action__#{action_name}"}
     = yield
     = render 'layouts/analytics'

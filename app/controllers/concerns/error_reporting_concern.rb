@@ -5,10 +5,6 @@ module ErrorReportingConcern
   end
 
   def report_error(e)
-    if defined?(Airbrake)
-      notify_airbrake(e)
-    else
-      logger.error(e)
-    end
+    logger.error(e)
   end
 end

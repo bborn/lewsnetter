@@ -37,9 +37,6 @@ GEM
       thread_safe (~> 0.1)
       tzinfo (~> 1.1)
     addressable (2.3.6)
-    airbrake (3.1.16)
-      builder
-      multi_json
     arel (5.0.1.20140414130214)
     awesome_print (1.2.0)
     aws-ses (0.5.0)
@@ -313,6 +310,9 @@ GEM
     sdoc (0.4.0)
       json (~> 1.8)
       rdoc (~> 4.0, < 5.0)
+    sentry-raven (0.10.1)
+      faraday (>= 0.7.6)
+      uuidtools
     settingslogic (2.0.9)
     shoulda-matchers (2.6.1)
       activesupport (>= 3.0.0)
@@ -372,6 +372,7 @@ GEM
       kgio (~> 2.6)
       rack
       raindrops (~> 0.7)
+    uuidtools (2.1.5)
     warden (1.2.3)
       rack (>= 1.0)
     xml-simple (1.1.4)
@@ -382,7 +383,6 @@ PLATFORMS
 DEPENDENCIES
   aasm
   addressable
-  airbrake
   awesome_print
   aws-ses
   bootstrap-kaminari-views
@@ -431,6 +431,7 @@ DEPENDENCIES
   rspec-sidekiq
   sass-rails
   sdoc
+  sentry-raven
   settingslogic
   shoulda-matchers
   sidekiq
