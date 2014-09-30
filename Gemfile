@@ -138,10 +138,10 @@ group :development, :test do
   gem 'factory_girl_rails'
   gem 'ffaker'
   # gem 'capybara-webkit'
-  # gem 'poltergeist'           # alternative to capybara-webkit
-  # gem 'capybara-firebug'
+  gem 'poltergeist'           # alternative to capybara-webkit
+  gem 'capybara-firebug'
   # gem 'launchy'               # save_and_open_page support for rspec
-  # gem 'zeus-parallel_tests'   # speed up lengthy tests
+  gem 'zeus-parallel_tests'   # speed up lengthy tests
 
   # Logging
   gem 'quiet_assets'

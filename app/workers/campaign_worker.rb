@@ -11,7 +11,7 @@ class CampaignWorker
     logger.debug "Delivering limit: #{limit}\n"
 
     # clean up any old locked items
-    expired_locks_condition = ['locked = ? AND locked_at <= ?', true, 1.hour.ago.utc]
+    expired_locks_condition = ['locked = ? AND locked_at <= ?', true, (Setting.get_with_default('queue.expire_locks_in', 1).minutes.ago.utc)]
     campaign.queued_mails.where(expired_locks_condition).update_all(:locked => false)
 
     # load the queue items to process
