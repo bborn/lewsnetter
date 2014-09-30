@@ -39,7 +39,10 @@ class @Editor
     button = new MediumButton(
       label: "<i class=\"fa fa-level-down\"></i>"
       action: (html, mark) ->
-        parentNode = thiz.medium.getSelectedParentElement()
+        parentNode = thiz.medium.findMatchingSelectionParent((el) ->
+          $(el).css("display") is "block"
+        )
+        console.log(parentNode)
         $(parentNode).before("<p>New paragraph</p>")
         thiz.clearSelection()
         thiz.medium.hideToolbarActions()
