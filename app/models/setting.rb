@@ -1,4 +1,6 @@
-class Setting < Smailer::Models::Property
+class Setting < Setting
+
+
 
   rails_admin do
   end

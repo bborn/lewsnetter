@@ -21,7 +21,7 @@ describe CampaignWorker do
 
       campaign.subscribers.count.should == 20
 
-      Smailer::Models::Property.stub(:get).and_return(2)
+      Setting.stub(:get).and_return(2)
 
       campaign.draft!
 

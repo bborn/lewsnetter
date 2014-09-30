@@ -56,12 +56,12 @@ class QueuedMail < Smailer::Models::QueuedMail
   end
 
   def retries_exceeded?
-    max_retries  = (Smailer::Models::Property.get('queue.max_retries') || 0).to_i
+    max_retries  = (Setting.get('queue.max_retries') || 0).to_i
     max_retries  > 0 && self.retries >= max_retries
   end
 
   def too_old?
-    max_lifetime = (Smailer::Models::Property.get('queue.max_lifetime') || 172800).to_i
+    max_lifetime = (Setting.get('queue.max_lifetime') || 172800).to_i
     max_lifetime > 0 && (Time.now - self.created_at) >= max_lifetime
   end
 

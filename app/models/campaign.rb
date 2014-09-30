@@ -74,7 +74,7 @@ class Campaign < Smailer::Models::MailCampaign
   end
 
   def create_queued_mails
-    batch_size   = (Smailer::Models::Property.get('queue.batch_size') || 100).to_f
+    batch_size   = (Setting.get('queue.batch_size') || 100).to_f
 
     self.subscribers.find_each(batch_size: batch_size) do |subscription|
       QueuedMailCreator.perform_async(self.id, subscription.email)
@@ -96,7 +96,7 @@ class Campaign < Smailer::Models::MailCampaign
     qm_count = self.queued_mails.count
 
     unless qm_count.zero?
-      batch_size   = (Smailer::Models::Property.get('queue.batch_size') || 100).to_f
+      batch_size   = (Setting.get('queue.batch_size') || 100).to_f
       worker_count = (qm_count/batch_size).ceil
 
       logger.debug "Run #{worker_count} workers: \n"

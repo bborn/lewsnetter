@@ -58,9 +58,9 @@ class CampaignWorker
   #     delivery_method *rails_delivery_method
   #   end
 
-  #   batch_size   = (Smailer::Models::Property.get('queue.batch_size') || 100).to_i
-  #   max_retries  = (Smailer::Models::Property.get('queue.max_retries') || 0).to_i
-  #   max_lifetime = (Smailer::Models::Property.get('queue.max_lifetime') || 172800).to_i
+  #   batch_size   = (Setting.get('queue.batch_size') || 100).to_i
+  #   max_retries  = (Setting.get('queue.max_retries') || 0).to_i
+  #   max_lifetime = (Setting.get('queue.max_lifetime') || 172800).to_i
 
   #   results = []
 

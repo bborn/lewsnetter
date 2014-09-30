@@ -1,5 +1,5 @@
 class SubscriptionMailer < ActionMailer::Base
-  default from: Rails.application.config.settings.mail.from
+  default from: (Setting.get('mail.from')||Rails.application.config.settings.mail.from)
 
   layout 'emails/email'
 
