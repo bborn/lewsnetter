@@ -38,7 +38,7 @@ gem "sentry-raven"
 
 
 # Data
-# gem 'pg'
+gem 'pg'
 # gem 'schema_plus'             # add better index and foreign key support
 # gem 'jbuilder'
 
@@ -63,6 +63,8 @@ gem 'coffee-rails'
 
 # Design
 gem 'bootstrap-sass'
+gem 'font-awesome-sass'
+
 # gem 'bourbon'
 # gem 'neat'
 # gem 'country_select'
@@ -112,7 +114,6 @@ group :development do
 end
 
 group :development, :test do
-  gem "pg"
   # Use spring or zeus
   gem 'spring'                  # keep application running in the background
   gem 'spring-commands-rspec'
@@ -162,7 +163,6 @@ group :test do
 end
 
 group :production do
-  gem "pg"
   gem "mysql2"
   gem 'dalli'                   # memcached
   gem 'memcachier'              # heroku add-on for auto config of dalli

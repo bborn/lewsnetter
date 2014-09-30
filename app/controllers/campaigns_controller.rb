@@ -19,6 +19,7 @@ class CampaignsController < ApplicationController
       format.json {
         opened = @campaign.deliveries.where(opened: true)
         bounced = @campaign.deliveries.where("bounced_at IS NOT NULL")
+
         render json: [
             {name: "Opened", data: opened.group_by_hour(:opened_at).count}
           ]

@@ -108,6 +108,8 @@ GEM
     ffi (1.9.3)
     font-awesome-rails (4.1.0.0)
       railties (>= 3.2, < 5.0)
+    font-awesome-sass (4.2.0)
+      sass (~> 3.2)
     formatador (0.2.5)
     groupdate (2.3.0)
       activesupport (>= 3)
@@ -160,13 +162,13 @@ GEM
     mail (2.5.4)
       mime-types (~> 1.16)
       treetop (~> 1.4.8)
-    medium-editor-rails (0.10.0)
+    medium-editor-rails (0.11.0)
       railties (>= 3.0)
     memcachier (0.0.2)
     method_source (0.8.2)
     mime-types (1.25.1)
     mini_portile (0.6.0)
-    minitest (5.4.0)
+    minitest (5.4.2)
     mock_redis (0.13.2)
     multi_json (1.10.1)
     multi_xml (0.5.5)
@@ -363,7 +365,7 @@ GEM
       polyglot (>= 0.3.1)
     turbolinks (2.2.2)
       coffee-rails
-    tzinfo (1.2.1)
+    tzinfo (1.2.2)
       thread_safe (~> 0.1)
     uglifier (2.5.1)
       execjs (>= 0.3.0)
@@ -398,6 +400,7 @@ DEPENDENCIES
   factory_girl_rails
   feedjira
   ffaker
+  font-awesome-sass
   groupdate
   guard-rspec
   haml-rails

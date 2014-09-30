@@ -32,7 +32,6 @@
 
 $ ->
   $("textarea.codemirror").each ->
-    console.log this
     if $(this).data('disabled')
       disabled = true
     else

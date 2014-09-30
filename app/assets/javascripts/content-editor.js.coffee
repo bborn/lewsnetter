@@ -2,6 +2,7 @@
 #= require jquery_ujs
 #= require bootstrap
 #= require medium-editor
+#= require mediumbutton
 #= require_self
 
 class @Editor
@@ -15,6 +16,7 @@ class @Editor
       secondHeader: "h2"
       cleanPastedHTML: true
       placeholder: ''
+      buttonLabels : 'fontawesome'
       buttons: [
         'bold'
         'italic'
@@ -24,8 +26,27 @@ class @Editor
         'header2'
         'quote'
         'image'
+        'newline'
       ]
+      extensions: {
+        'newline': @insertNewLine()
+      }
+
     )
+
+  insertNewLine : ->
+    thiz = @
+    button = new MediumButton(
+      label: "<i class=\"fa fa-level-down\"></i>"
+      action: (html, mark) ->
+        parentNode = thiz.medium.getSelectedParentElement()
+        $(parentNode).before("<p>New paragraph</p>")
+        thiz.clearSelection()
+        thiz.medium.hideToolbarActions()
+        html
+    )
+    button
+
 
   serialize: ->
     @medium.serialize()
@@ -53,3 +74,8 @@ class @Editor
         $(textArea).val json_string
         return
 
+  clearSelection : ->
+    if document.selection
+      document.selection.empty()
+    else window.getSelection().removeAllRanges()  if window.getSelection
+    return
