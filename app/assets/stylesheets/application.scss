@@ -6,6 +6,10 @@
 //= require_self
 
 
+@import 'medium-editor/medium-editor';
+@import 'medium-editor/themes/default';
+
+
 // Core
 @import "variables";
 @import "bootstrap";
@@ -22,8 +26,6 @@
 @import 'nprogress';
 @import 'nprogress-bootstrap';
 
-@import 'medium-editor/medium-editor';
-@import 'medium-editor/themes/default';
 @import 'codemirror';
 @import 'codemirror/themes/night';
 .CodeMirror {
