@@ -80,7 +80,7 @@ class Campaign < Smailer::Models::MailCampaign
       QueuedMailCreator.perform_async(self.id, subscription.email)
     end
 
-    self.delay_for(5.minutes).check_if_queued
+    self.delay_for(Setting.get_with_default('queue.checkup_delay', 300).seconds).check_if_queued
   end
 
   def check_if_queued
