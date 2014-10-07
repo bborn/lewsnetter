@@ -96,7 +96,7 @@ class Campaign < Smailer::Models::MailCampaign
     qm_count = self.queued_mails.count
 
     unless qm_count.zero?
-      batch_size   = (Setting.get('queue.batch_size') || 100).to_f
+      batch_size = Setting.get_with_default('queue.batch_size', 100).to_f
       worker_count = (qm_count/batch_size).ceil
 
       logger.debug "Run #{worker_count} workers: \n"
