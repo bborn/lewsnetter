@@ -74,7 +74,7 @@ class Campaign < Smailer::Models::MailCampaign
   end
 
   def create_queued_mails
-    batch_size   = (Setting.get('queue.batch_size') || 100).to_f
+    batch_size = Setting.get_with_default('queue.batch_size', 100).to_f
 
     self.subscribers.find_each(batch_size: batch_size) do |subscription|
       QueuedMailCreator.perform_async(self.id, subscription.email)
