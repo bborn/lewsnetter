@@ -87,7 +87,7 @@ class Campaign < Smailer::Models::MailCampaign
     if self.queued? || self.queued_mails.count.eql?(self.subscribers.count)
       self.queued!
     else
-      self.delay_for(Setting.get_with_default('queue.checkup_delay', 300).seconds).check_if_queued
+      self.delay_for(Setting.get_with_default('queue.checkup_delay', 300).to_i.seconds).check_if_queued
     end
   end
 
