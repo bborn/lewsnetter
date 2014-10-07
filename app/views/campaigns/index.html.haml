@@ -22,7 +22,7 @@
             -when 'sent'
               (#{number_to_percentage (campaign.hit_rate*100), precision: 2, strip_insignificant_zeros: true} opened)
             -when 'sending' || 'queued'
-              (#{campaign.sent_mails_count} delivered)
+              (#{campaign.deliveries.count} delivered)
           -if campaign.sent? || campaign.sending?
             =link_to 'view stats', campaign_path(campaign)
 

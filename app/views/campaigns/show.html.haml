@@ -13,7 +13,7 @@
                 =link_to 'View', webview_campaign_path(@campaign.deliveries.last.key), target: '_blank'
           -if @campaign.deliveries.any?
             Sent on #{@campaign.deliveries.maximum(:sent_at).to_s(:long)}
-          to #{@campaign.sent_mails_count} unique subscribers in #{@campaign.mailing_list.name}
+          to #{@campaign.deliveries.count} unique subscribers in #{@campaign.mailing_list.name}
 
         .panel-body
           .row

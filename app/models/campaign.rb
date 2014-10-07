@@ -255,5 +255,11 @@ class Campaign < Smailer::Models::MailCampaign
     deliveries.sum(:complaints_count)
   end
 
+  def hit_rate
+    return nil if deliveries.count == 0
+    opened_mails_count.to_f / deliveries.count
+  end
+
+
 
 end
