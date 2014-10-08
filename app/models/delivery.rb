@@ -53,7 +53,7 @@ class Delivery < Smailer::Models::FinishedMail
 
     update_attributes({bounced_at: Time.now, bounces_count: new_count})
 
-    subscription.unsubscribe! if bounces_count > MAX_BOUNCES
+    subscription.unsubscribe! if bounces_count >= MAX_BOUNCES
   end
 
   def complaint!
@@ -61,7 +61,7 @@ class Delivery < Smailer::Models::FinishedMail
 
     update_attributes({complaints_count: new_count})
 
-    subscription.unsubscribe! if complaints_count > MAX_COMPLAINTS
+    subscription.unsubscribe! if complaints_count >= MAX_COMPLAINTS
   end
 
   def subscription
