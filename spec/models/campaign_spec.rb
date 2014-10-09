@@ -1,7 +1,28 @@
 require 'spec_helper'
 
 describe Campaign do
-  let(:campaign) { FactoryGirl.create(:campaign) }
+  let(:campaign) {
+    campaign = FactoryGirl.create(:campaign)
+  }
+
+  describe "#send_preview" do
+    before(:each) do
+      campaign.preview_recipients = 'foo@example.com, bar@example.com'
+    end
+
+    it 'should not change state' do
+      expect {
+        campaign.send_preview
+      }.to_not change{ campaign.state }
+    end
+
+    it "should prefix the subject line" do
+      campaign.send_preview
+      email = ActionMailer::Base.deliveries.last
+      email.subject.should == "[PREVIEW] #{campaign.subject}"
+    end
+
+  end
 
   describe '#send_campaign!' do
     before(:each) do

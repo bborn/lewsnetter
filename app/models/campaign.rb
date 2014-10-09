@@ -195,6 +195,7 @@ class Campaign < Smailer::Models::MailCampaign
 
   def send_preview
     campaign = self
+    return if campaign.preview_recipients.blank?
 
     rails_delivery_method = if Smailer::Compatibility.rails_3_or_4?
       method = Rails.configuration.action_mailer.delivery_method
@@ -217,7 +218,7 @@ class Campaign < Smailer::Models::MailCampaign
       mail = Mail.new do
         from    campaign.from
         to      address
-        subject campaign.subject
+        subject "#{Setting.get_with_default("campaign.preview_subject_prefix", "[PREVIEW]")} #{campaign.subject}"
 
         text_part { body campaign.body_text }
         html_part { body html_body; content_type 'text/html; charset=UTF-8' }
