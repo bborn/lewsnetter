@@ -13,6 +13,10 @@ if defined? Sidekiq
       size: 2
     }
 
+    config.server_middleware do |chain|
+      chain.add Sidekiq::Throttler, storage: :redis
+    end
+
   end
   Sidekiq.configure_client do |config|
     config.redis = {

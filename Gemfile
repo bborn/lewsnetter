@@ -88,6 +88,7 @@ gem 'rails_admin'
 # Workers
 gem 'sidekiq'
 gem 'sidekiq-unique-jobs'
+gem 'sidekiq-throttler'
 gem 'devise-async'
 gem 'sinatra', require: false
 
