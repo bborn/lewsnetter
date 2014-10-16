@@ -30,9 +30,6 @@ ActiveRecord::Schema.define(version: 20140927185250) do
     t.datetime "updated_at"
   end
 
-  add_index "authentications", ["provider"], name: "index_authentications_on_provider", using: :btree
-  add_index "authentications", ["user_id"], name: "fk__authentications_user_id", using: :btree
-
   create_table "finished_mails", force: true do |t|
     t.integer  "mail_campaign_id"
     t.string   "from"
@@ -63,7 +60,6 @@ ActiveRecord::Schema.define(version: 20140927185250) do
 
   add_index "finished_mails", ["key"], name: "index_finished_mails_on_key", unique: true, using: :btree
   add_index "finished_mails", ["mail_campaign_id", "status"], name: "index_finished_mails_on_mail_campain_id_and_status", using: :btree
-  add_index "finished_mails", ["mail_campaign_id"], name: "fk__finished_mails_mail_campaign_id", using: :btree
   add_index "finished_mails", ["to", "mail_campaign_id"], name: "index_finished_mails_on_to_and_mail_campaign_id", using: :btree
 
   create_table "mail_campaign_attachments", force: true do |t|
@@ -74,7 +70,6 @@ ActiveRecord::Schema.define(version: 20140927185250) do
     t.datetime "updated_at"
   end
 
-  add_index "mail_campaign_attachments", ["mail_campaign_id"], name: "fk__mail_campaign_attachments_mail_campaign_id", using: :btree
   add_index "mail_campaign_attachments", ["mail_campaign_id"], name: "index_mail_campaign_attachments_on_mail_campaign_id", using: :btree
 
   create_table "mail_campaigns", force: true do |t|
@@ -93,7 +88,6 @@ ActiveRecord::Schema.define(version: 20140927185250) do
     t.integer  "template_id"
   end
 
-  add_index "mail_campaigns", ["mailing_list_id"], name: "fk__mail_campaigns_mailing_list_id", using: :btree
   add_index "mail_campaigns", ["mailing_list_id"], name: "index_mail_campaigns_on_mailing_list_id", using: :btree
 
   create_table "mail_keys", force: true do |t|
@@ -119,9 +113,6 @@ ActiveRecord::Schema.define(version: 20140927185250) do
     t.integer "mailing_list_id"
   end
 
-  add_index "mailing_lists_subscriptions", ["mailing_list_id"], name: "fk__mailing_lists_subscriptions_mailing_list_id", using: :btree
-  add_index "mailing_lists_subscriptions", ["subscription_id"], name: "fk__mailing_lists_subscriptions_subscription_id", using: :btree
-
   create_table "oauth_caches", id: false, force: true do |t|
     t.integer  "authentication_id", null: false
     t.text     "data_json",         null: false
@@ -129,7 +120,7 @@ ActiveRecord::Schema.define(version: 20140927185250) do
     t.datetime "updated_at"
   end
 
-  add_index "oauth_caches", ["authentication_id"], name: "index_oauth_caches_on_authentication_id", unique: true, using: :btree
+  add_index "oauth_caches", ["authentication_id"], name: "index_oauth_caches_on_authentication_id", using: :btree
 
   create_table "queued_mails", force: true do |t|
     t.integer  "mail_campaign_id"
@@ -147,7 +138,6 @@ ActiveRecord::Schema.define(version: 20140927185250) do
   add_index "queued_mails", ["locked", "locked_at"], name: "index_queued_mails_on_locked_and_locked_at", using: :btree
   add_index "queued_mails", ["locked", "retries", "id"], name: "index_queued_mails_on_locked_retries_and_id", using: :btree
   add_index "queued_mails", ["mail_campaign_id", "to"], name: "index_queued_mails_on_mail_campain_id_and_to", unique: true, using: :btree
-  add_index "queued_mails", ["mail_campaign_id"], name: "fk__queued_mails_mail_campaign_id", using: :btree
   add_index "queued_mails", ["retries", "locked"], name: "index_queued_mails_on_retries_and_locked", using: :btree
 
   create_table "rails_admin_histories", force: true do |t|
@@ -222,10 +212,5 @@ ActiveRecord::Schema.define(version: 20140927185250) do
     t.boolean  "is_admin"
     t.boolean  "approved"
   end
-
-  add_index "users", ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true, using: :btree
-  add_index "users", ["is_admin"], name: "index_users_on_is_admin", using: :btree
-  add_index "users", ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true, using: :btree
-  add_index "users", ["unlock_token"], name: "index_users_on_unlock_token", unique: true, using: :btree
 
 end
