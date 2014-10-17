@@ -13,7 +13,7 @@ You'll need to enter your SES credentials and your SES SMTP credentials in order
 
 Go to `/a/signup` and create an account.
 
-Using the console, turn that account into an admin user (`user.is_admin = true`)
+Using the console, turn that account into an admin user (`user.update(is_admin:true, approved: true)`)
 
 ### Creating a mailing list
 
