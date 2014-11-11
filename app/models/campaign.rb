@@ -266,7 +266,7 @@ class Campaign < Smailer::Models::MailCampaign
 
 
   def notify_admin_of_state_change
-    UserMailer.deliver_campaign_notification(self)
+    UserMailer.delay.campaign_notification(self)
   end
 
 
