@@ -7,6 +7,12 @@ class UserMailer < ActionMailer::Base
     mail to: @user.email, subject: I18n.t('emails.welcome.subject')
   end
 
+  def campaign_notification(campaign)
+    users = User.where(is_admin: true).map(&:email)
+    @campaign = campaign
+    mail to: users, subject: "Campaign #{campaign.id} status: #{campaign.state}"
+  end
+
   protected
 
   def load_user(user)

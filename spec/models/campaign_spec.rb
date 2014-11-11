@@ -5,6 +5,17 @@ describe Campaign do
     campaign = FactoryGirl.create(:campaign)
   }
 
+  describe "#queued!" do
+    it "should notify admin" do
+      campaign.update_attribute(:aasm_state, 'queueing')
+
+      campaign.should_receive(:notify_admin_of_state_change){ true }
+
+      campaign.queued!
+    end
+
+  end
+
   describe "#send_preview" do
     before(:each) do
       campaign.preview_recipients = 'foo@example.com, bar@example.com'

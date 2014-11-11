@@ -51,6 +51,9 @@ class Campaign < Smailer::Models::MailCampaign
 
     event :queued do
       transitions :from => :queueing, :to => :queued
+      after do
+        notify_admin_of_state_change
+      end
     end
 
     event :send_campaign do
@@ -261,6 +264,10 @@ class Campaign < Smailer::Models::MailCampaign
     opened_mails_count.to_f / deliveries.count
   end
 
+
+  def notify_admin_of_state_change
+    UserMailer.deliver_campaign_notification(self)
+  end
 
 
 end
