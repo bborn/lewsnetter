@@ -3,7 +3,7 @@
     -@feed.entries.each do |entry|
       %h2=link_to entry.title, entry.url
       %p
-        = image_tag(entry.enclosure ? entry.enclosure[:url] : first_image(entry.summary))
+        = image_tag(entry.image || first_image(entry.summary))
         -if entry.summary
           = truncate(strip_tags(entry.summary), length: 200, omission: '...' )
         = link_to('READ MORE', entry.url)
