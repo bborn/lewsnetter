@@ -40,7 +40,7 @@
 
     $('#loadFeedItems').click(function(){
       url = prompt('Enter the feed URL', '#{@campaign.last_feed_used}');
-      if (url != null){
+        if (url != null){
         link = $(this);
         $.get('#{get_feed_campaign_path(@campaign)}?url='+url, function(data){
           $('#feed-placeholder').html(data);
