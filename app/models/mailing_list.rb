@@ -36,8 +36,10 @@ class MailingList < Smailer::Models::MailingList
       sub.created_at = DateTime.parse(row[:created_at]) if row[:created_at]
       sub.name       = row[:name]
       sub.importing  = true
-      sub.confirmed  ||= true
-      sub.subscribed ||= true
+      if sub.new_record?
+        sub.confirmed  ||= true
+        sub.subscribed ||= true
+      end
       sub.save
       #don't send confirmation e-mail!!
 

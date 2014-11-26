@@ -20,9 +20,11 @@ describe MailingList do
       rows = [
         {email: subscription.email, name: 'John Doe'}
       ]
-      mailing_list.import_rows rows
 
-      subscription.subscribed.should == false
+      expect {
+        mailing_list.import_rows rows
+      }.to_not change(subscription, :subscribed)
+
     end
 
   end
