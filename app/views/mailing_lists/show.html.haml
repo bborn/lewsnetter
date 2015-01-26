@@ -6,6 +6,11 @@
   = link_to 'Back', mailing_lists_path, class: 'btn btn-default'
 
 
+#opens-chart
+  = line_chart mailing_list_path(@mailing_list, format: :json), library: {title: 'Subscribers over time'}
+
+
+
 %table.table.table-striped
   %thead
     %tr

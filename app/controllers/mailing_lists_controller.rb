@@ -10,6 +10,16 @@ class MailingListsController < ApplicationController
   # GET /mailing_lists/1
   def show
     @subscriptions = @mailing_list.subscriptions.page(params[:page]).per(params[:per]||10)
+
+    respond_to do |format|
+      format.html
+      format.json {
+        render json: [
+            {name: "Subscribers", data: @mailing_list.subscriptions.group_by_week(:created_at).count}
+          ]
+
+      }
+    end
   end
 
   # GET /mailing_lists/new

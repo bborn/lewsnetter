@@ -1,4 +1,4 @@
-%h1 Import Subscribers
+%h1 #{@mailing_list.name} - Import Subscribers
 
 = simple_form_for(@mailing_list, url: import_mailing_list_path(@mailing_list)) do |f|
   = f.error_notification
