@@ -1,11 +1,14 @@
 class Subscription < ActiveRecord::Base
   has_and_belongs_to_many :mailing_lists, -> { uniq }
+  has_many :deliveries, class_name: 'Smailer::Models::FinishedMail'
+
   validates_uniqueness_of :email
   validates_format_of :email, :with => /@/
 
   after_create :generate_mail_key
   after_create :send_confirmation_email
   attr_accessor :importing
+
 
   def self.confirmed
     where(confirmed: true)
@@ -47,7 +50,13 @@ class Subscription < ActiveRecord::Base
     SubscriptionMailer.delay.welcome_email(self.id)
   end
 
+  def bounces_count
+    deliveries.sum(:bounces_count)
+  end
 
+  def complaints_count
+    deliveries.sum(:complaints_count)
+  end
 
   def subscription_status
     subscribed? ? 'subscribed' : 'unsubscribed'

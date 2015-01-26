@@ -2,16 +2,22 @@ require 'spec_helper'
 
 describe Delivery do
   let(:delivery) {
-    delivery = FactoryGirl.build(:delivery)
-    sub = FactoryGirl.create(:subscription, email: delivery.to)
-    sub.mailing_lists << delivery.mail_campaign.mailing_list
+    sub = FactoryGirl.create(:subscription, email: 'test@test.com')
+    campaign = FactoryGirl.create(:campaign)
+    sub.mailing_lists << campaign.mailing_list
     sub.save!
 
-    delivery.subscription = sub
+    delivery = FactoryGirl.build(:delivery, to: sub.email, mail_campaign: campaign)
     delivery.save!
-
     delivery
   }
+
+  context 'on create' do
+    it 'should set subscription' do
+      delivery.subscription.should_not == nil
+      delivery.subscription.deliveries.should include(delivery)
+    end
+  end
 
   context 'with 1 or more complaints' do
     it "unsubscribes the subscription" do
@@ -26,12 +32,22 @@ describe Delivery do
 
   context 'with 2 or more bounces' do
     it "unsubscribes the subscription" do
-      delivery.subscription.subscribed.should == true
+      subscription = delivery.subscription
+
+      subscription.subscribed.should == true
 
       delivery.bounce!
-      delivery.bounce!
 
-      delivery.subscription.subscribed.should == false
+      subscription.subscribed.should == true
+
+      delivery2 = FactoryGirl.build(:delivery, mail_campaign: delivery.campaign, to: delivery.to )
+      delivery2.save!
+
+      delivery2.subscription.should == subscription
+
+      delivery2.bounce!
+
+      subscription.reload.subscribed.should == false
     end
   end
 
