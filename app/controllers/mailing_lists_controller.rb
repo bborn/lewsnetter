@@ -16,8 +16,8 @@ class MailingListsController < ApplicationController
       format.json {
         active_sum=0
         render json: [
-            {name: "Active", data: @mailing_list.active_subscriptions.group_by_week(:created_at).order("week asc").count.map { |x,y| { x => (active_sum += y)} }.reduce({}, :merge)},
-            {name: "Unsubscribed", data: @mailing_list.subscriptions.where(subscribed: false).group_by_week(:updated_at).order("week asc").count}
+            {name: "Active", data: @mailing_list.active_subscriptions.group_by_month(:created_at).order("month asc").count.map { |x,y| { x => (active_sum += y)} }.reduce({}, :merge)},
+            {name: "Unsubscribed", data: @mailing_list.subscriptions.where(subscribed: false).group_by_month(:updated_at).order("month asc").count}
           ]
 
       }
