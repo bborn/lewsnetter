@@ -58,6 +58,15 @@ class Subscription < ActiveRecord::Base
     deliveries.sum(:complaints_count)
   end
 
+  def opens_count
+    deliveries.where("opens_count IS NOT NULL").count
+  end
+
+  def hit_rate
+    return nil if deliveries.count == 0
+    opens_count.to_f / deliveries.count
+  end
+
   def subscription_status
     subscribed? ? 'subscribed' : 'unsubscribed'
   end

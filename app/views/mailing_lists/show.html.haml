@@ -17,7 +17,8 @@
 
     - @subscriptions.each do |sub|
       %tr
-        %td= sub.name
+        %td
+          = sub.name
         %td= sub.email
         %td
           =sub.subscribed? ? 'Subscribed' : 'Unsubscribed'
