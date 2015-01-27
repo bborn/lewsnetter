@@ -1,8 +1,18 @@
+module Smailer
+  module Models
+    class FinishedMail < ActiveRecord::Base
+      before_create :set_subscription
+      belongs_to :subscription, inverse_of: :deliveries
+      def set_subscription
+        self.subscription = Subscription.find_by_email(self.to)
+      end
+    end
+  end
+end
+
 class Delivery < Smailer::Models::FinishedMail
   MAX_BOUNCES = 2
   MAX_COMPLAINTS = 1
-  before_create :set_subscription
-  belongs_to :subscription, inverse_of: :deliveries
 
   # def see!(request)
   #   self.ip_address = request.remote_ip if ip_address.blank?
@@ -62,10 +72,6 @@ class Delivery < Smailer::Models::FinishedMail
     update_attributes({complaints_count: new_count})
 
     subscription.unsubscribe! if subscription.complaints_count >= MAX_COMPLAINTS
-  end
-
-  def set_subscription
-    self.subscription = Subscription.find_by_email(self.to)
   end
 
   rails_admin do
