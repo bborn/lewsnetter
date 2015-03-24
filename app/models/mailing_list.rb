@@ -32,19 +32,23 @@ class MailingList < Smailer::Models::MailingList
 
   def import_rows(rows)
     rows.each do |row|
-      sub = Subscription.find_or_initialize_by(email: row[:email])
-      sub.created_at = DateTime.parse(row[:created_at]) if row[:created_at]
-      sub.name       = row[:name]
-      sub.importing  = true
-      if sub.new_record?
-        sub.confirmed  ||= true
-        sub.subscribed ||= true
-      end
-      sub.save
-      #don't send confirmation e-mail!!
-
-      self.subscriptions << sub
+      self.delay.import_row(row)
     end
+  end
+
+  def import_row(row)
+    sub = Subscription.find_or_initialize_by(email: row[:email])
+    sub.created_at = DateTime.parse(row[:created_at]) if row[:created_at]
+    sub.name       = row[:name]
+    sub.importing  = true
+    if sub.new_record?
+      sub.confirmed  ||= true
+      sub.subscribed ||= true
+    end
+    sub.save
+    #don't send confirmation e-mail!!
+
+    self.subscriptions << sub
   end
 
 end
