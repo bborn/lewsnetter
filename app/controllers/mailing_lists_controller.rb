@@ -17,7 +17,7 @@ class MailingListsController < ApplicationController
         period = params[:period] || 12
 
         active_scope = @mailing_list.active_subscriptions
-        active_sum = active_scope.where("created_at > ?", period.weeks.ago ).count
+        active_sum = active_scope.where("created_at < ?", period.weeks.ago ).count
 
         unsubscribed_scope = @mailing_list.subscriptions.where(subscribed: false)
 
