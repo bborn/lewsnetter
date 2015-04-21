@@ -90,7 +90,7 @@ class MailingList < Smailer::Models::MailingList
 
   def import_row(row)
     email = ActiveSupport::JSON.encode row[:email]
-    name  = ActiveSupport::JSON.encode(row[:name])
+    name  = ActiveSupport::JSON.encode row[:name]
 
     sub = Subscription.find_or_initialize_by(email: email)
     sub.created_at = DateTime.parse(row[:created_at]) if row[:created_at]
