@@ -17,7 +17,8 @@ gem 'kaminari'
 gem 'bootstrap-kaminari-views'
 gem "chartkick"
 gem 'groupdate'
-
+gem 'heuristics'
+gem "chronic"
 
 #
 # PLATFORM SPECIFIC
