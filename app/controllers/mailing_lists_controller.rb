@@ -14,10 +14,16 @@ class MailingListsController < ApplicationController
     respond_to do |format|
       format.html
       format.json {
-        active_sum=0
+        period = params[:period] || 12
+
+        active_scope = @mailing_list.active_subscriptions
+        active_sum = active_scope.where("created_at > ?", period.weeks.ago ).count
+
+        unsubscribed_scope = @mailing_list.subscriptions.where(subscribed: false)
+
         render json: [
-            {name: "Active", data: @mailing_list.active_subscriptions.where("created_at > ?", 1.year.ago).group_by_week(:created_at).order("week asc").count.map { |x,y| { x => (active_sum += y)} }.reduce({}, :merge)},
-            {name: "Unsubscribed", data: @mailing_list.subscriptions.where("created_at > ?", 1.year.ago).where(subscribed: false).group_by_week(:updated_at).order("week asc").count}
+            {name: "Active", data: active_scope.group_by_week(:created_at, last: period).count.map { |x,y| { x => (active_sum += y)} }.reduce({}, :merge)},
+            {name: "Unsubscribed", data: unsubscribed_scope.group_by_week(:updated_at, last: period).count }
           ]
 
       }
