@@ -11,6 +11,8 @@
   %tbody
     - @campaigns.each do |campaign|
       %tr
+        %td.col-md-1
+          = campaign.created_at
         %td.col-md-2
           = campaign.name
         %td.col-md-2
