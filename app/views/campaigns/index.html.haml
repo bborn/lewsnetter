@@ -34,6 +34,7 @@
             -if can? :destroy, campaign
               = link_to 'Destroy', campaign, :method => :delete, :data => { :confirm => 'Are you sure?' }, class: "btn btn-danger"
 
+  = paginate @campaigns, theme: 'twitter-bootstrap-3'
 %br
 
 = link_to 'New Campaign', new_campaign_path

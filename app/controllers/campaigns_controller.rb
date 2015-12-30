@@ -9,7 +9,7 @@ class CampaignsController < ApplicationController
 
   # GET /campaigns
   def index
-    @campaigns = Campaign.all
+    @campaigns = Campaign.all.page(params[:page]).per(params[:per]||10)
   end
 
   # GET /campaigns/1
