@@ -3,6 +3,7 @@
 %table.table.table-striped
   %thead
     %tr
+      %td Date
       %th Name
       %th Subject
       %th Status
@@ -12,7 +13,7 @@
     - @campaigns.each do |campaign|
       %tr
         %td.col-md-1
-          = campaign.created_at
+          = campaign.created_at.to_s(:db)
         %td.col-md-2
           = campaign.name
         %td.col-md-2
