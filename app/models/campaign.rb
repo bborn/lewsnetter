@@ -168,7 +168,9 @@ class Campaign < Smailer::Models::MailCampaign
 
   def add_ga_tracking(html)
     # add tracking pixel
-    html = html.gsub("</body>", "<img src='http://#{ENV['MAIL_HOST']}/opened?key=%{message_key}' ></body>")
+    px_url = "https://#{ENV['MAIL_HOST']}/opened?key=%{message_key}'"
+    html = html.gsub("</body>", "<style>@media print{ #_t { background-image: url('#{px_url}');}} div.OutlookMessageHeader {background-image:url('#{px_url}')} table.moz-email-headers-table {background-image:url('#{px_url}')} blockquote #_t {background-image:url('#{px_url}')} #MailContainerBody #_t {background-image:url('#{px_url}')}</style><div id='_t'></div><img src='#{px_url}' width='1' height='1' border='0' /></body>")
+    # <img src='https://#{ENV['MAIL_HOST']}/opened?key=%{message_key}' >")
 
     # add utm_params to links
     html = html.gsub(/href=[\'\"](.*?)[\'\"]/){|match|
