@@ -52,7 +52,6 @@
     "heroku-postgresql",
     "memcachier:dev",
     "newrelic:wayne",
-    "pgbackups:plus",
     "redistogo:nano"
   ]
 }
