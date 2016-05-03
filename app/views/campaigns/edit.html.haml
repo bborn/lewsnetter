@@ -21,7 +21,7 @@
 
         = f.association :template, as: :select
 
-        .hiddens
+        .hidden
           = f.input :content_json
 
         -if @campaign.content_json

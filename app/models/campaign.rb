@@ -126,7 +126,7 @@ class Campaign < Smailer::Models::MailCampaign
 
     hash = JSON.parse(self.content_json)
     hash.each do |key, value|
-      html_doc.at_css("##{key}").inner_html = value['value']
+      html_doc.at_css("##{key}").inner_html = value
     end
 
     html_string = html_doc.to_s
