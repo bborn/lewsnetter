@@ -46,6 +46,21 @@
       "description": "Your SES smtp username",
       "value": "",
       "required": false
+    },
+    "S3_ACCESS_KEY_ID": {
+      "description": "Your S3 access key id",
+      "value": "",
+      "required": false
+    },
+    "S3_SECRET_ACCESS_KEY": {
+      "description": "Your S3 secrect access key",
+      "value": "",
+      "required": false
+    },
+    "S3_BUCKET_NAME": {
+      "description": "Your S3 bucket name",
+      "value": "",
+      "required": false
     }
   },
   "addons": [

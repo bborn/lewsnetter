@@ -6,8 +6,8 @@
     %title= content_for?(:title) ? yield(:title) : I18n.t('brand.name')
     %meta{content: (content_for?(:description) ? yield(:description) : I18n.t('brand.name')), name: 'description'}
 
-    = stylesheet_link_tag 'medium-editor/medium-editor', media: 'all', 'data-turbolinks-track' => true
-    = stylesheet_link_tag 'medium-editor/themes/default', media: 'all', 'data-turbolinks-track' => true
+    -# = stylesheet_link_tag 'medium-editor/medium-editor', media: 'all', 'data-turbolinks-track' => true
+    -# = stylesheet_link_tag 'medium-editor/themes/default', media: 'all', 'data-turbolinks-track' => true
     = stylesheet_link_tag 'font-awesome', media: 'all', 'data-turbolinks-track' => true
 
     /[if lt IE 9]

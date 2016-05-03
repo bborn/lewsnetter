@@ -1,8 +1,7 @@
 #= require jquery_2
 #= require jquery_ujs
 #= require bootstrap
-#= require medium-editor
-#= require mediumbutton
+#= require ckeditor/init
 #= require_self
 
 class @Editor
@@ -10,75 +9,49 @@ class @Editor
     self = @
     @boundTextArea
 
-  initMedium: ->
-    @medium = new MediumEditor(@selector,
-      firstHeader: "h1"
-      secondHeader: "h2"
-      cleanPastedHTML: true
-      placeholder: ''
-      buttonLabels : 'fontawesome'
-      buttons: [
-        'bold'
-        'italic'
-        'underline'
-        'anchor'
-        'header1'
-        'header2'
-        'quote'
-        'image'
-        'newline'
-      ]
-      extensions: {
-        'newline': @insertNewLine()
-      }
+  initCkeditor: (opts)->
+    CKEDITOR.disableAutoInline = true
+    CKEDITOR.dtd.$editable.td = 1
 
-    )
+    $(@selector).each (i, elm)->
+      $(elm).attr('contenteditable', true)
+      conf = {toolbar: 'mini'}
+      if opts.readOnly
+        conf.readOnly = true
+      CKEDITOR.inline( elm, conf)
 
-  insertNewLine : ->
-    thiz = @
-    button = new MediumButton(
-      label: "<i class=\"fa fa-level-down\"></i>"
-      action: (html, mark) ->
-        parentNode = thiz.medium.findMatchingSelectionParent((el) ->
-          $(el).css("display") is "block"
-        )
-        console.log(parentNode)
-        $(parentNode).before("<p>New paragraph</p>")
-        thiz.clearSelection()
-        thiz.medium.hideToolbarActions()
-        html
-    )
-    button
-
+  deactivate: ->
+    for n, instance of CKEDITOR.instances
+      console.log instance
+      instance.setReadOnly()
 
   serialize: ->
-    @medium.serialize()
+    json = {}
+    for n, instance of CKEDITOR.instances
+      json[n] = instance.getData()
+
+    json
 
   loadContents: (json) ->
-    for element in @medium.elements
+    for n, instance of CKEDITOR.instances
       #load the contents into the template
-      if json[$(element).attr("id")]
-        $(element).html json[$(element).attr("id")].value
+      if json[n]
+        instance.setData json[n]
 
   replaceHTML: (newHtml) ->
     if confirm('This will replace any content you\'ve already added. Are you sure?')
-      $(@medium.elements[0]).html newHtml
+      CKEDITOR.instances[Object.keys(CKEDITOR.instances)[0]].setData newHtml
       if @boundTextArea
-        json_string = JSON.stringify(@medium.serialize())
+        json_string = JSON.stringify(@serialize())
         $(@boundTextArea).val json_string
     return
 
   bindToTextArea: (textArea) ->
+    console.log textArea
     @boundTextArea = textArea
     #listen for changes and update the form
-    for element in @medium.elements
-      $(element).on "input", =>
-        json_string = JSON.stringify(@medium.serialize())
+    for name, instance of CKEDITOR.instances
+      instance.on 'change', ()=>
+        json_string = JSON.stringify(@serialize())
         $(textArea).val json_string
         return
-
-  clearSelection : ->
-    if document.selection
-      document.selection.empty()
-    else window.getSelection().removeAllRanges()  if window.getSelection
-    return

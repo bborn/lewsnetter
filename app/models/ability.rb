@@ -12,6 +12,10 @@ class Ability
     can :manage, User, id: user.id
     can :manage, Authentication, user_id: user.id
 
+    can :access, :ckeditor   # needed to access Ckeditor filebrowser
+    can [:read, :create, :destroy], Ckeditor::Picture
+    can [:read, :create, :destroy], Ckeditor::AttachmentFile        
+
     can :manage, Campaign
     cannot :destroy, Campaign
 

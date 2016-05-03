@@ -24,7 +24,7 @@
 # See avatar.scss and _avatar.html.haml
 #= require imagesloaded
 #= require avatar.errors
-#= require medium-editor
+# require medium-editor
 #= require jsapi
 #= require chartkick
 #= require codemirror

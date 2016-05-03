@@ -21,7 +21,7 @@
 
         = f.association :template, as: :select
 
-        .hidden
+        .hiddens
           = f.input :content_json
 
         -if @campaign.content_json
@@ -62,10 +62,9 @@
     editor_iframe = $('iframe')[0];
 
     $(editor_iframe).load(function(){
-      content_json = #{@campaign.content_json}
+      content_json = #{@campaign.content_json.blank? ? "{}" : @campaign.content_json};
 
       editor = this.contentWindow.window.editor;
-
       editor.loadContents(content_json);
 
       textarea = $("#campaign_content_json")[0];

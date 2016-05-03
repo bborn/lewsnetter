@@ -5,21 +5,14 @@
   :plain
     $(function() {
       window.editor = new Editor("#email_content .editable");
-      window.editor.initMedium()
+      window.editor.initCkeditor({readOnly: #{params[:editable].blank?}})
     });
-
-  -if params[:editable].blank?
-    :plain
-      $(function() {
-        window.editor.medium.deactivate();
-      });
 
 
   :plain
     $(function() {
       $('#email_content').click(function(e){
         if($(e.target).hasClass('editable')){
-
         } else {
           e.preventDefault();
           e.stopPropagation();

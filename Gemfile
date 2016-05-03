@@ -7,7 +7,12 @@ gem 'aws-ses'
 gem 'aasm'
 gem "hirefire-resource"
 
-gem 'medium-editor-rails'
+# gem 'medium-editor-rails'
+gem 'ckeditor'
+gem 'mini_magick'
+gem 'fog'
+gem "fog-aws"
+gem 'carrierwave'
 gem 'codemirror-rails'
 gem 'html_to_plain_text'
 gem 'smarter_csv'
@@ -171,4 +176,3 @@ group :production do
   gem 'unicorn'
   gem 'rails_12factor'          # https://devcenter.heroku.com/articles/rails4
 end
-

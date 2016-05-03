@@ -238,7 +238,7 @@ class Campaign < Smailer::Models::MailCampaign
     html = ""
 
     JSON.parse(content_json).each do |key, value|
-      html << value['value']
+      html << value
     end
 
     HtmlToPlainText.plain_text(html)
