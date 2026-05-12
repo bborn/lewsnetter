@@ -5,6 +5,18 @@ Rails.application.routes.draw do
   # healthcheck wired correctly.
   get "up" => "rails/health#show", as: :rails_health_check
 
+  # Public signup lockdown. Lewsnetter is in private alpha; only invited
+  # users (via the BulletTrain invitation flow at /account/teams/:id/
+  # invitations/new) can create an account. The Devise sign-up form +
+  # POST endpoint are both shadowed to a redirect.
+  #
+  # To open the gates: set LEWSNETTER_PUBLIC_SIGNUPS=true in kamal env and
+  # redeploy. Sign-in / password reset / invitations are unaffected.
+  unless ActiveModel::Type::Boolean.new.cast(ENV["LEWSNETTER_PUBLIC_SIGNUPS"])
+    get "/users/sign_up", to: redirect("/users/sign_in?signup_disabled=1")
+    post "/users", to: redirect("/users/sign_in?signup_disabled=1")
+  end
+
   # Public unsubscribe endpoint. Mounted BEFORE the BulletTrain engines so it
   # can be hit without authentication. Both GET (link click) and POST
   # (RFC 8058 one-click) hit the same controller.
