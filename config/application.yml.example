@@ -1,3 +1,7 @@
 BASE_URL: http://localhost:3000
 MARKETING_SITE_URL: /account
 # STRIPE_SECRET_KEY: ...
+
+# Hide BulletTrain's "Creative Concept" / "Tangible Thing" example domain objects.
+HIDE_THINGS: "true"
+HIDE_EXAMPLES: "true"

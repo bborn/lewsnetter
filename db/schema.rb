@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2025_11_11_175505) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_12_080400) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -82,6 +82,44 @@ ActiveRecord::Schema[8.1].define(version: 2025_11_11_175505) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["addressable_type", "addressable_id"], name: "index_addresses_on_addressable"
+  end
+
+  create_table "campaigns", force: :cascade do |t|
+    t.integer "team_id", null: false
+    t.bigint "template_id"
+    t.bigint "segment_id"
+    t.integer "sender_address_id"
+    t.string "subject"
+    t.string "preheader"
+    t.text "body_mjml"
+    t.text "body_html"
+    t.string "status", default: "draft", null: false
+    t.datetime "scheduled_for"
+    t.datetime "sent_at"
+    t.jsonb "stats", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["segment_id"], name: "index_campaigns_on_segment_id"
+    t.index ["sender_address_id"], name: "index_campaigns_on_sender_address_id"
+    t.index ["team_id", "scheduled_for"], name: "index_campaigns_on_team_id_and_scheduled_for"
+    t.index ["team_id", "status"], name: "index_campaigns_on_team_id_and_status"
+    t.index ["team_id"], name: "index_campaigns_on_team_id"
+    t.index ["template_id"], name: "index_campaigns_on_template_id"
+  end
+
+  create_table "events", force: :cascade do |t|
+    t.integer "team_id", null: false
+    t.bigint "subscriber_id", null: false
+    t.string "name", null: false
+    t.datetime "occurred_at", null: false
+    t.jsonb "properties", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["subscriber_id", "name"], name: "index_events_on_subscriber_id_and_name"
+    t.index ["subscriber_id"], name: "index_events_on_subscriber_id"
+    t.index ["team_id", "name"], name: "index_events_on_team_id_and_name"
+    t.index ["team_id", "occurred_at"], name: "index_events_on_team_id_and_occurred_at"
+    t.index ["team_id"], name: "index_events_on_team_id"
   end
 
   create_table "integrations_stripe_installations", force: :cascade do |t|
@@ -227,6 +265,37 @@ ActiveRecord::Schema[8.1].define(version: 2025_11_11_175505) do
     t.index ["tangible_thing_id"], name: "index_tangible_things_assignments_on_tangible_thing_id"
   end
 
+  create_table "segments", force: :cascade do |t|
+    t.integer "team_id", null: false
+    t.string "name", null: false
+    t.jsonb "definition", default: {}, null: false
+    t.text "natural_language_source"
+    t.integer "computed_count"
+    t.datetime "last_computed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["team_id", "name"], name: "index_segments_on_team_id_and_name"
+    t.index ["team_id"], name: "index_segments_on_team_id"
+  end
+
+  create_table "subscribers", force: :cascade do |t|
+    t.integer "team_id", null: false
+    t.string "external_id"
+    t.string "email", null: false
+    t.string "name"
+    t.jsonb "custom_attributes", default: {}, null: false
+    t.boolean "subscribed", default: true, null: false
+    t.datetime "unsubscribed_at"
+    t.datetime "complained_at"
+    t.datetime "bounced_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["team_id", "email"], name: "index_subscribers_on_team_id_and_email"
+    t.index ["team_id", "external_id"], name: "index_subscribers_on_team_id_and_external_id", unique: true, where: "(external_id IS NOT NULL)"
+    t.index ["team_id", "subscribed"], name: "index_subscribers_on_team_id_and_subscribed"
+    t.index ["team_id"], name: "index_subscribers_on_team_id"
+  end
+
   create_table "teams", id: :serial, force: :cascade do |t|
     t.string "name"
     t.string "slug"
@@ -235,6 +304,17 @@ ActiveRecord::Schema[8.1].define(version: 2025_11_11_175505) do
     t.boolean "being_destroyed"
     t.string "time_zone"
     t.string "locale"
+  end
+
+  create_table "templates", force: :cascade do |t|
+    t.integer "team_id", null: false
+    t.string "name", null: false
+    t.text "mjml_body"
+    t.text "rendered_html"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["team_id", "name"], name: "index_templates_on_team_id_and_name"
+    t.index ["team_id"], name: "index_templates_on_team_id"
   end
 
   create_table "users", id: :serial, force: :cascade do |t|
@@ -352,6 +432,11 @@ ActiveRecord::Schema[8.1].define(version: 2025_11_11_175505) do
   add_foreign_key "account_onboarding_invitation_lists", "teams"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "campaigns", "segments"
+  add_foreign_key "campaigns", "teams"
+  add_foreign_key "campaigns", "templates"
+  add_foreign_key "events", "subscribers"
+  add_foreign_key "events", "teams"
   add_foreign_key "integrations_stripe_installations", "oauth_stripe_accounts"
   add_foreign_key "integrations_stripe_installations", "teams"
   add_foreign_key "invitations", "account_onboarding_invitation_lists", column: "invitation_list_id"
@@ -369,6 +454,9 @@ ActiveRecord::Schema[8.1].define(version: 2025_11_11_175505) do
   add_foreign_key "scaffolding_completely_concrete_tangible_things", "scaffolding_absolutely_abstract_creative_concepts", column: "absolutely_abstract_creative_concept_id"
   add_foreign_key "scaffolding_completely_concrete_tangible_things_assignments", "memberships"
   add_foreign_key "scaffolding_completely_concrete_tangible_things_assignments", "scaffolding_completely_concrete_tangible_things", column: "tangible_thing_id"
+  add_foreign_key "segments", "teams"
+  add_foreign_key "subscribers", "teams"
+  add_foreign_key "templates", "teams"
   add_foreign_key "users", "oauth_applications", column: "platform_agent_of_id"
   add_foreign_key "webhooks_outgoing_endpoints", "scaffolding_absolutely_abstract_creative_concepts"
   add_foreign_key "webhooks_outgoing_endpoints", "teams"

@@ -1,0 +1,28 @@
+<% team = @team || @team %>
+<% context ||= team %>
+<% collection ||= :subscribers %>
+<% hide_actions ||= false %>
+<% hide_back ||= false %>
+
+<% with_attribute_settings object: subscriber do %>
+  <tr data-id="<%= subscriber.id %>" class="group">
+    <%= render "shared/tables/checkbox", object: subscriber %>
+    <td><%= render 'shared/attributes/text', attribute: :external_id, url: [:account, subscriber] %></td>
+    <td><%= render 'shared/attributes/email', attribute: :email %></td>
+    <td><%= render 'shared/attributes/text', attribute: :name %></td>
+    <td class="text-center"><%= render 'shared/attributes/option', attribute: :subscribed %></td>
+    <%# 🚅 super scaffolding will insert new fields above this line. %>
+    <td><%= render 'shared/attributes/date_and_time', attribute: :created_at %></td>
+    <td class="buttons">
+      <% unless hide_actions %>
+        <% if can? :edit, subscriber %>
+          <%= link_to t('.buttons.shorthand.edit'), [:edit, :account, subscriber], class: 'button-secondary button-smaller' %>
+        <% end %>
+        <% if can? :destroy, subscriber %>
+          <%= button_to t('.buttons.shorthand.destroy'), [:account, subscriber], method: :delete, data: { turbo_confirm: t('.buttons.confirmations.destroy', model_locales(subscriber)) }, class: 'button-secondary button-smaller' %>
+        <% end %>
+        <%# 🚅 super scaffolding will insert new action model buttons above this line. %>
+      <% end %>
+    </td>
+  </tr>
+<% end %>

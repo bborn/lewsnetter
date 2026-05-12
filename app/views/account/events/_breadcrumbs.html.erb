@@ -1,0 +1,8 @@
+<% event ||= @event %>
+<% subscriber ||= @subscriber || event&.subscriber %>
+<%= render 'account/subscribers/breadcrumbs', subscriber: subscriber %>
+<%= render 'account/shared/breadcrumb', label: t('.label'), url: [:account, subscriber, :events] %>
+<% if event&.persisted? %>
+  <%= render 'account/shared/breadcrumb', label: event.label_string, url: [:account, event] %>
+<% end %>
+<%= render 'account/shared/breadcrumbs/actions', only_for: 'events' %>

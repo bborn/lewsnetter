@@ -1,0 +1,117 @@
+en:
+  subscribers: &subscribers
+    label: &label Subscribers
+    breadcrumbs:
+      label: *label
+    navigation:
+      label: *label
+      icon: fal fa-puzzle-piece
+    buttons: &buttons
+      new: Add New Subscriber
+      create: Create Subscriber
+      edit: Edit Subscriber
+      update: Update Subscriber
+      destroy: Remove Subscriber
+      shorthand:
+        edit: Edit
+        destroy: Delete
+      confirmations:
+        # TODO customize for your use-case.
+        destroy: Are you sure you want to remove %{subscriber_name}? This will also remove any child resources and can't be undone.
+    subscriber:
+      buttons: *buttons
+    fields: &fields
+      id:
+        heading: Subscriber ID
+      team_id:
+        heading: Team ID
+      external_id:
+        _: &external_id External ID
+        label: *external_id
+        heading: *external_id
+        api_title: *external_id
+        api_description: *external_id
+      email:
+        _: &email Email
+        label: *email
+        heading: *email
+        api_title: *email
+        api_description: *email
+      name:
+        _: &name Name
+        label: *name
+        heading: *name
+        api_title: *name
+        api_description: *name
+      subscribed:
+        _: &subscribed Subscribed
+        label: *subscribed
+        heading: *subscribed
+        api_title: *subscribed
+        api_description: *subscribed
+        options:
+          yes: "Yes"
+          no: "No"
+      # 🚅 super scaffolding will insert new fields above this line.
+      created_at:
+        _: &created_at Added
+        label: *created_at
+        heading: *created_at
+      updated_at:
+        _: &updated_at Updated
+        label: *updated_at
+        heading: *updated_at
+    api:
+      collection_actions: "Collection Actions for Subscribers"
+      index: "List Subscribers"
+      create: "Add a New Subscriber"
+      member_actions: "Actions for an Individual Subscriber"
+      show: "Retrieve a Subscriber"
+      update: "Update a Subscriber"
+      destroy: "Delete a Subscriber"
+      fields: *fields
+    index:
+      section: "%{teams_possessive} Subscribers"
+      contexts:
+        team:
+          header: Subscribers
+          description: Below is a list of Subscribers that have been added for %{team_name}.
+          description_empty: No Subscribers have been added for %{team_name}.
+      fields: *fields
+      buttons: *buttons
+    show:
+      section: "%{subscriber_name}"
+      header: Subscriber Details
+      description: Below are the details we have for %{subscriber_name}.
+      manage_description: You'll also find options for updating these details or removing %{subscriber_name} from %{team_name} entirely.
+      fields: *fields
+      buttons: *buttons
+    form: &form
+      buttons: *buttons
+      fields: *fields
+    new:
+      section: "New Subscriber for %{team_name}"
+      header: New Subscriber Details
+      description: Please provide the details of the new Subscriber you'd like to add to %{team_name}.
+      form: *form
+    edit:
+      section: "%{subscriber_name}"
+      header: Edit Subscriber Details
+      description: You can update the details or settings for %{subscriber_name} below.
+      form: *form
+    notifications:
+      created: Subscriber was successfully created.
+      updated: Subscriber was successfully updated.
+      destroyed: Subscriber was successfully destroyed.
+  account:
+    subscribers: *subscribers
+  activerecord:
+    attributes:
+      subscriber:
+        external_id: *external_id
+        email: *email
+        name: *name
+        subscribed: *subscribed
+        # 🚅 super scaffolding will insert new activerecord attributes above this line.
+        created_at: *created_at
+        updated_at: *updated_at

@@ -94,3 +94,5 @@ erd.pdf
 CLAUDE.md
 
 # 🚅 add your files to ignore here.
+tmp/qa/
+.playwright-mcp/
