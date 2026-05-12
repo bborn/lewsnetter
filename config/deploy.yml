@@ -27,31 +27,20 @@ servers:
       - 178.156.185.100
     cmd: bundle exec rake solid_queue:start
 
-# Cloudflare proxy is ON in front of this app (orange-cloud). Cloudflare
-# terminates TLS at the edge using their Universal SSL cert. We use SSL
-# mode Full (Strict) on the Cloudflare side, paired with a Cloudflare
-# Origin CA cert installed on Kamal's proxy here. That cert is generated
-# in the Cloudflare dashboard (R2 → SSL/TLS → Origin Server → Create
-# Certificate) and pasted into .kamal/secrets as ORIGIN_CERT + ORIGIN_KEY,
-# which the pre-deploy hook writes to /etc/kamal-proxy/ on the host.
-#
-# Why not Let's Encrypt: HTTP-01 validation can't reach the origin while
-# Cloudflare proxy intercepts traffic, and DNS-01 would need a Cloudflare
-# DNS API token. Origin CA is the right primitive when CF is in front.
+# Cloudflare proxy is ON in front of this app (orange-cloud). For the
+# first deploy we keep things simple: kamal-proxy serves plain HTTP,
+# Cloudflare terminates TLS at the edge in "Flexible" SSL mode. Once
+# the deploy is healthy we'll install the Cloudflare Origin CA cert
+# (stashed in .kamal/secrets as ORIGIN_CERT / ORIGIN_KEY) and flip the
+# CF SSL mode to "Full (Strict)" for end-to-end encryption.
 proxy:
-  ssl: true
+  ssl: false
   host: lewsnetter.whinynil.co
   forward_headers: true
   app_port: 3000
   healthcheck:
     path: /up
     interval: 20
-  # Custom Origin CA cert pair. The pre-connect hook copies these from
-  # secrets to the host. Until ORIGIN_CERT/ORIGIN_KEY are set, the proxy
-  # falls back to a self-signed cert; Cloudflare Full (not strict) is
-  # acceptable in that mode for the first smoke deploy.
-  ssl_certificate_path: /etc/kamal-proxy/origin.pem
-  ssl_certificate_key_path: /etc/kamal-proxy/origin.key
 
 # Credentials for the image registry.
 registry:
