@@ -22,19 +22,22 @@ servers:
       - 178.156.185.100
     options:
       add-host: host.docker.internal:host-gateway
-    labels:
-      traefik.http.routers.lewsnetter.entrypoints: websecure
-      traefik.http.routers.lewsnetter.rule: Host(`lewsnetter.whinynil.co`)
-      traefik.http.routers.lewsnetter.tls.certresolver: letsencrypt
   worker:
     hosts:
       - 178.156.185.100
     cmd: bundle exec rake solid_queue:start
 
-# Kamal's built-in Traefik-based proxy handles TLS termination via
-# Let's Encrypt. Assumes DNS-only (gray cloud) Cloudflare so HTTP-01
-# validation can reach the box. If you flip Cloudflare to proxied mode,
-# switch ssl: false and let Cloudflare handle SSL termination.
+# Cloudflare proxy is ON in front of this app (orange-cloud). Cloudflare
+# terminates TLS at the edge using their Universal SSL cert. We use SSL
+# mode Full (Strict) on the Cloudflare side, paired with a Cloudflare
+# Origin CA cert installed on Kamal's proxy here. That cert is generated
+# in the Cloudflare dashboard (R2 → SSL/TLS → Origin Server → Create
+# Certificate) and pasted into .kamal/secrets as ORIGIN_CERT + ORIGIN_KEY,
+# which the pre-deploy hook writes to /etc/kamal-proxy/ on the host.
+#
+# Why not Let's Encrypt: HTTP-01 validation can't reach the origin while
+# Cloudflare proxy intercepts traffic, and DNS-01 would need a Cloudflare
+# DNS API token. Origin CA is the right primitive when CF is in front.
 proxy:
   ssl: true
   host: lewsnetter.whinynil.co
@@ -43,6 +46,12 @@ proxy:
   healthcheck:
     path: /up
     interval: 20
+  # Custom Origin CA cert pair. The pre-connect hook copies these from
+  # secrets to the host. Until ORIGIN_CERT/ORIGIN_KEY are set, the proxy
+  # falls back to a self-signed cert; Cloudflare Full (not strict) is
+  # acceptable in that mode for the first smoke deploy.
+  ssl_certificate_path: /etc/kamal-proxy/origin.pem
+  ssl_certificate_key_path: /etc/kamal-proxy/origin.key
 
 # Credentials for the image registry.
 registry:
@@ -59,15 +68,17 @@ env:
     BASE_URL: "https://lewsnetter.whinynil.co"
     HIDE_THINGS: "true"
     HIDE_EXAMPLES: "true"
-    # Litestream bucket / endpoint (R2). Account ID is a placeholder until
-    # Bruno provisions the R2 bucket — update before the first real deploy.
+    # Litestream → Cloudflare R2. Bucket `lewsnetter-litestream` was
+    # provisioned in CF account 407493dfba8306ff79bb5cd68f609eb0 (ENAM).
     LITESTREAM_REPLICA_BUCKET: lewsnetter-litestream
-    LITESTREAM_REPLICA_ENDPOINT: https://CLOUDFLARE_R2_ACCOUNT_ID.r2.cloudflarestorage.com
+    LITESTREAM_REPLICA_ENDPOINT: https://407493dfba8306ff79bb5cd68f609eb0.r2.cloudflarestorage.com
     LITESTREAM_REPLICA_REGION: auto
   secret:
     - RAILS_MASTER_KEY
     - LITESTREAM_REPLICA_ACCESS_KEY_ID
     - LITESTREAM_REPLICA_SECRET_ACCESS_KEY
+    - ORIGIN_CERT
+    - ORIGIN_KEY
 
 # Persistent storage for SQLite databases + Active Storage uploads.
 # Bind on the host: /var/lib/docker/volumes/lewsnetter_storage/_data
