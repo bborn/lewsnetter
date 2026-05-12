@@ -33,8 +33,9 @@ RUN apt-get update -qq && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives
 
 # Install MJML CLI globally — `mjml-rails` shells out to this binary at
-# render time. Pinning here keeps the prod render deterministic.
-RUN npm install -g mjml@4.16.1
+# render time. Pin to v5.x (mjml-rails 5.0+ validates against this output
+# format).
+RUN npm install -g mjml@5.2.1
 
 # Install Litestream binary.
 # Hetzner CX/CPX/CCX (x86) maps to amd64. If we ever move to cax* (ARM)
