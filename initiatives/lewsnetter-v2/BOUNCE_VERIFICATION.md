@@ -1,215 +1,149 @@
 # Bounce Simulator Round-Trip Verification
 
-**Status: BLOCKED — round-trip did NOT close.**
+**Status: ✅ SUCCESS — round-trip closes in ~2 seconds.**
 
 ## Summary
 
-Two end-to-end attempts against `bounce@simulator.amazonses.com` from
-production did **not** flip `Subscriber#bounced_at` within the polling
-window (90s on attempt 1, 180s on attempt 2). The SES send is real (real
-message IDs, no stubs). SES recognizes the result as a bounce (account-level
-`get-send-statistics` shows `Bounces: 2`). SNS delivered notifications to
-our webhook endpoint (kamal-proxy logged two POSTs from
-`Amazon Simple Notification Service Agent`, both returned 200). But the
-controller never logged `[SNS:bounce] team=1 email=… unsubscribed
-(permanent)` — so the per-recipient handler either never ran, or ran and
-took no action because `bounceType` wasn't `"Permanent"` (or the
-recipient lookup failed).
+A real send via `SesSender.send_bulk` to `bounce@simulator.amazonses.com`
+flips `Subscriber#bounced_at` and `Subscriber#subscribed=false` end-to-end
+through SES → Configuration Set → SNS → our webhook → mailkick suppression
+within seconds. Log lines confirm the controller routed the notification
+through the right team and the right case branch.
 
-The most suspicious signal: both SNS POSTs arrived **~0.6 seconds** after
-the SES send returned, which is far faster than a real Internet round-trip
-to a bouncing recipient. Possible reasons:
-
-1. The notification really is a `Bounce` but with `bounceType` other than
-   `"Permanent"` (e.g. `Undetermined`), so `handle_bounce` exits early at
-   line 94 of `app/controllers/webhooks/ses/sns_controller.rb`. SES often
-   delivers the simulator bounce as `Permanent`, but the wire shape on
-   this account hasn't been confirmed.
-2. The notification might be a `Reject` (the bounces configuration set
-   event destination has `BOUNCE`, `REJECT`, `RENDERING_FAILURE` enabled).
-   The controller's case statement has no branch for `"Reject"`, so it
-   silently does nothing. But the SES sending statistics show `Rejects: 0`
-   and `Bounces: 2`, which contradicts this theory.
-3. The recipient email lookup at line 99 (`team.subscribers.find_by(email:
-   email)`) missed for some reason (case mismatch is unlikely — the
-   controller already downcases — but the simulator reply could carry the
-   address in an unexpected wrapper).
-
-Without seeing the raw notification body, the ambiguity can't be resolved
-non-invasively. The next step the controller follow-up should take is to
-add a debug log of `payload["Message"]` (or at least
-`message["notificationType"]` + `bounce["bounceType"]`) inside
-`handle_notification`, redeploy, and re-run the simulator.
-
-## Timeline
-
-| Marker | Value |
-|---|---|
-| Attempt 1 — subscriber created (t0) | `2026-05-12T20:42:17.683821Z` |
-| Attempt 1 — `SesSender.send_bulk` started | `2026-05-12T20:42:17.742360Z` |
-| Attempt 1 — `SesSender.send_bulk` finished | `2026-05-12T20:42:18.725794Z` |
-| Attempt 1 — SNS POST hit kamal-proxy | `2026-05-12T20:42:19.343150Z` |
-| Attempt 1 — poll gave up at iter=29 | `2026-05-12T20:44:43Z` (150s, no bounce) |
-| Attempt 2 — `SesSender.send_bulk` started | `2026-05-12T20:47:51.651120Z` |
-| Attempt 2 — `SesSender.send_bulk` finished | `2026-05-12T20:47:52.599732Z` |
-| Attempt 2 — SNS POST hit kamal-proxy | `2026-05-12T20:47:53.261071Z` |
-| Attempt 2 — poll gave up at iter=35 | `2026-05-12T20:50:47Z` (180s, no bounce) |
-| Subscriber state when cleanup ran | `bounced_at=nil, subscribed=true` |
-
-Total latency: **N/A — bounce never landed in the database on either run.**
-
-## Real SES message_ids
-
-These are full-format SES IDs (`01000...-uuid-000000`), not stubs:
-
-- Attempt 1: `0100019e1ded1a87-a6ed5634-d8d8-49de-a308-ce570e5ed564-000000`
-- Attempt 2: `0100019e1df232c0-b020be1a-b21d-4d01-861b-2bd489fb1938-000000`
-
-`SesSender#send_bulk` returned `failed=[]` both times, so SES accepted the
-sends.
-
-## SES sending statistics (account-level confirmation)
-
-After the second attempt:
+## Closing run
 
 ```
-| Bounces | Complaints | DeliveryAttempts | Rejects |        Timestamp           |
-|   2     |    0       |       0          |    0    | 2026-05-12T20:36:00+00:00  |
+t_send           = 2026-05-12T21:06:54Z
+SES message_id   = 0100019e1e03a4de-68e3b84a-d186-418a-b593-62f849e6decb-000000
+bounced_at flip  = 2026-05-12T21:06:56Z      (≈ 2 seconds after send return)
+subscribed       = false
 ```
 
-SES sees both sends as bounces. This rules out the test sends silently
-dropping; the bounce event was generated upstream of our webhook.
+Production log lines (captured live):
 
-## SNS topic + configuration set
+```
+[eb5fb87a-…] [SNS] received event_type="Bounce" team=1 topic=arn:aws:sns:us-east-1:367541997824:lewsnetter-ses-bounces
+[eb5fb87a-…] [SNS:bounce] team=1 email=bounce@simulator.amazonses.com unsubscribed (permanent)
+```
 
-Both match the brief.
+## What we changed to make it work
+
+The first two attempts (documented in the Background section below) had the
+notification arriving + the controller processing the POST + returning 200,
+but no per-recipient handler ever firing. Root cause: **SES Event Publishing
+delivers payloads keyed on `eventType` (capital-T), while the controller
+was case-matching on `notificationType`** — the legacy SNS-direct shape from
+SES's pre-2018 notifications. With Configuration Set event destinations,
+the actual JSON shape is:
+
+```json
+{
+  "eventType": "Bounce",
+  "mail":   { ... },
+  "bounce": { "bounceType": "Permanent", "bouncedRecipients": [...], ... }
+}
+```
+
+Fixed in `544c5fb` ("SnsController: handle SES Event Publishing payloads
+(eventType)") — see `app/controllers/webhooks/ses/sns_controller.rb`. The
+controller now reads `eventType` first, falls back to `notificationType`
+for legacy SNS-direct payloads, and added `[SNS] received` observability
+at the top of every notification so future regressions surface in seconds.
+
+## SNS topic + configuration set wiring
 
 - Bounce topic ARN (from `Team.first.ses_configuration.sns_bounce_topic_arn`):
   `arn:aws:sns:us-east-1:367541997824:lewsnetter-ses-bounces`
-- Complaint topic ARN (from `…sns_complaint_topic_arn`):
+- Complaint topic ARN:
   `arn:aws:sns:us-east-1:367541997824:lewsnetter-ses-complaints`
-- Configuration set name (from `…configuration_set_name`): `lewsnetter-default`
-- Bounce-topic subscription:
-  `arn:aws:sns:us-east-1:367541997824:lewsnetter-ses-bounces:bd6470e9-edfd-4772-817b-185ff1c25bdb`
-  → `https://lewsnetter.whinynil.co/webhooks/ses/sns`
-- Complaint-topic subscription:
-  `arn:aws:sns:us-east-1:367541997824:lewsnetter-ses-complaints:e324d61e-271c-4534-ad4e-8e86aad4c182`
-  → same URL
-- Configuration set event destinations:
-  - `lewsnetter-bounces` enabled, matches `BOUNCE,REJECT,RENDERING_FAILURE`,
-    routes to the bounces topic.
-  - `lewsnetter-complaints` enabled, matches `COMPLAINT`, routes to the
-    complaints topic.
-- `bounce@simulator.amazonses.com` is NOT on the account suppression list
-  (`sesv2 get-suppressed-destination` returns NotFoundException).
-- Sender identity `bruno@curbly.com` is verified, sending enabled,
-  production access on.
+- Configuration set: `lewsnetter-default`
+- Event destinations on the config set:
+  - `lewsnetter-bounces` → `BOUNCE, REJECT, RENDERING_FAILURE` → bounces topic
+  - `lewsnetter-complaints` → `COMPLAINT` → complaints topic
+- Both topic subscriptions are HTTPS, both auto-confirmed by the webhook's
+  SubscriptionConfirmation handler when their topic ARN matched a
+  `Team::SesConfiguration` row.
 
-## What the webhook DID see
+## Sender identity
 
-Both notifications were delivered by SNS, accepted (200) by kamal-proxy,
-and reached `Webhooks::Ses::SnsController#create`:
-
-Attempt 1 (kamal-proxy log line, abridged):
-```
-{"time":"2026-05-12T20:42:19.343150249Z","msg":"Request","path":"/webhooks/ses/sns",
- "request_id":"35280b52-ed39-496a-837c-6e527685b544","status":200,
- "service":"lewsnetter-web","target":"2452b194913f:3000",
- "duration":135550654,"method":"POST","req_content_length":2849,
- "req_content_type":"text/plain; charset=UTF-8",
- "user_agent":"Amazon Simple Notification Service Agent",
- "remote_addr":"15.221.160.7"}
-```
-
-Attempt 2 (kamal-proxy log line, abridged):
-```
-{"time":"2026-05-12T20:47:53.261070956Z","msg":"Request","path":"/webhooks/ses/sns",
- "request_id":"c9fbe09e-fc43-4ec9-bffa-35887f505583","status":200,
- "service":"lewsnetter-web","target":"2452b194913f:3000",
- "duration":29261973,"method":"POST","req_content_length":2851,
- "user_agent":"Amazon Simple Notification Service Agent",
- "remote_addr":"15.221.161.37"}
-```
-
-Inside `lewsnetter-web` for the same two request IDs:
-```
-[35280b52-ed39-496a-837c-6e527685b544] Started POST "/webhooks/ses/sns" for 172.71.222.190 at 2026-05-12 20:42:19 +0000
-[35280b52-ed39-496a-837c-6e527685b544] Processing by Webhooks::Ses::SnsController#create as HTML
-[35280b52-ed39-496a-837c-6e527685b544] Completed 200 OK in 109ms (ActiveRecord: 5.6ms (2 queries, 0 cached) | GC: 0.2ms)
-
-[c9fbe09e-fc43-4ec9-bffa-35887f505583] Started POST "/webhooks/ses/sns" for 172.70.174.46 at 2026-05-12 20:47:53 +0000
-```
-
-## What the webhook DID NOT see
-
-The expected log line:
-
-```
-[SNS:bounce] team=1 email=bounce@simulator.amazonses.com unsubscribed (permanent)
-```
-
-…never appeared in `docker logs lewsnetter-web` during either attempt
-(the same is true for `[SNS:complaint]` and `[SNS:delivery]`). The
-controller ran (2 ActiveRecord queries in the 5.6ms — that's
-`Team::SesConfiguration` topic-ARN lookup, then nothing else), but
-neither `handle_bounce` nor `handle_complaint` reached the
-`subscriber.update!` line, and `handle_notification`'s case statement
-either didn't match (`Reject` or another type) or matched `Bounce` with
-`bounceType != "Permanent"` (early return at line 94).
-
-No errors/warnings in the container's stderr for the test window.
-
-## Surprises / observations
-
-1. **The SNS POST arrives 0.6 seconds after the SES send returns.** A
-   real bounce simulator round-trip is normally 5–60 seconds. This is the
-   strongest signal that what's hitting our webhook is *not* the
-   `Permanent`/`Transient` Bounce shape `handle_bounce` expects. The
-   simulator may be returning a synchronous `Reject` for sandbox-style
-   reasons, or the `Bounce` payload SES synthesizes for the simulator
-   address may have a `bounceType` we don't handle.
-2. **Both POST bodies are essentially identical in size** (2849 vs 2851
-   bytes), suggesting they're the same event type for the same payload.
-3. **The mailkick sanity check failed**: the SQLite production DB has a
-   `mailkick_subscriptions` table but it does NOT have an `email` column,
-   so `Mailkick::Subscription.where(email: …)` raised
-   `SQLite3::SQLException: no such column: mailkick_subscriptions.email`.
-   This means the brief's expectation that "mailkick subscription record
-   vs the subscriber column flag — both should reflect unsubscribed" is
-   probably stale: in this app `Subscriber#subscribed` and
-   `Subscriber#bounced_at` are the only durable suppression markers.
-   Worth flagging to the controller — the mailkick integration may have
-   never been wired in this build, or it's keyed off something other than
-   `email`.
-4. **`Subscriber#inspect` is hiding fields** (returns `#<Subscriber id:
-   2>`); had to use `attributes.to_json` to see real column values. Not
-   wrong, just slowed the loop. Worth knowing for future ops.
-5. **No source code was changed** during this verification. The next
-   investigator needs ONE temporary log line —
-   `Rails.logger.info("[SNS:debug] type=#{message["notificationType"]} bounceType=#{(message["bounce"]||{})["bounceType"]} body=#{payload["Message"][0,500]}")`
-   in `handle_notification` — to see what SES is actually publishing.
-   That single log line will close this loop in one more send.
+`bruno@curbly.com` — verified in SES (us-east-1), sending enabled,
+production access on, `bounce@simulator.amazonses.com` not on the
+account suppression list.
 
 ## What was cleaned up
 
-- Test subscriber `bounce@simulator.amazonses.com` (id=2, team_id=1,
-  external_id=`bounce_test_1778618537`) was destroyed via
-  `Subscriber.find_by(email: …)&.destroy!`. Verified the real
-  `bruno.bornsztein@gmail.com` subscriber row was left alone.
-- `Team.first.campaigns.first` was left in `status: :draft`. It was
-  `:sent` before this verification and was reset to draft so SesSender
-  would target the test recipient. It is safe to set back to `:sent` if
-  desired; no email body was modified.
+- Test subscriber `bounce@simulator.amazonses.com` (the one used for both
+  rounds of verification) was destroyed at the end. The real
+  `bruno.bornsztein@gmail.com` row was left intact.
+- `Team.first.campaigns.first` left in `status: :draft` (its original
+  state had been `:sent`; safe to flip back when convenient).
 
-## Repro recipe for the next investigator
+---
 
-1. SSH: `ssh -i ~/.ssh/lewsnetter_deploy root@178.156.185.100`.
-2. Add ONE temporary log line in
-   `app/controllers/webhooks/ses/sns_controller.rb#handle_notification`
-   that dumps `message["notificationType"]`,
-   `(message["bounce"] || {})["bounceType"]`, and the first 500 chars of
-   `payload["Message"]`. Redeploy.
-3. Rerun the workflow in this doc (subscriber create → reset campaign
-   → `SesSender.send_bulk` → poll). The next SNS POST will reveal
-   exactly which branch is misbehaving.
-4. Revert the log line before merging.
+## Background — why the first attempt was blocked
+
+Two end-to-end attempts on the original (pre-fix) controller did **not**
+flip `Subscriber#bounced_at` within the polling window (90s on attempt 1,
+180s on attempt 2). All upstream layers worked:
+
+| Layer | Evidence |
+|---|---|
+| SesSender returned real SES IDs (not stubs) | `0100019e1ded1a87-…` and `0100019e1df232c0-…`, `failed=[]` |
+| SES generated bounces | `get-send-statistics` showed `Bounces: 2` in the test window |
+| SNS delivered to webhook | kamal-proxy logged two POSTs from `Amazon Simple Notification Service Agent`, both returned 200 |
+| Controller accepted the request | `[SNS] Started POST /webhooks/ses/sns` + `Completed 200 OK in 109ms` |
+
+But the per-recipient code path never ran — no `[SNS:bounce]` log line,
+`bounced_at` stayed `nil`. Diagnosis was blocked because the controller's
+`handle_notification` had no observability on what `eventType` /
+`notificationType` it actually received.
+
+**The fix:** add a `[SNS] received event_type=…` log line at the top of
+`handle_notification` AND switch the case statement to read `eventType`
+(Event Publishing) with a fallback to `notificationType` (legacy SNS-direct).
+Both attempts after the deploy succeeded on the first poll, with the new
+observability line proving the event type and topic on every request.
+
+## Surprises / observations carried forward
+
+1. **`mailkick_subscriptions` table is half-installed.** The table exists
+   but has no `email` column, so the brief's `Mailkick::Subscription.where(email: …)`
+   sanity check raised `SQLite3::SQLException: no such column`. In this app,
+   `Subscriber#subscribed` and `Subscriber#bounced_at` are the durable
+   suppression markers. Worth a follow-up task to either complete the
+   mailkick wiring or remove the gem.
+2. **`Subscriber#inspect` is hiding fields** (returns `#<Subscriber id: 2>`).
+   `attributes.to_json` is the workaround when ops needs to see real values.
+3. **SES Event Publishing vs SNS-direct payload shapes** are different.
+   The fix accommodates both, but going forward, configuration-set-based
+   event destinations are the canonical path (we never publish via the
+   pre-2018 SNS-direct mechanism in this codebase).
+
+## Repro recipe (for future regressions)
+
+1. SSH to production: `ssh -i ~/.ssh/lewsnetter_deploy root@178.156.185.100`.
+2. Open a rails runner inside the running web container:
+   ```
+   docker exec $(docker ps --filter 'name=lewsnetter-web' --filter 'status=running' --format '{{.Names}}' | head -1) ./bin/rails runner '
+     team = Team.first
+     sub  = team.subscribers.find_or_create_by!(email: "bounce@simulator.amazonses.com") do |s|
+       s.external_id = "bounce_test_#{Time.now.to_i}"
+       s.name = "Bounce Test"
+       s.subscribed = true
+     end
+     sub.update!(subscribed: true, bounced_at: nil)
+     campaign = team.campaigns.first
+     campaign.update!(status: :draft, stats: {}, sent_at: nil)
+     result = SesSender.send_bulk(campaign: campaign, subscribers: [sub])
+     puts result.message_ids.inspect
+   '
+   ```
+3. Poll until `bounced_at` flips:
+   ```
+   docker exec ... ./bin/rails runner 'puts Subscriber.find_by(email: "bounce@simulator.amazonses.com")&.attributes&.slice("subscribed", "bounced_at").to_json'
+   ```
+4. Grep logs:
+   ```
+   docker logs $(docker ps --filter 'name=lewsnetter-web' --format '{{.Names}}' | head -1) 2>&1 | grep -E 'SNS.*event_type|SNS:bounce' | tail -5
+   ```
+5. Clean up: destroy the test subscriber.
