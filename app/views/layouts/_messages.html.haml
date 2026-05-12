@@ -1,6 +1,0 @@
-- flash.each do |name, msg|
-  - if msg.is_a?(String) and msg.present?
-    - type = (['info', 'success', 'warning', 'danger'].include?(name.to_s) ? name : 'info')
-    .alert.alert-dismissable{class: "alert-#{type}"}
-      %button.close{'data-dismiss' => 'alert', 'aria-hidden' => true} &times;
-      = msg
