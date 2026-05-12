@@ -8,11 +8,16 @@ test:
 
 amazon:
   service: S3
-  # If you update this, you also have to update `config/environments/production.rb`.
-  access_key_id: <%= ENV['AWS_ACCESS_KEY_ID'] || ENV['BUCKETEER_AWS_ACCESS_KEY_ID'] %>
-  secret_access_key: <%= ENV['AWS_SECRET_ACCESS_KEY'] || ENV['BUCKETEER_AWS_SECRET_ACCESS_KEY'] %>
-  bucket: <%= ENV['AWS_S3_BUCKET'] || ENV['BUCKETEER_BUCKET_NAME'] %>
-  region: <%= ENV['AWS_S3_REGION'] || ENV['BUCKETEER_AWS_REGION'] %>
+  # Cloudflare R2 (S3-compatible). Keys live in
+  # credentials.cloudflare.r2_uploads (see config/credentials.yml.enc).
+  access_key_id: <%= Rails.application.credentials.dig(:cloudflare, :r2_uploads, :access_key_id) %>
+  secret_access_key: <%= Rails.application.credentials.dig(:cloudflare, :r2_uploads, :secret_access_key) %>
+  region: auto
+  bucket: <%= Rails.application.credentials.dig(:cloudflare, :r2_uploads, :bucket) || "lewsnetter-uploads" %>
+  endpoint: <%= Rails.application.credentials.dig(:cloudflare, :r2_uploads, :endpoint) || "https://407493dfba8306ff79bb5cd68f609eb0.r2.cloudflarestorage.com" %>
+  force_path_style: true
+  request_checksum_calculation: when_required
+  response_checksum_validation: when_required
 
 cloudinary:
   service: Cloudinary

@@ -21,8 +21,8 @@ Rails.application.configure do
   # Enable serving of images, stylesheets, and JavaScripts from an asset server.
   # config.asset_host = "http://assets.example.com"
 
-  # Store uploaded files on the local file system (see config/storage.yml for options).
-  config.active_storage.service = :local
+  # Store uploaded files on Cloudflare R2 (S3-compatible). See config/storage.yml.
+  config.active_storage.service = :amazon
 
   # Assume all access to the app is happening through a SSL-terminating reverse proxy.
   config.assume_ssl = true
@@ -101,14 +101,11 @@ Rails.application.configure do
   # part of the Postgres → SQLite swap so background jobs run on the same
   # SQLite-backed queue database.
 
-  if (ENV["AWS_ACCESS_KEY_ID"] || ENV["BUCKETEER_AWS_ACCESS_KEY_ID"]).present?
-    config.active_storage.service = :amazon
-  elsif ENV["CLOUDINARY_URL"].present?
-    config.active_storage.service = :cloudinary
-  else
-    puts "WARNING! : We didn't find an active_storage.service configured so we're falling back to the local store, but it's A VERY BAD IDEA to rely on it in production unless you know what you're doing."
-    config.active_storage.service = :local
-  end
+  # Active Storage is wired to Cloudflare R2 via the `:amazon` service in
+  # config/storage.yml (credentials live in cloudflare.r2_uploads). The legacy
+  # AWS / Bucketeer / Cloudinary env-var sniffing has been replaced because
+  # without it production silently falls back to local disk.
+  config.active_storage.service = :amazon
 
   config.action_mailer.perform_deliveries = true
   config.action_mailer.raise_delivery_errors = true
