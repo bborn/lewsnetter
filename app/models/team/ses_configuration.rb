@@ -18,6 +18,9 @@ class Team::SesConfiguration < ApplicationRecord
 
   validates :region, presence: true
   validates :status, inclusion: {in: STATUSES}
+  validates :unsubscribe_host,
+    format: {with: /\A[a-z0-9.\-]+\z/i, allow_blank: true},
+    length: {maximum: 253}
   # 🚅 add validations above.
 
   # 🚅 add callbacks above.
@@ -42,6 +45,14 @@ class Team::SesConfiguration < ApplicationRecord
   def quota
     return nil unless quota_max_send_24h
     "#{quota_sent_last_24h.to_i} / #{quota_max_send_24h}"
+  end
+
+  # Returns this team's configured unsubscribe_host if present, otherwise the
+  # caller-supplied default. Callers (ApplicationMailer, CampaignRenderer,
+  # UnsubscribeUrlHelper) pass in the app-wide default rather than us
+  # hard-coding "lewsnetter.whinynil.co" in the model.
+  def resolved_unsubscribe_host(default:)
+    unsubscribe_host.presence || default
   end
   # 🚅 add methods above.
 end

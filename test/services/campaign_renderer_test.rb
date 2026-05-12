@@ -85,4 +85,50 @@ class CampaignRendererTest < ActiveSupport::TestCase
     # last_name substitution should resolve to "" rather than leaving {{last_name}}
     refute_includes result.html, "{{last_name}}"
   end
+
+  test "substitutes {{unsubscribe_url}} with a per-recipient signed URL" do
+    @campaign.update!(body_mjml: <<~MJML)
+      <mjml>
+        <mj-body>
+          <mj-section>
+            <mj-column>
+              <mj-text>
+                Hi {{first_name}} —
+                <a href="{{unsubscribe_url}}">unsubscribe</a>
+              </mj-text>
+            </mj-column>
+          </mj-section>
+        </mj-body>
+      </mjml>
+    MJML
+
+    result = CampaignRenderer.new(campaign: @campaign, subscriber: @subscriber).call
+
+    refute_includes result.html, "{{unsubscribe_url}}",
+      "expected {{unsubscribe_url}} token to be substituted"
+    assert_match %r{https://[^"\s]+/unsubscribe/[^"\s]+}, result.html
+  end
+
+  test "{{unsubscribe_url}} substitution honors the team's unsubscribe_host" do
+    @team.build_ses_configuration(
+      region: "us-east-1",
+      status: "verified",
+      unsubscribe_host: "email.influencekit.com"
+    ).save!
+
+    @campaign.update!(body_mjml: <<~MJML)
+      <mjml>
+        <mj-body>
+          <mj-section>
+            <mj-column>
+              <mj-text><a href="{{unsubscribe_url}}">u</a></mj-text>
+            </mj-column>
+          </mj-section>
+        </mj-body>
+      </mjml>
+    MJML
+
+    result = CampaignRenderer.new(campaign: @campaign, subscriber: @subscriber.reload).call
+    assert_includes result.html, "email.influencekit.com/unsubscribe/"
+  end
 end

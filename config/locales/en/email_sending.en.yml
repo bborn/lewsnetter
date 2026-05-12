@@ -32,6 +32,11 @@ en:
         _: &sns_complaint SNS Complaint Topic ARN
         label: *sns_complaint
         heading: *sns_complaint
+      unsubscribe_host:
+        _: &unsubscribe_host Unsubscribe Host
+        label: *unsubscribe_host
+        heading: *unsubscribe_host
+        help: "Optional. CNAME this hostname to lewsnetter.whinynil.co in your DNS for branded unsubscribe URLs."
       status:
         _: &status SES Status
         label: *status
@@ -63,6 +68,9 @@ en:
         sns:
           header: SNS Topic ARNs (optional)
           description: Configure SES to publish bounce and complaint notifications to these topics. The public webhook lives at %{webhook_url}.
+        unsubscribe:
+          header: Unsubscribe Host (optional)
+          description: "Optional. CNAME this hostname to lewsnetter.whinynil.co in your DNS for branded unsubscribe URLs that share organizational identity with your From domain (better deliverability)."
         identities:
           header: Verified Sending Identities
           description: Tick an identity to add it as a Sender Address for this team.
@@ -101,6 +109,7 @@ en:
         region: *region
         sns_bounce_topic_arn: *sns_bounce
         sns_complaint_topic_arn: *sns_complaint
+        unsubscribe_host: *unsubscribe_host
         status: *status
         sandbox: *sandbox
         last_verified_at: *last_verified_at

@@ -67,7 +67,8 @@ class CampaignRenderer
       first_name: first.to_s,
       last_name: last.to_s,
       email: @subscriber.email.to_s,
-      external_id: @subscriber.external_id.to_s
+      external_id: @subscriber.external_id.to_s,
+      unsubscribe_url: UnsubscribeUrlHelper.url_for(subscriber: @subscriber)
     }
 
     custom = (@subscriber.custom_attributes || {}).each_with_object({}) do |(k, v), h|

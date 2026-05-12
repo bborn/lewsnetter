@@ -97,7 +97,8 @@ class Account::EmailSendingController < Account::ApplicationController
       :encrypted_secret_access_key,
       :region,
       :sns_bounce_topic_arn,
-      :sns_complaint_topic_arn
+      :sns_complaint_topic_arn,
+      :unsubscribe_host
     )
   end
 

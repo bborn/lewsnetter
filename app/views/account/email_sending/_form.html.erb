@@ -42,6 +42,17 @@
                    options: {placeholder: "arn:aws:sns:us-east-1:…:complaint"} %>
       <% end %>
 
+      <h3 class="text-lg font-bold mt-6 mb-2"><%= t('email_sending.show.sections.unsubscribe.header') %></h3>
+      <p class="text-sm text-gray-500 mb-4">
+        <%= t('email_sending.show.sections.unsubscribe.description') %>
+      </p>
+
+      <% with_field_settings form: form do %>
+        <%= render 'shared/fields/text_field',
+                   method: :unsubscribe_host,
+                   options: {placeholder: "email.example.com"} %>
+      <% end %>
+
       <div class="buttons mt-4">
         <%= form.submit t('email_sending.buttons.update'), class: "button" %>
       </div>

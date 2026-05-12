@@ -35,7 +35,18 @@ servers:
 # CF SSL mode to "Full (Strict)" for end-to-end encryption.
 proxy:
   ssl: false
-  host: lewsnetter.whinynil.co
+  # Multi-host: kamal-proxy will accept requests for any of these hostnames
+  # and route to the same Rails app. The primary host is for the platform
+  # itself; additional hosts are tenant-branded unsubscribe subdomains
+  # (CNAME'd by the tenant to lewsnetter.whinynil.co and recorded in
+  # Team::SesConfiguration#unsubscribe_host).
+  #
+  # Adding a new tenant unsubscribe host = append it here + redeploy.
+  # Long-term we'd want this to be data-driven, but for MVP a static list
+  # is fine while we have one tenant.
+  hosts:
+    - lewsnetter.whinynil.co
+    - email.influencekit.com
   forward_headers: true
   app_port: 3000
   healthcheck:
