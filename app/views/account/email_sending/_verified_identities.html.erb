@@ -1,0 +1,44 @@
+<%= render 'account/shared/box', divider: true do |box| %>
+  <% box.title t('email_sending.show.sections.identities.header') %>
+  <% box.description t('email_sending.show.sections.identities.description') %>
+
+  <% box.body do %>
+    <% if identities.any? %>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Identity</th>
+            <th>Type</th>
+            <th>Verified</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% existing_emails = team.sender_addresses.pluck(:email) %>
+          <% identities.each do |identity| %>
+            <tr>
+              <td><%= identity[:identity] %></td>
+              <td><%= identity[:type] %></td>
+              <td><%= identity[:verified] %></td>
+              <td class="text-right">
+                <% if existing_emails.include?(identity[:identity]) %>
+                  <span class="text-gray-500">Imported</span>
+                <% elsif identity[:type] == "EMAIL_ADDRESS" %>
+                  <%= button_to t('email_sending.buttons.import'),
+                                account_team_import_identity_email_sending_path(team),
+                                method: :post,
+                                params: {identity: identity[:identity]},
+                                class: "button-secondary" %>
+                <% else %>
+                  <span class="text-gray-500">Domain — verify per-address in AWS</span>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% else %>
+      <p><%= t('email_sending.show.sections.identities.empty') %></p>
+    <% end %>
+  <% end %>
+<% end %>

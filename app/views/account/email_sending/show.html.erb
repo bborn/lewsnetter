@@ -1,0 +1,63 @@
+<%= render 'account/shared/page' do |page| %>
+  <% page.title t('.section', teams_possessive: possessive_string(@team.name)) %>
+  <% page.body do %>
+
+    <%= render 'account/shared/box', divider: true do |box| %>
+      <% box.title t('.header') %>
+      <% box.description do %>
+        <% if @ses_configuration.verified? %>
+          <%= t('.verified_description',
+                last_verified_at: @ses_configuration.last_verified_at ? l(@ses_configuration.last_verified_at, format: :short) : "—",
+                quota_sent: @ses_configuration.quota_sent_last_24h || 0,
+                quota_max: @ses_configuration.quota_max_send_24h || "—") %>
+        <% elsif @ses_configuration.failed? %>
+          <%= t('.failed_description', error: @ses_configuration.try(:last_verification_error) || "see logs") %>
+        <% elsif @ses_configuration.verifying? %>
+          <%= t('.verifying_description') %>
+        <% else %>
+          <%= t('.unconfigured_description') %>
+        <% end %>
+      <% end %>
+
+      <% box.body do %>
+        <% with_attribute_settings object: @ses_configuration, strategy: :label do %>
+          <%= render 'shared/attributes/text', attribute: :status,
+                     value: t("email_sending.statuses.#{@ses_configuration.status}", default: @ses_configuration.status.to_s.humanize) %>
+          <%= render 'shared/attributes/text', attribute: :region %>
+          <% if @ses_configuration.configured? %>
+            <%= render 'shared/attributes/text', attribute: :encrypted_access_key_id,
+                       value: "•••• #{@ses_configuration.access_key_id_last_four}" %>
+          <% end %>
+          <%= render 'shared/attributes/text', attribute: :sandbox,
+                     value: t("email_sending.sandbox_states.#{@ses_configuration.sandbox? ? "yes" : "no"}") %>
+          <% if @ses_configuration.quota_max_send_24h %>
+            <%= render 'shared/attributes/text', attribute: :quota,
+                       value: "#{@ses_configuration.quota_sent_last_24h.to_i} / #{@ses_configuration.quota_max_send_24h}" %>
+          <% end %>
+          <% if @ses_configuration.last_verified_at %>
+            <%= render 'shared/attributes/text', attribute: :last_verified_at,
+                       value: l(@ses_configuration.last_verified_at, format: :short) %>
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <% box.actions do %>
+        <% if @ses_configuration.configured? && can?(:manage, @ses_configuration) %>
+          <%= button_to t('.buttons.verify'),
+                        account_team_verify_email_sending_path(@team),
+                        method: :post, class: first_button_primary %>
+        <% end %>
+        <%= link_to t('.buttons.docs'), "https://lewsnetter.com/docs/ses",
+                    class: "button-secondary", target: "_blank", rel: "noopener" %>
+        <%= link_to t('global.buttons.back'), [:account, @team], class: "button-secondary" %>
+      <% end %>
+    <% end %>
+
+    <%= render 'account/email_sending/form', team: @team, ses_configuration: @ses_configuration %>
+
+    <% if @verifier_result&.identities&.any? %>
+      <%= render 'account/email_sending/verified_identities',
+                 team: @team, identities: @verifier_result.identities %>
+    <% end %>
+  <% end %>
+<% end %>

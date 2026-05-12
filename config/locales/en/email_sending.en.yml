@@ -1,0 +1,106 @@
+en:
+  email_sending: &email_sending
+    label: &label Email Sending
+    breadcrumbs:
+      label: *label
+    navigation:
+      label: *label
+      icon: ti ti-cloud-upload
+    buttons: &buttons
+      verify: Verify Credentials
+      update: Save Credentials
+      import: Import as Sender Address
+      docs: View setup docs
+    fields: &fields
+      encrypted_access_key_id:
+        _: &access_key_id AWS Access Key ID
+        label: *access_key_id
+        heading: *access_key_id
+      encrypted_secret_access_key:
+        _: &secret_access_key AWS Secret Access Key
+        label: *secret_access_key
+        heading: *secret_access_key
+      region:
+        _: &region AWS Region
+        label: *region
+        heading: *region
+      sns_bounce_topic_arn:
+        _: &sns_bounce SNS Bounce Topic ARN
+        label: *sns_bounce
+        heading: *sns_bounce
+      sns_complaint_topic_arn:
+        _: &sns_complaint SNS Complaint Topic ARN
+        label: *sns_complaint
+        heading: *sns_complaint
+      status:
+        _: &status SES Status
+        label: *status
+        heading: *status
+      sandbox:
+        _: &sandbox Sandbox Mode
+        label: *sandbox
+        heading: *sandbox
+      quota:
+        heading: 24h Send Quota
+      last_verified_at:
+        _: &last_verified_at Last Verified
+        label: *last_verified_at
+        heading: *last_verified_at
+    show:
+      section: "%{teams_possessive} Email Sending"
+      header: Email Sending
+      description: Bring your own AWS SES account. Lewsnetter sends every campaign for %{team_name} through these credentials, so your team's sending reputation stays in your hands.
+      unconfigured_description: No SES credentials configured yet. Paste an AWS access key + secret + region below to get started.
+      verified_description: Verified on %{last_verified_at}. %{quota_sent} of %{quota_max} sends used in the last 24 hours.
+      verifying_description: We're checking your credentials with AWS.
+      failed_description: "Verification failed: %{error}"
+      buttons: *buttons
+      fields: *fields
+      sections:
+        credentials:
+          header: AWS Credentials
+          description: Stored encrypted at rest. Only the last four characters of the access key are shown after saving.
+        sns:
+          header: SNS Topic ARNs (optional)
+          description: Configure SES to publish bounce and complaint notifications to these topics. The public webhook lives at %{webhook_url}.
+        identities:
+          header: Verified Sending Identities
+          description: Tick an identity to add it as a Sender Address for this team.
+          empty: No verified identities yet. In your AWS console, verify a domain or email in SES, then click Verify Credentials again.
+    dashboard_card:
+      header: Email Sending
+      unconfigured: Not configured. Connect AWS SES to start sending.
+      verified: Verified — %{remaining} sends remaining today.
+      failed: "Verification failed: %{error}"
+      sandbox_notice: Your SES account is still in sandbox mode — you can only send to verified addresses.
+      manage: Manage
+    statuses:
+      unconfigured: Not configured
+      verifying: Verifying...
+      verified: Verified
+      failed: Failed
+    sandbox_states:
+      "yes": Sandbox
+      "no": Production
+    notifications:
+      updated: Credentials saved.
+      verified: SES credentials verified.
+      failed: "Verification failed: %{error}"
+      unconfigured: Add AWS credentials before verifying.
+      verifying: Verification in progress.
+      imported: "Added %{email} as a sender address."
+      import_existing: "%{email} is already a sender address."
+      import_blank: Pick an identity to import.
+  account:
+    email_sending: *email_sending
+  activerecord:
+    attributes:
+      team/ses_configuration:
+        encrypted_access_key_id: *access_key_id
+        encrypted_secret_access_key: *secret_access_key
+        region: *region
+        sns_bounce_topic_arn: *sns_bounce
+        sns_complaint_topic_arn: *sns_complaint
+        status: *status
+        sandbox: *sandbox
+        last_verified_at: *last_verified_at

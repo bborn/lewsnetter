@@ -1,15 +1,16 @@
 # SesSender wraps AWS SES v2's SendEmail API. The job owns batching and stats;
 # SesSender owns the per-recipient render + SES call.
 #
-# For MVP each subscriber gets their own rendered html/text/subject — we pay
-# one SES API call per recipient instead of batching with template_data. This
-# keeps the surface area tiny and the rendering correct (variable substitution
-# happens per subscriber in CampaignRenderer). We can switch to SES
-# SendBulkEmail with replacement_template_data later for cost.
+# Per-tenant SES: the client comes from `Ses::ClientFor.call(campaign.team)`
+# which reads that team's `Team::SesConfiguration`. Each tenant brings their
+# own AWS credentials, so reputation is per-tenant and we don't need a global
+# AWS account configured for MVP.
 #
-# In stub mode (no AWS credentials), we log a preview of the rendered HTML and
-# return synthetic message ids so the rest of the pipeline (job, stats, status
-# transitions) can run end-to-end in development.
+# Stub mode: when a team has no SES configured (dev/test or a brand-new
+# tenant) we log a preview and return synthetic message ids so the rest of
+# the pipeline (job, stats, status transitions) runs end-to-end. The
+# `Rails.application.config.ses_client = :stub` override is also honored for
+# tests that want to force stub behavior even when a config exists.
 class SesSender
   Result = Struct.new(:message_ids, :failed, keyword_init: true)
 
@@ -20,9 +21,8 @@ class SesSender
       subscribers = Array(subscribers)
       return Result.new(message_ids: [], failed: []) if subscribers.empty?
 
-      client = Rails.application.config.ses_client
-      stub_mode = client == :stub || client.nil?
-
+      team = campaign.team
+      client, stub_mode = resolve_client(team)
       from_address = build_from_address(campaign)
 
       message_ids = []
@@ -78,6 +78,25 @@ class SesSender
     end
 
     private
+
+    # Returns [client_or_nil, stub_mode_bool]. We're in stub mode when either:
+    #   1. The global override `Rails.application.config.ses_client = :stub`
+    #      is set — preserved so existing tests can force stub mode.
+    #   2. The team has no SES configuration (NotConfigured) — every brand-new
+    #      team starts here until they paste credentials.
+    def resolve_client(team)
+      global = Rails.application.config.respond_to?(:ses_client) ? Rails.application.config.ses_client : nil
+      return [nil, true] if global == :stub
+
+      begin
+        [Ses::ClientFor.call(team), false]
+      rescue Ses::ClientFor::NotConfigured
+        Rails.logger.info(
+          "[SesSender] team #{team.id} has no SES config — running in stub mode."
+        )
+        [nil, true]
+      end
+    end
 
     def build_from_address(campaign)
       if campaign.sender_address&.name.present?

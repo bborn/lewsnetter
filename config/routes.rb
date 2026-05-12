@@ -5,6 +5,12 @@ Rails.application.routes.draw do
   get "/unsubscribe/:token", to: "unsubscribe#update", as: :unsubscribe
   post "/unsubscribe/:token", to: "unsubscribe#update"
 
+  # Public SNS webhook for SES bounce + complaint notifications. Mounted
+  # BEFORE the BulletTrain engines so SNS can hit it without auth. Each
+  # tenant points their SNS topic at this URL; routing back to the right
+  # team happens via Team::SesConfiguration topic ARN lookup.
+  post "/webhooks/ses/sns", to: "webhooks/ses/sns#create"
+
   # See `config/routes/*.rb` to customize these configurations.
   draw "concerns"
   draw "devise"
@@ -98,6 +104,17 @@ Rails.application.routes.draw do
           end
         end
         resources :sender_addresses
+
+        # Singleton "Email Sending" page — there's at most one
+        # Team::SesConfiguration per team. We use member routes rather than
+        # a `resource :email_sending` so the URLs read naturally
+        # (/account/teams/:team_id/email_sending) and we have explicit verbs
+        # for verify + import_identity.
+        get "email_sending", to: "email_sending#show", as: :email_sending
+        patch "email_sending", to: "email_sending#update"
+        put "email_sending", to: "email_sending#update"
+        post "email_sending/verify", to: "email_sending#verify", as: :verify_email_sending
+        post "email_sending/import_identity", to: "email_sending#import_identity", as: :import_identity_email_sending
       end
     end
   end

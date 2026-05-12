@@ -1,0 +1,50 @@
+<%= render 'account/shared/box', divider: true do |box| %>
+  <% box.title t('email_sending.show.sections.credentials.header') %>
+  <% box.description t('email_sending.show.sections.credentials.description') %>
+
+  <% box.body do %>
+    <%= form_with model: ses_configuration,
+                  url: account_team_email_sending_path(team),
+                  method: :patch, class: 'form',
+                  scope: :team_ses_configuration do |form| %>
+      <%= render 'account/shared/forms/errors', form: form %>
+
+      <% with_field_settings form: form do %>
+        <%= render 'shared/fields/text_field',
+                   method: :encrypted_access_key_id,
+                   options: {
+                     placeholder: ses_configuration.configured? ? "•••• #{ses_configuration.access_key_id_last_four} (leave blank to keep)" : "AKIA…",
+                     autocomplete: "off"
+                   } %>
+        <%= render 'shared/fields/password_field',
+                   method: :encrypted_secret_access_key,
+                   options: {
+                     placeholder: ses_configuration.configured? ? "•••• (leave blank to keep)" : "AWS secret key",
+                     autocomplete: "off"
+                   } %>
+        <%= render 'shared/fields/text_field',
+                   method: :region,
+                   options: {placeholder: "us-east-1"} %>
+      <% end %>
+
+      <h3 class="text-lg font-bold mt-6 mb-2"><%= t('email_sending.show.sections.sns.header') %></h3>
+      <p class="text-sm text-gray-500 mb-4">
+        <%= t('email_sending.show.sections.sns.description',
+              webhook_url: request.base_url + "/webhooks/ses/sns") %>
+      </p>
+
+      <% with_field_settings form: form do %>
+        <%= render 'shared/fields/text_field',
+                   method: :sns_bounce_topic_arn,
+                   options: {placeholder: "arn:aws:sns:us-east-1:…:bounce"} %>
+        <%= render 'shared/fields/text_field',
+                   method: :sns_complaint_topic_arn,
+                   options: {placeholder: "arn:aws:sns:us-east-1:…:complaint"} %>
+      <% end %>
+
+      <div class="buttons mt-4">
+        <%= form.submit t('email_sending.buttons.update'), class: "button" %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

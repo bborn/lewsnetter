@@ -1,0 +1,24 @@
+<% ses = team.ses_configuration %>
+<%= render 'account/shared/box' do |box| %>
+  <% box.title t('email_sending.dashboard_card.header') %>
+  <% box.description do %>
+    <% if ses.nil? || !ses.configured? %>
+      <%= t('email_sending.dashboard_card.unconfigured') %>
+    <% elsif ses.verified? %>
+      <% remaining = (ses.quota_max_send_24h.to_i - ses.quota_sent_last_24h.to_i) %>
+      <%= t('email_sending.dashboard_card.verified', remaining: remaining) %>
+      <% if ses.sandbox? %>
+        <br><span class="text-yellow-600"><%= t('email_sending.dashboard_card.sandbox_notice') %></span>
+      <% end %>
+    <% elsif ses.failed? %>
+      <%= t('email_sending.dashboard_card.failed', error: "see logs") %>
+    <% else %>
+      <%= t("email_sending.statuses.#{ses.status}", default: ses.status.to_s.humanize) %>
+    <% end %>
+  <% end %>
+  <% box.actions do %>
+    <%= link_to t('email_sending.dashboard_card.manage'),
+                account_team_email_sending_path(team),
+                class: first_button_primary %>
+  <% end %>
+<% end %>

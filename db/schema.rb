@@ -324,6 +324,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_141635) do
     t.index ["team_id"], name: "index_subscribers_on_team_id"
   end
 
+  create_table "team_ses_configurations", force: :cascade do |t|
+    t.integer "team_id", null: false
+    t.string "encrypted_access_key_id"
+    t.string "encrypted_secret_access_key"
+    t.string "region", default: "us-east-1", null: false
+    t.string "sns_bounce_topic_arn"
+    t.string "sns_complaint_topic_arn"
+    t.string "status", default: "unconfigured", null: false
+    t.integer "quota_max_send_24h"
+    t.integer "quota_sent_last_24h"
+    t.boolean "sandbox", default: true, null: false
+    t.datetime "last_verified_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["sns_bounce_topic_arn"], name: "index_team_ses_configurations_on_sns_bounce_topic_arn", where: "sns_bounce_topic_arn IS NOT NULL"
+    t.index ["sns_complaint_topic_arn"], name: "index_team_ses_configurations_on_sns_complaint_topic_arn", where: "sns_complaint_topic_arn IS NOT NULL"
+    t.index ["team_id"], name: "index_team_ses_configurations_on_team_id", unique: true
+  end
+
   create_table "teams", force: :cascade do |t|
     t.string "name"
     t.string "slug"
@@ -476,6 +495,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_141635) do
   add_foreign_key "segments", "teams"
   add_foreign_key "sender_addresses", "teams"
   add_foreign_key "subscribers", "teams"
+  add_foreign_key "team_ses_configurations", "teams"
   add_foreign_key "users", "oauth_applications", column: "platform_agent_of_id"
   add_foreign_key "webhooks_outgoing_endpoints", "scaffolding_absolutely_abstract_creative_concepts"
   add_foreign_key "webhooks_outgoing_endpoints", "teams"

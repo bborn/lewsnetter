@@ -1,30 +1,14 @@
-# Builds the AWS SES v2 client used by SesSender. Reads credentials from
-# Rails.application.credentials.aws (preferred) or falls back to ENV.
+# Per-tenant SES is configured via Team::SesConfiguration. Each team brings
+# their own AWS credentials and SNS topics. See app/services/ses/client_for.rb
+# for the per-team client factory. This initializer only ensures the SDKs
+# are loaded and that the global stub-override hook is defined.
 #
-# In development, if no credentials are configured, we don't crash — we set
-# Rails.application.config.ses_client = :stub so SesSender knows to log
-# instead of actually calling the API.
+# `Rails.application.config.ses_client` is consulted by SesSender as an
+# override knob for tests — setting it to `:stub` forces stub mode for every
+# send, regardless of per-team config. Unset (`nil`) means SesSender routes
+# through `Ses::ClientFor.call(team)` for each campaign; teams that haven't
+# configured SES still fall through to stub mode at the per-team layer.
 require "aws-sdk-sesv2"
+require "aws-sdk-sns"
 
-Rails.application.config.to_prepare do
-  creds = Rails.application.credentials.aws || {}
-  region = creds[:region] || ENV["AWS_REGION"] || ENV["AWS_DEFAULT_REGION"]
-  access_key_id = creds[:access_key_id] || ENV["AWS_ACCESS_KEY_ID"]
-  secret_access_key = creds[:secret_access_key] || ENV["AWS_SECRET_ACCESS_KEY"]
-
-  if region.present? && access_key_id.present? && secret_access_key.present?
-    Rails.application.config.ses_client = Aws::SESV2::Client.new(
-      region: region,
-      access_key_id: access_key_id,
-      secret_access_key: secret_access_key
-    )
-  else
-    if Rails.env.development? || Rails.env.test?
-      Rails.application.config.ses_client = :stub
-      Rails.logger.info("[SES] No AWS credentials configured — running in stub mode (#{Rails.env}).")
-    else
-      Rails.application.config.ses_client = :stub
-      Rails.logger.warn("[SES] AWS credentials missing in #{Rails.env}; SesSender will operate in stub mode until configured.")
-    end
-  end
-end
+Rails.application.config.ses_client = nil

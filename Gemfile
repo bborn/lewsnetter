@@ -280,6 +280,9 @@ gem "active_hash"
 # Email sending via SES (SendBulkEmail, suppression list, bounce/complaint via SNS).
 gem "aws-sdk-sesv2", "~> 1.0"
 
+# SNS client for confirming subscription handshakes from tenant SNS topics.
+gem "aws-sdk-sns", "~> 1.0"
+
 # Per-list subscription state + one-click unsubscribe + List-Unsubscribe headers + SES suppression sync.
 gem "mailkick"
 

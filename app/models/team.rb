@@ -16,6 +16,7 @@ class Team < ApplicationRecord
 
   # 🚅 add oauth providers above.
 
+  has_one :ses_configuration, class_name: "Team::SesConfiguration", dependent: :destroy
   # 🚅 add has_one associations above.
 
   # 🚅 add scopes above.
