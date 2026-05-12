@@ -67,8 +67,12 @@ RUN apt-get update -qq && \
       python-is-python3 && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives
 
-# Install application gems
+# Install application gems. The Gemfile references a path-vendored gem
+# at vendor/gems/lewsnetter-rails (in-repo until we extract it), so the
+# gemspec + source need to exist in the build context before `bundle install`
+# can resolve dependencies.
 COPY Gemfile Gemfile.lock .ruby-version ./
+COPY vendor/gems/lewsnetter-rails ./vendor/gems/lewsnetter-rails
 RUN bundle install && \
     rm -rf ~/.bundle/ "${BUNDLE_PATH}"/ruby/*/cache "${BUNDLE_PATH}"/ruby/*/bundler/gems/*/.git && \
     bundle exec bootsnap precompile --gemfile

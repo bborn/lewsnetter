@@ -292,8 +292,8 @@ gem "mailkick"
 # MJML → responsive HTML for email templates. Wraps the mjml CLI.
 gem "mjml-rails"
 
-# Inline CSS at send time for clients that strip <style>.
-gem "premailer-rails"
+# `premailer-rails` is already included in Bullet Train's bundle above —
+# no need to duplicate here.
 
 # LLM agent framework (already proven in IK Kit refactor).
 gem "ruby_llm"
