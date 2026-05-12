@@ -1,4 +1,10 @@
 Rails.application.routes.draw do
+  # Rails 8 default health endpoint used by Kamal's proxy + load balancers.
+  # Returns 200 if the app can boot; otherwise 500. BulletTrain's stock
+  # routes.rb doesn't include this — adding it here keeps the deploy
+  # healthcheck wired correctly.
+  get "up" => "rails/health#show", as: :rails_health_check
+
   # Public unsubscribe endpoint. Mounted BEFORE the BulletTrain engines so it
   # can be hit without authentication. Both GET (link click) and POST
   # (RFC 8058 one-click) hit the same controller.
