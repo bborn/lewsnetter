@@ -1,17 +1,17 @@
 en:
   email_templates: &email_templates
-    label: &label EmailTemplates
+    label: &label Email Templates
     breadcrumbs:
       label: *label
     navigation:
       label: *label
       icon: fal fa-puzzle-piece
     buttons: &buttons
-      new: Add New EmailTemplate
-      create: Create EmailTemplate
-      edit: Edit EmailTemplate
-      update: Update EmailTemplate
-      destroy: Remove EmailTemplate
+      new: Add New Email Template
+      create: Create Email Template
+      edit: Edit Email Template
+      update: Update Email Template
+      destroy: Remove Email Template
       shorthand:
         edit: Edit
         destroy: Delete
@@ -22,7 +22,7 @@ en:
       buttons: *buttons
     fields: &fields
       id:
-        heading: EmailTemplate ID
+        heading: Email Template ID
       team_id:
         heading: Team ID
       name:
@@ -47,26 +47,26 @@ en:
         label: *updated_at
         heading: *updated_at
     api:
-      collection_actions: "Collection Actions for EmailTemplates"
-      index: "List EmailTemplates"
-      create: "Add a New EmailTemplate"
-      member_actions: "Actions for an Individual EmailTemplate"
-      show: "Retrieve a EmailTemplate"
-      update: "Update a EmailTemplate"
-      destroy: "Delete a EmailTemplate"
+      collection_actions: "Collection Actions for Email Templates"
+      index: "List Email Templates"
+      create: "Add a New Email Template"
+      member_actions: "Actions for an Individual Email Template"
+      show: "Retrieve a Email Template"
+      update: "Update a Email Template"
+      destroy: "Delete a Email Template"
       fields: *fields
     index:
-      section: "%{teams_possessive} EmailTemplates"
+      section: "%{teams_possessive} Email Templates"
       contexts:
         team:
-          header: EmailTemplates
-          description: Below is a list of EmailTemplates that have been added for %{team_name}.
-          description_empty: No EmailTemplates have been added for %{team_name}.
+          header: Email Templates
+          description: Below is a list of Email Templates that have been added for %{team_name}.
+          description_empty: No Email Templates have been added for %{team_name}.
       fields: *fields
       buttons: *buttons
     show:
       section: "%{email_template_name}"
-      header: EmailTemplate Details
+      header: Email Template Details
       description: Below are the details we have for %{email_template_name}.
       manage_description: You'll also find options for updating these details or removing %{email_template_name} from %{team_name} entirely.
       fields: *fields
@@ -75,19 +75,19 @@ en:
       buttons: *buttons
       fields: *fields
     new:
-      section: "New EmailTemplate for %{team_name}"
-      header: New EmailTemplate Details
-      description: Please provide the details of the new EmailTemplate you'd like to add to %{team_name}.
+      section: "New Email Template for %{team_name}"
+      header: New Email Template Details
+      description: Please provide the details of the new Email Template you'd like to add to %{team_name}.
       form: *form
     edit:
       section: "%{email_template_name}"
-      header: Edit EmailTemplate Details
+      header: Edit Email Template Details
       description: You can update the details or settings for %{email_template_name} below.
       form: *form
     notifications:
-      created: EmailTemplate was successfully created.
-      updated: EmailTemplate was successfully updated.
-      destroyed: EmailTemplate was successfully destroyed.
+      created: Email Template was successfully created.
+      updated: Email Template was successfully updated.
+      destroyed: Email Template was successfully destroyed.
   account:
     email_templates: *email_templates
   activerecord:
