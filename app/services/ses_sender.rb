@@ -24,6 +24,7 @@ class SesSender
       team = campaign.team
       client, stub_mode = resolve_client(team)
       from_address = build_from_address(campaign)
+      configuration_set_name = resolve_configuration_set_name(team)
 
       message_ids = []
       failed = []
@@ -51,7 +52,7 @@ class SesSender
         end
 
         begin
-          response = client.send_email(
+          send_args = {
             from_email_address: from_address,
             destination: {to_addresses: [subscriber.email]},
             content: {
@@ -63,7 +64,12 @@ class SesSender
                 }
               }
             }
-          )
+          }
+          # Attaching the configuration set is what makes SES publish bounce/
+          # complaint events to SNS. Without this argument, SES still sends,
+          # but our webhook never sees the bounce.
+          send_args[:configuration_set_name] = configuration_set_name if configuration_set_name.present?
+          response = client.send_email(**send_args)
           message_ids << response.message_id
         rescue => e
           Rails.logger.warn(
@@ -96,6 +102,14 @@ class SesSender
         )
         [nil, true]
       end
+    end
+
+    # Per-team override falls back to the shared default. We treat blank as
+    # "use the default" so an empty string in the DB doesn't disable event
+    # publishing.
+    def resolve_configuration_set_name(team)
+      configured = team.ses_configuration&.configuration_set_name.presence
+      configured || "lewsnetter-default"
     end
 
     def build_from_address(campaign)

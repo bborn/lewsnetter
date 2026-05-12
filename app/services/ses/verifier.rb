@@ -33,6 +33,11 @@ module Ses
           verification_status: i.verification_status
         }
       }
+      # Backfill `configuration_set_name` for tenants whose row predates the
+      # migration. New rows get the column default. We don't fail verification
+      # if this update can't be persisted — the verifier's job is to surface
+      # SES state, not own migrations.
+      backfill_configuration_set_name
       Result.new(
         status: "verified",
         sandbox: account.production_access_enabled == false,
@@ -47,6 +52,19 @@ module Ses
     rescue Ses::ClientFor::NotConfigured => e
       Result.new(status: "unconfigured", sandbox: nil, quota_max: nil, quota_sent: nil,
         identities: [], error: e.message)
+    end
+
+    private
+
+    def backfill_configuration_set_name
+      config = @team.ses_configuration
+      return unless config
+      return if config.configuration_set_name.present?
+      config.update_columns(configuration_set_name: "lewsnetter-default")
+    rescue ActiveRecord::StatementInvalid
+      # Column not yet migrated — safe to ignore; nothing in send path depends
+      # on this being set, since SesSender falls back to the same default.
+      nil
     end
   end
 end
