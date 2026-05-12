@@ -75,8 +75,8 @@ en:
       contexts:
         team:
           header: Subscribers
-          description: Below is a list of Subscribers that have been added for %{team_name}.
-          description_empty: No Subscribers have been added for %{team_name}.
+          description: Your team's full audience — everyone %{team_name} can email. Lewsnetter has one audience per team; use Segments below to filter it for a specific campaign.
+          description_empty: No Subscribers have been added for %{team_name} yet. Lewsnetter has one audience per team — add subscribers here and target them with Segments.
       fields: *fields
       buttons: *buttons
     show:

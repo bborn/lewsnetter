@@ -12,6 +12,7 @@ en:
       edit: Edit Sender Address
       update: Update Sender Address
       destroy: Remove Sender Address
+      recheck: Re-check with SES
       shorthand:
         edit: Edit
         destroy: Delete
@@ -47,11 +48,21 @@ en:
           yes: "Yes"
           no: "No"
       ses_status:
-        _: &ses_status Ses Status
+        _: &ses_status SES Status
         label: *ses_status
         heading: *ses_status
         api_title: *ses_status
         api_description: *ses_status
+        values:
+          success: "Verified for sending"
+          pending: "Verification pending"
+          failed: "Verification failed"
+          temporary_failure: "Temporary failure — re-check soon"
+          not_started: "Not started"
+          not_in_ses: "Not yet added to SES"
+          unconfigured: "Team SES credentials not configured"
+          error: "Error contacting SES"
+          unknown: "Unknown"
       # 🚅 super scaffolding will insert new fields above this line.
       created_at:
         _: &created_at Added
@@ -86,6 +97,11 @@ en:
       manage_description: You'll also find options for updating these details or removing %{sender_address_name} from %{team_name} entirely.
       fields: *fields
       buttons: *buttons
+      badges:
+        verified: "✓ Verified by SES"
+        unverified: "Not verified"
+      ses_status:
+        unknown: "Unknown"
     form: &form
       buttons: *buttons
       fields: *fields
@@ -103,6 +119,7 @@ en:
       created: Sender Address was successfully created.
       updated: Sender Address was successfully updated.
       destroyed: Sender Address was successfully destroyed.
+      rechecked: Re-checked Sender Address with SES.
   account:
     sender_addresses: *sender_addresses
   activerecord:

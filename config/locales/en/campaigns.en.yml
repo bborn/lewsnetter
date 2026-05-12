@@ -69,7 +69,8 @@ en:
         heading: *segment_id
         api_title: *segment_id
         api_description: *segment_id
-        placeholder: None
+        placeholder: "— Send to everyone subscribed —"
+        help: "Leave blank to send to everyone subscribed. Pick a Segment to filter your audience for this campaign."
       segment: *segment
       # 🚅 super scaffolding will insert new fields above this line.
       created_at:

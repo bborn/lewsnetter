@@ -87,13 +87,19 @@ class Api::V1::SenderAddressesControllerTest < Api::Test
   end
 
   test "update" do
-    # Post an attribute update ensure nothing is seriously broken.
+    # `verified` and `ses_status` are intentionally NOT writable — they're
+    # derived from SES on save via Ses::IdentityChecker. We send them anyway
+    # to assert the controller drops them.
+    original_ses_status = @sender_address.ses_status
+    original_verified = @sender_address.verified
+
     put "/api/v1/sender_addresses/#{@sender_address.id}", params: {
       access_token: access_token,
       sender_address: {
         email: "another.email@test.com",
         name: "Alternative String Value",
-        ses_status: "Alternative String Value",
+        ses_status: "user-supplied-should-be-ignored",
+        verified: !original_verified
         # 🚅 super scaffolding will also insert new fields above this line.
       }
     }
@@ -107,7 +113,9 @@ class Api::V1::SenderAddressesControllerTest < Api::Test
     @sender_address.reload
     assert_equal @sender_address.email, "another.email@test.com"
     assert_equal @sender_address.name, "Alternative String Value"
-    assert_equal @sender_address.ses_status, "Alternative String Value"
+    # ses_status + verified must NOT be writable via the API.
+    assert_equal original_ses_status, @sender_address.ses_status
+    assert_equal original_verified, @sender_address.verified
     # 🚅 super scaffolding will additionally insert new fields above this line.
 
     # Also ensure we can't do that same action as another user.

@@ -36,7 +36,9 @@
       <%= render 'shared/fields/date_and_time_field', method: :scheduled_for %>
       <%= render 'shared/fields/super_select', method: :email_template_id, options: {}, html_options: {},
         choices: @campaign.valid_email_templates.map { |template| [template.label_string, template.id] } %>
-      <%= render 'shared/fields/super_select', method: :segment_id, options: {}, html_options: {},
+      <%= render 'shared/fields/super_select', method: :segment_id,
+        options: {include_blank: t('campaigns.fields.segment_id.placeholder', default: '— Send to everyone subscribed —')},
+        html_options: {},
         choices: @campaign.valid_segments.map { |segment| [segment.label_string, segment.id] } %>
       <%= render 'shared/fields/super_select', method: :sender_address_id, options: {}, html_options: {},
         choices: @campaign.valid_sender_addresses.map { |sender| [sender.label_string, sender.id] } %>

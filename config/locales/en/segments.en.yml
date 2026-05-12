@@ -60,8 +60,8 @@ en:
       contexts:
         team:
           header: Segments
-          description: Below is a list of Segments that have been added for %{team_name}.
-          description_empty: No Segments have been added for %{team_name}.
+          description: Saved targets for campaigns. Filter your audience down for specific sends — or leave a campaign's Segment blank to send to everyone subscribed.
+          description_empty: Lewsnetter doesn't have separate lists — there's one audience per team. Use Segments to filter your audience for targeted campaigns, or leave a campaign's Segment blank to send to everyone subscribed.
       fields: *fields
       buttons: *buttons
     show:

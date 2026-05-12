@@ -41,13 +41,15 @@ if defined?(Api::V1::ApplicationController)
 
     module StrongParameters
       # Only allow a list of trusted parameters through.
+      #
+      # `:verified` and `:ses_status` are intentionally NOT permitted — they
+      # are derived from SES via Ses::IdentityChecker on save/recheck, never
+      # supplied by the user.
       def sender_address_params
         strong_params = params.require(:sender_address).permit(
           *permitted_fields,
           :email,
           :name,
-          :verified,
-          :ses_status,
           # 🚅 super scaffolding will insert new fields above this line.
           *permitted_arrays,
           # 🚅 super scaffolding will insert new arrays above this line.

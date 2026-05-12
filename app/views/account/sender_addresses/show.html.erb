@@ -13,14 +13,29 @@
           <% with_attribute_settings object: @sender_address, strategy: :label do %>
             <%= render 'shared/attributes/email', attribute: :email %>
             <%= render 'shared/attributes/text', attribute: :name %>
-            <%= render 'shared/attributes/option', attribute: :verified %>
-            <%= render 'shared/attributes/text', attribute: :ses_status %>
+
+            <%# Verified + Ses Status are SES-derived (read only). %>
+            <%= render 'shared/attributes/attribute', object: @sender_address, attribute: :verified, strategy: :label do %>
+              <% if @sender_address.verified? %>
+                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
+                  <%= t('.badges.verified') %>
+                </span>
+              <% else %>
+                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                  <%= t('.badges.unverified') %>
+                </span>
+              <% end %>
+            <% end %>
+            <%= render 'shared/attributes/attribute', object: @sender_address, attribute: :ses_status, strategy: :label do %>
+              <%= t("sender_addresses.fields.ses_status.values.#{@sender_address.ses_status.presence || 'unknown'}", default: @sender_address.ses_status.to_s.presence || t('.ses_status.unknown')) %>
+            <% end %>
             <%# 🚅 super scaffolding will insert new fields above this line. %>
           <% end %>
         <% end %>
 
         <% box.actions do %>
           <%= link_to t('.buttons.edit'), [:edit, :account, @sender_address], class: first_button_primary if can? :edit, @sender_address %>
+          <%= button_to t('.buttons.recheck'), recheck_account_sender_address_path(@sender_address), method: :post, class: first_button_primary if can? :update, @sender_address %>
           <%# 🚅 super scaffolding will insert new action model buttons above this line. %>
           <%= button_to t('.buttons.destroy'), [:account, @sender_address], method: :delete, class: first_button_primary, data: { turbo_confirm: t('.buttons.confirmations.destroy', model_locales(@sender_address)) } if can? :destroy, @sender_address %>
           <%= link_to t('global.buttons.back'), [:account, @team, :sender_addresses], class: first_button_primary %>

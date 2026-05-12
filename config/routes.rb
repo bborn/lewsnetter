@@ -128,7 +128,11 @@ Rails.application.routes.draw do
             get :postmortem, to: "campaign_postmortems#show"
           end
         end
-        resources :sender_addresses
+        resources :sender_addresses do
+          member do
+            post :recheck
+          end
+        end
 
         # Singleton "Email Sending" page — there's at most one
         # Team::SesConfiguration per team. We use member routes rather than

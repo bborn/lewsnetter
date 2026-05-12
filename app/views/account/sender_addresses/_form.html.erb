@@ -7,8 +7,7 @@
     <% with_field_settings form: form do %>
       <%= render 'shared/fields/email_field', method: :email, options: {autofocus: true} %>
       <%= render 'shared/fields/text_field', method: :name %>
-      <%= render 'shared/fields/options', method: :verified %>
-      <%= render 'shared/fields/text_field', method: :ses_status %>
+      <%# Verified + Ses Status are derived from SES on save — not user-editable. %>
       <%# 🚅 super scaffolding will insert new fields above this line. %>
     <% end %>
 

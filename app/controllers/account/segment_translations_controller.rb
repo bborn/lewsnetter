@@ -20,7 +20,7 @@ class Account::SegmentTranslationsController < Account::ApplicationController
 
     respond_to do |format|
       format.html { render partial: "account/segments/preview", locals: {result: @result, natural_language: @natural_language} }
-      format.turbo_stream { render partial: "account/segments/preview", locals: {result: @result, natural_language: @natural_language} }
+      format.turbo_stream { render partial: "account/segments/preview", formats: [:html], locals: {result: @result, natural_language: @natural_language} }
     end
   end
 end
