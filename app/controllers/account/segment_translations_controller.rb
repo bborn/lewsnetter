@@ -1,11 +1,17 @@
 class Account::SegmentTranslationsController < Account::ApplicationController
-  account_load_and_authorize_resource :team, through: :user, through_association: :teams
-
   # POST /account/teams/:team_id/segments/translate
   #
   # Runs AI::SegmentTranslator against the team's subscriber schema and renders
   # a preview frame (predicate + a handful of matching subscribers).
+  #
+  # Singleton-style action with no persisted record yet — `account_load_and_
+  # authorize_resource` doesn't apply cleanly here, so we resolve the team
+  # manually + authorize against Segment.new(team:) using the standard ability
+  # rules.
   def create
+    @team = current_user.teams.find(params[:team_id])
+    authorize! :create, @team.segments.new
+
     @natural_language = params[:natural_language].to_s
     @result = AI::SegmentTranslator.new(
       team: @team,
