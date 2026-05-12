@@ -43,7 +43,7 @@ class Campaign < ApplicationRecord
   end
 
   def valid_sender_addresses
-    team.sender_addresses
+    team.sender_addresses.where(verified: true)
   end
   # 🚅 add methods above.
 end

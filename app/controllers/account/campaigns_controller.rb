@@ -1,5 +1,8 @@
 class Account::CampaignsController < Account::ApplicationController
-  account_load_and_authorize_resource :campaign, through: :team, through_association: :campaigns
+  account_load_and_authorize_resource :campaign,
+    through: :team,
+    through_association: :campaigns,
+    member_actions: [:send_now, :test_send]
 
   # GET /account/teams/:team_id/campaigns
   # GET /account/teams/:team_id/campaigns.json
@@ -66,6 +69,41 @@ class Account::CampaignsController < Account::ApplicationController
       redirect_to [:account, @campaign], notice: "Campaign queued for sending."
     else
       redirect_to [:account, @campaign], alert: "Only draft campaigns can be sent."
+    end
+  end
+
+  # POST /account/campaigns/:id/test_send
+  #
+  # Sends a single rendered copy of the campaign to the current user using the
+  # same render pipeline as a real send (MJML → HTML → premailer-inlined +
+  # variable substitution). What lands in the inbox is exactly what subscribers
+  # would see. Bypasses segment + subscribed checks; never transitions the
+  # campaign status; never records anything in stats. Subject is prefixed
+  # [TEST] so a stray test in your inbox is obvious.
+  def test_send
+    fake_subscriber = Subscriber.new(
+      team: @campaign.team,
+      email: current_user.email,
+      name: [current_user.first_name, current_user.last_name].compact.join(" "),
+      external_id: "test-#{current_user.id}",
+      subscribed: true,
+      custom_attributes: {}
+    )
+
+    original_subject = @campaign.subject
+    @campaign.subject = "[TEST] #{original_subject}"
+
+    begin
+      result = SesSender.send_bulk(campaign: @campaign, subscribers: [fake_subscriber])
+
+      if result.failed.empty? && result.message_ids.any?
+        redirect_to [:account, @campaign], notice: "Test email sent to #{current_user.email}."
+      else
+        error = result.failed.first&.dig(:error) || "Unknown error"
+        redirect_to [:account, @campaign], alert: "Test send failed: #{error}"
+      end
+    ensure
+      @campaign.subject = original_subject
     end
   end
 

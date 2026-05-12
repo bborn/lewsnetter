@@ -92,6 +92,7 @@ Rails.application.routes.draw do
         resources :campaigns do
           member do
             post :send_now
+            post :test_send
             post :draft, to: "campaign_drafts#create"
             get :postmortem, to: "campaign_postmortems#show"
           end

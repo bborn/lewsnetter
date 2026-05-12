@@ -1,10 +1,15 @@
-# SesSender wraps AWS SES v2's SendBulkEmail API. It is intentionally tiny —
-# the job is responsible for batching (50 at a time), the campaign owns
-# content + sender, and SesSender just translates that into the SES payload.
+# SesSender wraps AWS SES v2's SendEmail API. The job owns batching and stats;
+# SesSender owns the per-recipient render + SES call.
 #
-# In stub mode (no AWS credentials), we log and return synthetic message ids
-# so the rest of the pipeline (job, stats, status transitions) can run
-# end-to-end in development.
+# For MVP each subscriber gets their own rendered html/text/subject — we pay
+# one SES API call per recipient instead of batching with template_data. This
+# keeps the surface area tiny and the rendering correct (variable substitution
+# happens per subscriber in CampaignRenderer). We can switch to SES
+# SendBulkEmail with replacement_template_data later for cost.
+#
+# In stub mode (no AWS credentials), we log a preview of the rendered HTML and
+# return synthetic message ids so the rest of the pipeline (job, stats, status
+# transitions) can run end-to-end in development.
 class SesSender
   Result = Struct.new(:message_ids, :failed, keyword_init: true)
 
@@ -16,55 +21,70 @@ class SesSender
       return Result.new(message_ids: [], failed: []) if subscribers.empty?
 
       client = Rails.application.config.ses_client
+      stub_mode = client == :stub || client.nil?
 
-      if client == :stub || client.nil?
-        Rails.logger.info(%([SES STUB] would send "#{campaign.subject}" to #{subscribers.size} recipients))
-        return Result.new(
-          message_ids: subscribers.map { |s| "stub-#{SecureRandom.hex(8)}" },
-          failed: []
-        )
-      end
-
-      body_html = campaign.body_html.presence || campaign.body_mjml
-      from_address = if campaign.sender_address&.name.present?
-        %("#{campaign.sender_address.name}" <#{campaign.sender_address.email}>)
-      else
-        campaign.sender_address&.email
-      end
-
-      response = client.send_bulk_email(
-        from_email_address: from_address,
-        default_content: {
-          template: {
-            template_content: {
-              subject: campaign.subject,
-              html: body_html,
-              text: campaign.preheader.to_s
-            },
-            template_data: "{}"
-          }
-        },
-        bulk_email_entries: subscribers.map { |s|
-          {
-            destination: {to_addresses: [s.email]},
-            replacement_email_content: {
-              replacement_template: {template_data: "{}"}
-            }
-          }
-        }
-      )
+      from_address = build_from_address(campaign)
 
       message_ids = []
       failed = []
-      response.bulk_email_entry_results.each_with_index do |result, i|
-        if result.status.to_s == "SUCCESS"
-          message_ids << result.message_id
-        else
-          failed << {subscriber: subscribers[i], error: result.error}
+
+      subscribers.each do |subscriber|
+        rendered =
+          begin
+            CampaignRenderer.new(campaign: campaign, subscriber: subscriber).call
+          rescue => e
+            Rails.logger.warn(
+              "[SesSender] render failed for subscriber=#{subscriber.id} " \
+              "campaign=#{campaign.id}: #{e.class}: #{e.message}"
+            )
+            failed << {subscriber: subscriber, error: "render_failed: #{e.message}"}
+            next
+          end
+
+        if stub_mode
+          Rails.logger.info(
+            %([SES STUB] to=#{subscriber.email} subject=#{rendered.subject.inspect} ) +
+              %(html_preview=#{rendered.html.to_s[0, 200].inspect})
+          )
+          message_ids << "stub-#{SecureRandom.hex(8)}"
+          next
+        end
+
+        begin
+          response = client.send_email(
+            from_email_address: from_address,
+            destination: {to_addresses: [subscriber.email]},
+            content: {
+              simple: {
+                subject: {data: rendered.subject},
+                body: {
+                  html: {data: rendered.html},
+                  text: {data: rendered.text}
+                }
+              }
+            }
+          )
+          message_ids << response.message_id
+        rescue => e
+          Rails.logger.warn(
+            "[SesSender] SES send failed for subscriber=#{subscriber.id} " \
+            "campaign=#{campaign.id}: #{e.class}: #{e.message}"
+          )
+          failed << {subscriber: subscriber, error: e.message}
         end
       end
 
       Result.new(message_ids: message_ids, failed: failed)
+    end
+
+    private
+
+    def build_from_address(campaign)
+      if campaign.sender_address&.name.present?
+        %("#{campaign.sender_address.name}" <#{campaign.sender_address.email}>)
+      else
+        campaign.sender_address&.email
+      end
     end
   end
 end

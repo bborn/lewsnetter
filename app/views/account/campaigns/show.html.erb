@@ -26,6 +26,7 @@
         <% box.actions do %>
           <%= link_to t('.buttons.edit'), [:edit, :account, @campaign], class: first_button_primary if can? :edit, @campaign %>
           <% if @campaign.draft? && can?(:update, @campaign) %>
+            <%= button_to "Send test to me", test_send_account_campaign_path(@campaign), method: :post, class: first_button_primary, form: { data: { turbo: false } }, data: { turbo_confirm: "Send a test of \"#{@campaign.subject}\" to #{current_user.email}?" } %>
             <%= button_to "Send now", send_now_account_campaign_path(@campaign), method: :post, class: first_button_primary, data: { turbo_confirm: "Send this campaign to all subscribed team subscribers?" } %>
           <% end %>
           <%# 🚅 super scaffolding will insert new action model buttons above this line. %>

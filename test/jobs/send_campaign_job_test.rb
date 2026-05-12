@@ -61,4 +61,78 @@ class SendCampaignJobTest < ActiveJob::TestCase
 
     assert_equal "failed", @campaign.reload.status
   end
+
+  test "applies segment predicate to narrow the audience" do
+    # Two paying subscribers added; the segment should pick only them and skip
+    # the two existing setup subscribers (a@, b@) who have no plan attribute.
+    @team.subscribers.create!(
+      email: "paying-1@example.com", external_id: "p1", subscribed: true,
+      custom_attributes: {plan: "growth"}
+    )
+    @team.subscribers.create!(
+      email: "paying-2@example.com", external_id: "p2", subscribed: true,
+      custom_attributes: {plan: "growth"}
+    )
+
+    segment = @team.segments.create!(
+      name: "Paying",
+      definition: {"predicate" => "custom_attributes->>'plan' = 'growth'"}
+    )
+    @campaign.update!(segment: segment)
+
+    original = Rails.application.config.ses_client
+    Rails.application.config.ses_client = :stub
+    begin
+      SendCampaignJob.perform_now(@campaign.id)
+    ensure
+      Rails.application.config.ses_client = original
+    end
+
+    @campaign.reload
+    assert_equal "sent", @campaign.status
+    assert_equal 2, @campaign.stats["sent"]
+  end
+
+  test "sends to all subscribed when no segment is attached" do
+    assert_nil @campaign.segment
+
+    original = Rails.application.config.ses_client
+    Rails.application.config.ses_client = :stub
+    begin
+      SendCampaignJob.perform_now(@campaign.id)
+    ensure
+      Rails.application.config.ses_client = original
+    end
+
+    @campaign.reload
+    assert_equal "sent", @campaign.status
+    assert_equal 2, @campaign.stats["sent"]
+  end
+
+  test "fails cleanly when segment predicate contains forbidden tokens" do
+    segment = @team.segments.create!(
+      name: "Bad",
+      definition: {"predicate" => "1 = 1"}
+    )
+    # Bypass any future model-level validation; we want to test the job's
+    # defense-in-depth catch.
+    segment.update_column(:definition, {"predicate" => "name = 'x'; DROP TABLE users"})
+    @campaign.update!(segment: segment)
+
+    original = Rails.application.config.ses_client
+    Rails.application.config.ses_client = :stub
+    begin
+      SendCampaignJob.perform_now(@campaign.id)
+    ensure
+      Rails.application.config.ses_client = original
+    end
+
+    @campaign.reload
+    assert_equal "failed", @campaign.status
+    assert @campaign.stats["errors"].is_a?(Array)
+    assert(
+      @campaign.stats["errors"].any? { |e| e.include?("forbidden token") },
+      "Expected stats[errors] to mention forbidden token, got #{@campaign.stats["errors"].inspect}"
+    )
+  end
 end
