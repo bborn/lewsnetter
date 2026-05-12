@@ -29,16 +29,18 @@ jobs:
           ruby-version-file: .ruby-version
           bundler-cache: true
 
+      # `cache: yarn` runs before corepack is enabled, so it uses the system
+      # yarn (1.22.x) and chokes on package.json's "packageManager: yarn@4.2.2".
+      # Skip the cache step here; corepack enable + yarn install is fast enough.
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-          cache: yarn
 
       - name: Enable corepack + install yarn deps
         run: |
           corepack enable
-          yarn install --frozen-lockfile
+          yarn install --immutable
 
       - name: Prepare test database
         run: bundle exec rails db:test:prepare
