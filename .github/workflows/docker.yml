@@ -1,0 +1,13 @@
+#
+name: "🚢 ~ Docker"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  placeholder-job:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6

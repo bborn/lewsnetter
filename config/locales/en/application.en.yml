@@ -1,0 +1,14 @@
+en:
+  application:
+    name: Lewsnetter
+    owner: Unidentified Developer
+    description: "You can update this description in `config/locales/en/application.en.yml`."
+    keywords: lewsnetter seo keywords
+    support_email: change.me@localhost
+    key: lewsnetter
+  webhooks/outgoing/endpoints:
+    fields:
+      api_version:
+        options:
+          1: V1
+          # 🚅 super scaffolding will insert new api versions above this line.

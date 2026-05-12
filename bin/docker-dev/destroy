@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+docker container rm lewsnetter_dev
+docker image rm lewsnetter_dev

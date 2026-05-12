@@ -1,0 +1,41 @@
+#!/usr/bin/env ruby
+require "active_support/deprecation"
+require "colorize"
+
+ActiveSupport::Deprecation.new.warn(
+  "`bin/super-scaffold` is deprecated. Please use `rails generate super_scaffold` instead.\n" \
+  "You can see which options are available in the Super Scaffolding documentation: https://bullettrain.co/docs/super-scaffolding"
+)
+
+scaffolding_type = case ARGV.first
+when "crud"
+  ARGV.shift
+  nil
+when "crud-field"
+  "field"
+when "incoming-webhooks"
+  "incoming_webhooks"
+when "join-model"
+  "join_model"
+when "oauth-provider"
+  "oauth_provider"
+else
+  nil
+end
+
+if ARGV.first.match?(/^action-models/)
+  if defined?(BulletTrain::ActionModels)
+    scaffolding_type = ARGV.first.gsub(/-/, "_")
+  else
+    puts ""
+    puts "You must have Action Models installed if you want to use this generator.".red
+    puts "Please refer to the documentation for more information: https://bullettrain.co/docs/action-models"
+    exit 1
+  end
+end
+
+if scaffolding_type
+  exec "#{"spring" if ENV["SPRING"]} rails generate super_scaffold:#{scaffolding_type} #{ARGV.join(" ")}"
+else
+  exec "#{"spring" if ENV["SPRING"]} rails generate super_scaffold #{ARGV.join(" ")}"
+end

@@ -1,0 +1,35 @@
+# This workflow will deploy an app to heroku.
+#
+# The name of the app to deploy must be passed in.
+# HEROKU_API_KEY & HEROKU_EMAIL should be added to your repo secrets to provide deployment credentials.
+#
+# This workflow is pimarily meant to be called by other workflows, but it can be run manually.
+name: 🚢 ~ Deploy to Heroku
+
+on:
+  workflow_call:
+    inputs:
+      heroku-app-name:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      heroku-app-name:
+        required: true
+        type: string
+
+jobs:
+  heroku:
+    runs-on: ubuntu-latest
+    steps:
+      # TODO: Will the heroku-deploy action eventually handle this for us?
+      # https://github.com/AkhileshNS/heroku-deploy/issues/188
+      - name: Install Heroku CLI
+        run: |
+          curl https://cli-assets.heroku.com/install.sh | sh
+      - uses: actions/checkout@v6
+      - uses: akhileshns/heroku-deploy@v3.14.15 # This is the action
+        with:
+          heroku_api_key: ${{secrets.HEROKU_API_KEY}}
+          heroku_app_name: ${{ inputs.heroku-app-name }} #Must be unique in Heroku
+          heroku_email: ${{secrets.HEROKU_EMAIL}}

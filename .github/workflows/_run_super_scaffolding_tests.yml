@@ -1,0 +1,188 @@
+# This workflow will run a few super scaffolding commands and then run tests against the generated code.
+#
+# This workflow is pimarily meant to be called by other workflows, but it can be run manually.
+name: 🏗️ ~ Run super scaffolding tests
+on:
+  workflow_call:
+    inputs:
+      use-core-repo:
+        required: false
+        type: boolean
+        default: false
+  workflow_dispatch:
+    inputs:
+      use-core-repo:
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  calculate_matrix:
+    name: 🏗️ Generate Test List
+    runs-on: ubuntu-latest
+    outputs:
+      tests: ${{ steps.generate-test-list.outputs.result }}
+    steps:
+      - name: Checkout Repo
+        uses: "actions/checkout@v6"
+
+      - uses: actions/github-script@v9
+        id: generate-test-list
+        name: Generate Test List
+        with:
+          script: |
+            const globber = await glob.create('test/system/super_scaffolding/**/setup.rb')
+            const tests = []
+            for await (const file of globber.globGenerator()) {
+              console.log(file)
+              var fileParts = file.split("/")
+              var test_dir_name = fileParts[fileParts.length - 2];
+              console.log("test_dir_name =", test_dir_name)
+              tests.push(test_dir_name)
+            }
+            return tests
+  test:
+    name: "🏗️"
+    runs-on: ubuntu-latest
+    needs: calculate_matrix
+    strategy:
+      fail-fast: false
+      matrix:
+        test: ${{ fromJson(needs.calculate_matrix.outputs.tests) }}
+    services:
+      postgres:
+        image: postgres:11-alpine
+        ports:
+          - "5432:5432"
+        env:
+          POSTGRES_DB: rails_test
+          POSTGRES_USER: rails
+          POSTGRES_PASSWORD: password
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis
+        ports:
+          - "6379:6379"
+        # Set health checks to wait until redis has started
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      RAILS_ENV: test
+      # Manually export your local RAILS_MASTER_KEY if using the credentials system.
+      # RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
+      DATABASE_URL: "postgres://rails:password@localhost:5432/rails_test"
+      BUNDLE_JOBS: 2
+      BUNDLE_RETRY: 3
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          path: tmp/starter
+
+      - name: Checkout Core Repo
+        uses: bullet-train-co/checkout-repo-with-matching-branch@v1
+        if: ${{ inputs.use-core-repo == true }}
+        with:
+          target_dir: tmp/core
+          repository: bullet-train-co/bullet_train-core
+
+      - name: Install Ruby and gems
+        uses: ruby/setup-ruby@v1
+        with:
+          working-directory: tmp/starter
+          bundler-cache: true
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: tmp/starter/.nvmrc
+          cache: 'yarn'
+          cache-dependency-path: tmp/starter/yarn.lock
+
+      - name: Link Core Repo
+        uses: bullet-train-co/link-core-gems@v1
+        if: ${{ inputs.use-core-repo == true }}
+        with:
+          application_dir: tmp/starter
+          core_dir: tmp/core
+
+      - name: asset cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            tmp/starter/public/assets
+            tmp/starter/tmp/cache/assets/sprockets
+          key: asset-cache-${{ runner.os }}-${{ github.ref }}-${{ github.sha }}
+          restore-keys: |
+            asset-cache-${{ runner.os }}-${{ github.ref }}-${{ github.sha }}
+            asset-cache-${{ runner.os }}-${{ github.ref }}-
+            asset-cache-${{ runner.os }}-
+
+      - name: Set up database schema
+        run: bin/rails db:schema:load
+        working-directory: tmp/starter
+
+      - run: yarn install
+        working-directory: tmp/starter
+      - run: yarn build
+        working-directory: tmp/starter
+      - run: yarn build:css
+        working-directory: tmp/starter
+
+      - name: 'Setup Super Scaffolding System Test'
+        run: bundle exec test/system/super_scaffolding/${{ matrix.test }}/setup.rb --allow-dirty-workspace
+        working-directory: tmp/starter
+
+      - name: 'Run Super Scaffolding Test'
+        run: bin/rails test test/system/super_scaffolding/${{ matrix.test }}/ test/system/super_scaffolding/open_api_test.rb
+        working-directory: tmp/starter
+
+      - name: 'Run Super Scaffolding Webhook Test'
+        run: bin/rails test test/controllers/webhooks/incoming/some_provider_webhooks_controller_test.rb
+        if: ${{ matrix.test == 'webhook' }}
+        working-directory: tmp/starter
+
+      - name: Upload Test Summary Logs
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: test_summary_super_scaffolding_${{ matrix.test }}_${{ inputs.use-core-repo }}.log
+          path: tmp/starter/test/reports/**/TEST-*.xml
+
+      - name: Upload Test Coverage Data
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: test_coverage_${{ matrix.test }}_${{ inputs.use-core-repo }}.log
+          path: tmp/starter/coverage/.resultset.json
+          include-hidden-files: true
+
+      - name: Check For Error Screenshots
+        id: check-for-error-screenshots
+        if: always()
+        run: |
+          FILE_PATH="tmp/starter/tmp/screenshots/*.png"
+          if [ -f "$FILE_PATH" ]; then
+            echo "File exists. $FILE_PATH"
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "File does not exist. $FILE_PATH"
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload Error Screenshots
+        uses: actions/upload-artifact@v7
+        if: steps.check-for-error-screenshots.outputs.exists == 'true'
+        with:
+          name: error_screenshots_${{ matrix.test }}.zip
+          path: tmp/starter/tmp/screenshots/*.png

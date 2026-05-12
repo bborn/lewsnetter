@@ -1,0 +1,47 @@
+<% expand ||= false %>
+
+<% unless hide_team_resource_menus? %>
+  <%= render 'account/shared/menu/section' do %>
+    <%= render 'account/teams/menu_item' %>
+    <%= render 'account/scaffolding/absolutely_abstract/creative_concepts/menu_item' unless scaffolding_things_disabled? %>
+    <% # added by super scaffolding. %>
+  <% end %>
+
+  <% @last_menu_orientation = @menu_orientation %>
+  <% @menu_orientation = :side %>
+  <% integrations = capture do %>
+    <%= render 'account/integrations/stripe_installations/menu_item' if stripe_enabled? %>
+    <%# 🚅 super scaffolding will insert new oauth providers above this line. %>
+  <% end %>
+  <% @menu_orientation = @last_menu_orientation %>
+
+  <%# We don't want to show this menu section if the menu items only rendered annotations. %>
+  <% if integrations.gsub(/<!--(.*)-->/, "").present? %>
+    <%= render 'account/shared/menu/subsection', title: t('menus.main.labels.integrations'), expand: expand do %>
+      <%= integrations %>
+    <% end %>
+  <% end %>
+
+  <% unless disable_developer_menu? %>
+    <%= render 'account/shared/menu/subsection', title: t('menus.main.labels.developers'), expand: expand do %>
+      <%= render 'account/platform/applications/menu_item' %>
+      <%= render 'account/webhooks/outgoing/endpoints/menu_item' if webhooks_enabled? %>
+    <% end %>
+  <% end %>
+
+  <%= render 'account/shared/menu/subsection', title: t('menus.main.labels.team'), expand: expand do %>
+    <%= render 'account/shared/menu/item', url: main_app.edit_account_team_path(current_team), label: t('menus.main.labels.team_settings') do |p| %>
+      <% p.content_for :icon do %>
+        <i class="fal fa-cog ti ti-settings"></i>
+      <% end %>
+    <% end if can? :edit, current_team %>
+    <%= render 'account/memberships/menu_item' %>
+    <%= render 'account/billing/subscriptions/menu_item' if billing_enabled? %>
+  <% end %>
+<% end %>
+
+<% if expand %>
+  <%= render 'account/shared/menu/subsection', title: t('menus.main.labels.your_account'), expand: expand do %>
+    <%= render "account/shared/menu/user_items" %>
+  <% end %>
+<% end %>
