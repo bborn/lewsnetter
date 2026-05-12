@@ -35,5 +35,13 @@ class Team::SesConfiguration < ApplicationRecord
   def access_key_id_last_four
     encrypted_access_key_id.to_s.last(4)
   end
+
+  # Display-only helper consumed by app/views/account/email_sending/show.html.erb
+  # (the BulletTrain shared/attributes/text partial calls `object.public_send(:quota)`
+  # to decide whether to render the row).
+  def quota
+    return nil unless quota_max_send_24h
+    "#{quota_sent_last_24h.to_i} / #{quota_max_send_24h}"
+  end
   # 🚅 add methods above.
 end
