@@ -1,0 +1,58 @@
+<%= render 'account/shared/page' do |page| %>
+  <% page.title t('.section', id: @import.id) %>
+  <% page.body do %>
+    <%= render 'account/shared/box', divider: true do |box| %>
+      <% box.title t('.header') %>
+      <% box.description do %>
+        <%= t('.description') %>
+      <% end %>
+
+      <% box.body do %>
+        <% with_attribute_settings object: @import, strategy: :label do %>
+          <%= render 'shared/attributes/text', attribute: :status %>
+          <%= render 'shared/attributes/text', attribute: :total_rows %>
+          <%= render 'shared/attributes/text', attribute: :processed %>
+          <%= render 'shared/attributes/text', attribute: :created_count %>
+          <%= render 'shared/attributes/text', attribute: :updated_count %>
+          <%= render 'shared/attributes/text', attribute: :error_count %>
+          <%= render 'shared/attributes/date_and_time', attribute: :started_at %>
+          <%= render 'shared/attributes/date_and_time', attribute: :finished_at %>
+          <% if @import.notes.present? %>
+            <%= render 'shared/attributes/text', attribute: :notes %>
+          <% end %>
+        <% end %>
+
+        <% if @import.errors_log.present? %>
+          <div class="mt-4">
+            <h3 class="font-bold"><%= t('.fields.errors_log.heading') %></h3>
+            <table class="table mt-2">
+              <thead>
+                <tr>
+                  <th>Row</th>
+                  <th>Email</th>
+                  <th>Errors</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% @import.errors_log.first(50).each do |entry| %>
+                  <tr>
+                    <td><%= entry["row"] %></td>
+                    <td><%= entry["email"] %></td>
+                    <td><%= Array(entry["errors"]).join("; ") %></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% end %>
+      <% end %>
+
+      <% box.actions do %>
+        <% unless @import.completed? || @import.failed? %>
+          <%= link_to "Refresh", account_subscribers_import_path(@import), class: first_button_primary(@import) %>
+        <% end %>
+        <%= link_to t('global.buttons.back'), account_team_subscribers_imports_path(@team), class: first_button_primary(@import) %>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

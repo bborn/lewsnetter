@@ -45,6 +45,7 @@
             <% if can? :create, Subscriber.new(team: team) %>
               <%= link_to t('.buttons.new'), [:new, :account, team, :subscriber], class: "#{first_button_primary(:subscriber)} new" %>
             <% end %>
+            <%= render 'account/subscribers/imports/dashboard_card', team: team %>
           <% end %>
 
           <%# 🚅 super scaffolding will insert new targets one parent action model buttons above this line. %>

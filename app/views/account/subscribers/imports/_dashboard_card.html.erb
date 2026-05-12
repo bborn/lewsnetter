@@ -1,0 +1,8 @@
+<%# Tiny card shown on the Subscribers index linking to the CSV import flow. %>
+<% team ||= @team %>
+<% if can?(:create, Subscribers::Import.new(team: team)) %>
+  <%= link_to account_team_subscribers_imports_path(team), class: "button-secondary" do %>
+    <i class="fal fa-file-csv mr-1"></i>
+    <%= t('subscribers/imports.buttons.new') %>
+  <% end %>
+<% end %>

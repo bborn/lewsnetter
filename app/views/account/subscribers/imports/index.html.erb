@@ -1,0 +1,51 @@
+<%= render 'account/shared/page' do |page| %>
+  <% page.title t('.section') %>
+  <% page.body.render 'account/shared/box' do |box| %>
+    <% box.title t('.contexts.team.header') %>
+    <% box.description do %>
+      <%= t(".contexts.team.description#{"_empty" unless @imports.any?}") %>
+    <% end %>
+
+    <% box.table do %>
+      <% if @imports.any? %>
+        <table class="table">
+          <thead>
+            <tr>
+              <th><%= t('.fields.id.heading') %></th>
+              <th><%= t('.fields.status.heading') %></th>
+              <th class="text-right"><%= t('.fields.processed.heading') %></th>
+              <th class="text-right"><%= t('.fields.created_count.heading') %></th>
+              <th class="text-right"><%= t('.fields.updated_count.heading') %></th>
+              <th class="text-right"><%= t('.fields.error_count.heading') %></th>
+              <th><%= t('.fields.created_at.heading') %></th>
+              <th class="text-right"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @imports.order(created_at: :desc).each do |import| %>
+              <tr data-id="<%= import.id %>" class="group">
+                <td><%= link_to "##{import.id}", account_subscribers_import_path(import) %></td>
+                <td><%= import.status %></td>
+                <td class="text-right"><%= import.processed %></td>
+                <td class="text-right"><%= import.created_count %></td>
+                <td class="text-right"><%= import.updated_count %></td>
+                <td class="text-right"><%= import.error_count %></td>
+                <td><%= l(import.created_at, format: :short) if import.created_at %></td>
+                <td class="buttons">
+                  <%= link_to t('.buttons.shorthand.view'), account_subscribers_import_path(import), class: 'button-secondary button-smaller' %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      <% end %>
+    <% end %>
+
+    <% box.actions do %>
+      <% if can? :create, Subscribers::Import.new(team: @team) %>
+        <%= link_to t('.buttons.new'), new_account_team_subscribers_import_path(@team), class: "#{first_button_primary(Subscribers::Import.new)} new" %>
+      <% end %>
+      <%= link_to t('global.buttons.back'), [:account, @team, :subscribers], class: first_button_primary(Subscribers::Import.new) %>
+    <% end %>
+  <% end %>
+<% end %>

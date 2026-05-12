@@ -95,6 +95,13 @@ Rails.application.routes.draw do
           resources :events
         end
 
+        # Subscribers::Import — CSV upload + background processing. A sibling
+        # of subscribers (not nested under) because imports are tenant-scoped,
+        # not subscriber-scoped.
+        namespace :subscribers do
+          resources :imports, only: %i[index new create show]
+        end
+
         resources :segments do
           collection do
             post :translate, to: "segment_translations#create"

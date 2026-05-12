@@ -12,6 +12,7 @@ class Team < ApplicationRecord
   has_many :email_templates, dependent: :destroy
   has_many :campaigns, dependent: :destroy
   has_many :sender_addresses, dependent: :destroy
+  has_many :subscriber_imports, class_name: "Subscribers::Import", dependent: :destroy
   # 🚅 add has_many associations above.
 
   # 🚅 add oauth providers above.

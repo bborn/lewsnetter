@@ -1,0 +1,9 @@
+<% import ||= @import %>
+<% team ||= @team || import&.team %>
+<%= render 'account/teams/breadcrumbs', team: team %>
+<%= render 'account/shared/breadcrumb', label: t('subscribers.label'), url: [:account, team, :subscribers] %>
+<%= render 'account/shared/breadcrumb', label: t('subscribers/imports.label'), url: account_team_subscribers_imports_path(team) %>
+<% if import&.persisted? %>
+  <%= render 'account/shared/breadcrumb', label: import.label_string, url: account_subscribers_import_path(import) %>
+<% end %>
+<%= render 'account/shared/breadcrumbs/actions', only_for: 'subscribers/imports' %>

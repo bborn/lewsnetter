@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_12_141635) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_12_210000) do
   create_table "account_onboarding_invitation_lists", force: :cascade do |t|
     t.integer "team_id", null: false
     t.json "invitations"
@@ -324,6 +324,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_141635) do
     t.index ["team_id"], name: "index_subscribers_on_team_id"
   end
 
+  create_table "subscribers_imports", force: :cascade do |t|
+    t.integer "team_id", null: false
+    t.string "status", default: "pending", null: false
+    t.integer "total_rows"
+    t.integer "processed", default: 0, null: false
+    t.integer "created_count", default: 0, null: false
+    t.integer "updated_count", default: 0, null: false
+    t.integer "error_count", default: 0, null: false
+    t.json "errors_log", default: [], null: false
+    t.text "notes"
+    t.datetime "started_at"
+    t.datetime "finished_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["team_id", "created_at"], name: "index_subscribers_imports_on_team_id_and_created_at"
+    t.index ["team_id"], name: "index_subscribers_imports_on_team_id"
+  end
+
   create_table "team_ses_configurations", force: :cascade do |t|
     t.integer "team_id", null: false
     t.string "encrypted_access_key_id"
@@ -495,6 +513,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_141635) do
   add_foreign_key "segments", "teams"
   add_foreign_key "sender_addresses", "teams"
   add_foreign_key "subscribers", "teams"
+  add_foreign_key "subscribers_imports", "teams"
   add_foreign_key "team_ses_configurations", "teams"
   add_foreign_key "users", "oauth_applications", column: "platform_agent_of_id"
   add_foreign_key "webhooks_outgoing_endpoints", "scaffolding_absolutely_abstract_creative_concepts"

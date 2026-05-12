@@ -7,6 +7,7 @@ default:
     Segment: read
     Event: read
     Subscriber: read
+    Subscribers::Import: read
     Team: read
     Membership:
       - read
@@ -42,6 +43,7 @@ admin:
     Segment: manage
     Event: manage
     Subscriber: manage
+    Subscribers::Import: manage
     Team: manage
     Membership: manage
     Scaffolding::AbsolutelyAbstract::CreativeConcept: manage

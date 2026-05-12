@@ -1,0 +1,111 @@
+en:
+  subscribers/imports: &subscribers_imports
+    label: &label Imports
+    breadcrumbs:
+      label: *label
+    navigation:
+      label: *label
+      icon: fal fa-file-csv
+    buttons: &buttons
+      new: Import from CSV
+      create: Start Import
+      shorthand:
+        view: View
+    subscribers_import:
+      buttons: *buttons
+    fields: &fields
+      id:
+        heading: Import ID
+      status:
+        _: &status Status
+        label: *status
+        heading: *status
+      total_rows:
+        _: &total_rows Total Rows
+        label: *total_rows
+        heading: *total_rows
+      processed:
+        _: &processed Processed
+        label: *processed
+        heading: *processed
+      created_count:
+        _: &created_count Created
+        label: *created_count
+        heading: *created_count
+      updated_count:
+        _: &updated_count Updated
+        label: *updated_count
+        heading: *updated_count
+      error_count:
+        _: &error_count Errors
+        label: *error_count
+        heading: *error_count
+      errors_log:
+        _: &errors_log Errors Log
+        label: *errors_log
+        heading: *errors_log
+      csv:
+        _: &csv CSV File
+        label: *csv
+        heading: *csv
+      notes:
+        _: &notes Notes
+        label: *notes
+        heading: *notes
+      started_at:
+        _: &started_at Started
+        label: *started_at
+        heading: *started_at
+      finished_at:
+        _: &finished_at Finished
+        label: *finished_at
+        heading: *finished_at
+      created_at:
+        _: &created_at Uploaded
+        label: *created_at
+        heading: *created_at
+      updated_at:
+        _: &updated_at Updated
+        label: *updated_at
+        heading: *updated_at
+    index:
+      section: "%{teams_possessive} Subscriber Imports"
+      contexts:
+        team:
+          header: Subscriber Imports
+          description: "Past CSV imports for %{team_name}. Each row in your CSV is upserted to a Subscriber — keyed by external_id when present, otherwise by email."
+          description_empty: "No imports yet. Upload a CSV to bring in your existing list."
+      fields: *fields
+      buttons: *buttons
+    show:
+      section: "Import #%{id}"
+      header: Import Details
+      description: "Status and per-row results for this CSV import."
+      fields: *fields
+      buttons: *buttons
+    new:
+      section: "Import Subscribers for %{team_name}"
+      header: Upload Subscribers CSV
+      description: "Drop in a CSV with columns for external_id, email, name, and subscribed. Any other columns will be folded into the subscriber's custom_attributes. Existing subscribers (matched by external_id or email) will be updated."
+      buttons: *buttons
+    notifications:
+      created: "Import queued — refresh this page to watch progress."
+  account:
+    subscribers:
+      imports: *subscribers_imports
+  activerecord:
+    attributes:
+      subscribers/import:
+        status: *status
+        total_rows: *total_rows
+        processed: *processed
+        created_count: *created_count
+        updated_count: *updated_count
+        error_count: *error_count
+        errors_log: *errors_log
+        csv: *csv
+        notes: *notes
+        started_at: *started_at
+        finished_at: *finished_at
+        created_at: *created_at
+        updated_at: *updated_at

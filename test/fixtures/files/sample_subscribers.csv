@@ -1,0 +1,11 @@
+external_id,email,name,subscribed,plan,company
+ext-001,alice@example.com,Alice Anderson,true,growth,Acme
+ext-002,bob@example.com,Bob Barker,true,starter,
+ext-003,carol@example.com,Carol Coats,false,growth,Initech
+ext-004,dave@example.com,Dave Day,true,,Initrode
+ext-005,eve@example.com,Eve Evans,true,enterprise,Globex
+ext-001,alice-renamed@example.com,Alice Renamed,true,growth,Acme Corp
+ext-006,frank@example.com,Frank Foster,yes,growth,
+,gail@example.com,Gail Gold,true,starter,
+ext-007,,Henry Hopkins,true,growth,Hopco
+ext-008,ivy@example.com,Ivy Iris,no,enterprise,Soylent
