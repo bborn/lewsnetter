@@ -21,7 +21,7 @@ module AI
       ).call
 
       assert result.stub?, "result should be flagged as stub"
-      assert_equal "subscribed = true", result.sql_predicate
+      assert_equal "subscribed = 1", result.sql_predicate
       assert_match(/stub mode/, result.human_description)
       assert_equal [], result.errors
       assert_equal 2, result.estimated_count
@@ -37,7 +37,7 @@ module AI
 
     test "Result#success? requires predicate and no errors" do
       good = AI::SegmentTranslator::Result.new(
-        sql_predicate: "subscribed = true", human_description: "ok",
+        sql_predicate: "subscribed = 1", human_description: "ok",
         sample_subscribers: [], estimated_count: 0, errors: [], stub: false
       )
       bad = AI::SegmentTranslator::Result.new(
@@ -50,7 +50,7 @@ module AI
 
     test "validate_predicate rejects forbidden tokens" do
       translator = AI::SegmentTranslator.new(team: @team, natural_language: "x")
-      errs = translator.send(:validate_predicate, "subscribed = true; DROP TABLE users")
+      errs = translator.send(:validate_predicate, "subscribed = 1; DROP TABLE users")
       assert errs.any? { |e| e.include?("DROP") || e.include?(";") },
         "expected forbidden token error, got #{errs.inspect}"
     end
@@ -63,7 +63,7 @@ module AI
 
     test "validate_predicate accepts a normal subscribers predicate" do
       translator = AI::SegmentTranslator.new(team: @team, natural_language: "x")
-      errs = translator.send(:validate_predicate, "subscribed = true AND custom_attributes->>'plan' = 'pro'")
+      errs = translator.send(:validate_predicate, "subscribed = 1 AND json_extract(custom_attributes, '$.plan') = 'pro'")
       assert_equal [], errs
     end
   end

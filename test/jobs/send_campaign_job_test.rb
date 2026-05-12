@@ -76,7 +76,7 @@ class SendCampaignJobTest < ActiveJob::TestCase
 
     segment = @team.segments.create!(
       name: "Paying",
-      definition: {"predicate" => "custom_attributes->>'plan' = 'growth'"}
+      definition: {"predicate" => "json_extract(custom_attributes, '$.plan') = 'growth'"}
     )
     @campaign.update!(segment: segment)
 

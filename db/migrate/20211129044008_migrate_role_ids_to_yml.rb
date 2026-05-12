@@ -1,6 +1,6 @@
 class MigrateRoleIdsToYml < ActiveRecord::Migration[6.1]
   def up
-    add_column :memberships, :role_ids, :jsonb, default: []
+    add_column :memberships, :role_ids, :json, default: []
     migrating_role_ids = {}
     say_with_time "Creating #{yml_file_path} using existing Roles from the database" do
       role_keys = []

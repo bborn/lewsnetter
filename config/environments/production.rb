@@ -50,7 +50,8 @@ Rails.application.configure do
   # config.cache_store = :mem_cache_store
 
   # Replace the default in-process and non-durable queuing backend for Active Job.
-  # config.active_job.queue_adapter = :resque
+  config.active_job.queue_adapter = :solid_queue
+  config.solid_queue.connects_to = { database: { writing: :queue } }
 
   # Ignore bad email addresses and do not raise email delivery errors.
   # Set this to true and configure the email server for immediate delivery to raise delivery errors.
@@ -95,7 +96,10 @@ Rails.application.configure do
 
   config.public_file_server.enabled = ENV["RAILS_SERVE_STATIC_FILES"].present? || ENV["RENDER"].present?
 
-  config.active_job.queue_adapter = :sidekiq
+  # Queue adapter is configured above (Rails-default Solid Queue block). The
+  # original Bullet Train default of `:sidekiq` lived here; we drop it as
+  # part of the Postgres → SQLite swap so background jobs run on the same
+  # SQLite-backed queue database.
 
   if (ENV["AWS_ACCESS_KEY_ID"] || ENV["BUCKETEER_AWS_ACCESS_KEY_ID"]).present?
     config.active_storage.service = :amazon

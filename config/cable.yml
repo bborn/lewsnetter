@@ -1,15 +1,22 @@
+# Action Cable on Solid Cable — backed by the `cable` SQLite database
+# defined in config/database.yml. Replaces the Redis adapter that Bullet
+# Train ships with by default.
+
 development:
-  adapter: redis
-  # An accomodation for Docker
-  <% if ENV['REDIS_URL'] %>url: <%= ENV['REDIS_URL'] %><% end %>
+  adapter: solid_cable
+  connects_to:
+    database:
+      writing: cable
+  polling_interval: 0.1.seconds
+  message_retention: 1.day
 
 test:
   adapter: test
 
 production:
-  adapter: redis
-  url: <%= ENV.fetch("REDIS_URL") { "redis://localhost:6379/1" } %>
-  channel_prefix: lewsnetter_production
-  driver: :ruby
-  ssl_params:
-    verify_mode: <%= OpenSSL::SSL::VERIFY_NONE %>
+  adapter: solid_cable
+  connects_to:
+    database:
+      writing: cable
+  polling_interval: 0.1.seconds
+  message_retention: 1.day

@@ -18,7 +18,7 @@ class CreateCampaigns < ActiveRecord::Migration[8.1]
       t.datetime :scheduled_for
       t.datetime :sent_at
 
-      t.jsonb :stats, null: false, default: {}
+      t.json :stats, null: false, default: {}
 
       t.timestamps
     end

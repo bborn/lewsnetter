@@ -1,77 +1,42 @@
-# PostgreSQL. Versions 9.1 and up are supported.
+# SQLite on Rails 8. We use the three-database layout that Rails 8 ships as
+# default for production (primary, queue, cable) and mirror it in development
+# and test so behavior is consistent across environments. All three live in
+# storage/ which is gitignored.
 #
-# Install the pg driver:
-#   gem install pg
-# On OS X with Homebrew:
-#   gem install pg -- --with-pg-config=/usr/local/bin/pg_config
-# On OS X with MacPorts:
-#   gem install pg -- --with-pg-config=/opt/local/lib/postgresql84/bin/pg_config
-# On Windows:
-#   gem install pg
-#       Choose the win32 build.
-#       Install PostgreSQL and put its /bin directory on your path.
-#
-# Configure Using Gemfile
-# gem 'pg'
-#
+# Why SQLite here even though Bullet Train defaults to Postgres: see
+# initiatives/lewsnetter-v2/PLAN.md. Short version — Litestream-to-S3 for
+# backups, one-file deploy story for OSS self-hosters, and Rails 8's actual
+# default.
+
 default: &default
-  adapter: postgresql
-  encoding: unicode
-  # For details on connection pooling, see rails configuration guide
-  # http://guides.rubyonrails.org/configuring.html#database-pooling
+  adapter: sqlite3
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
-  # Some accomodations for dev.Dockerfile
-  <% if ENV['DATABASE_HOST'] %>host: <%= ENV['DATABASE_HOST'] %><% end %>
-  <% if ENV['DATABASE_USERNAME'] %>username: <%= ENV['DATABASE_USERNAME'] %><% end %>
-  <% if ENV['DATABASE_PORT'] %>port: <%= ENV['DATABASE_PORT'] %><% end %>
+  timeout: 5000
 
 development:
-  <<: *default
-  database: lewsnetter_development
-  # On MacOS some users are reporting crashes when first trying to access
-  # the database. This workaround was suggested in this issue on `ruby-pg`:
-  # https://github.com/ged/ruby-pg/issues/538
-  <% if RUBY_PLATFORM =~ /darwin/ %>gssencmode: disable<% end %>
+  primary:
+    <<: *default
+    database: storage/lewsnetter_development.sqlite3
+  queue:
+    <<: *default
+    database: storage/lewsnetter_development_queue.sqlite3
+    migrations_paths: db/queue_migrate
+  cable:
+    <<: *default
+    database: storage/lewsnetter_development_cable.sqlite3
+    migrations_paths: db/cable_migrate
 
-  # The specified database role being used to connect to postgres.
-  # To create additional roles in postgres see `$ createuser --help`.
-  # When left blank, postgres will use the default role. This is
-  # the same name as the operating system user that initialized the database.
-  #username: lewsnetter-app
-
-  # The password associated with the postgres role (username).
-  #password:
-
-  # Connect on a TCP socket. Omitted by default since the client uses a
-  # domain socket that doesn't need configuration. Windows does not have
-  # domain sockets, so uncomment these lines.
-  #host: localhost
-
-  # The TCP port the server listens on. Defaults to 5432.
-  # If your server runs on a different port number, change accordingly.
-  #port: 5432
-
-  # Schema search path. The server defaults to $user,public
-  #schema_search_path: myapp,sharedapp,public
-
-  # Minimum log levels, in increasing order:
-  #   debug5, debug4, debug3, debug2, debug1,
-  #   log, notice, warning, error, fatal, and panic
-  # Defaults to warning.
-  #min_messages: notice
-
-# Warning: The database defined as "test" will be erased and
-# re-generated from your development database when you run "rake".
-# Do not set this db to the same as development or production.
+# Warning: The database defined as "test" will be erased and re-generated from
+# your development database when you run "rake". Do not set this db to the
+# same as development or production.
 test:
-  <<: *default
   <%
-    # Generate a unique suffix based on git worktree name to allow concurrent test runs
+    # Mirror the worktree-aware naming we had on Postgres so concurrent test
+    # runs in sibling worktrees don't fight over the same SQLite file.
     worktree_suffix = begin
       worktree_path = `git rev-parse --show-toplevel 2>/dev/null`.strip
       if worktree_path.present?
-        # Use the worktree directory name, sanitized for database naming
-        File.basename(worktree_path).gsub(/[^a-zA-Z0-9_]/, '_')
+        File.basename(worktree_path).gsub(/[^a-zA-Z0-9_]/, "_")
       else
         ""
       end
@@ -79,34 +44,29 @@ test:
       ""
     end
     worktree_suffix = "_#{worktree_suffix}" if worktree_suffix.present?
+    test_env_number = ENV["TEST_ENV_NUMBER"]
   %>
-  database: lewsnetter_test<%= worktree_suffix %><%= ENV['TEST_ENV_NUMBER'] %>
-  <% if ENV['CI'] %>username: <%= ENV['POSTGRES_USER'] %><% end %>
-  <% if ENV['CI'] %>password: <%= ENV['POSTGRES_PASSWORD'] %><% end %>
-  <% if ENV['CI'] %>host: localhost<% end %>
+  primary:
+    <<: *default
+    database: storage/lewsnetter_test<%= worktree_suffix %><%= test_env_number %>.sqlite3
+  queue:
+    <<: *default
+    database: storage/lewsnetter_test<%= worktree_suffix %><%= test_env_number %>_queue.sqlite3
+    migrations_paths: db/queue_migrate
+  cable:
+    <<: *default
+    database: storage/lewsnetter_test<%= worktree_suffix %><%= test_env_number %>_cable.sqlite3
+    migrations_paths: db/cable_migrate
 
-# As with config/secrets.yml, you never want to store sensitive information,
-# like your database password, in your source code. If your source code is
-# ever seen by anyone, they now have access to your database.
-#
-# Instead, provide the password as a unix environment variable when you boot
-# the app. Read http://guides.rubyonrails.org/configuring.html#configuring-a-database
-# for a full rundown on how to provide these environment variables in a
-# production deployment.
-#
-# On Heroku and other platform providers, you may have a full connection URL
-# available as an environment variable. For example:
-#
-#   DATABASE_URL="postgres://myuser:mypass@localhost/somedatabase"
-#
-# You can use this database configuration with:
-#
-#   production:
-#     url: <%= ENV['DATABASE_URL'] %>
-#
 production:
-  <<: *default
-  database: lewsnetter_production
-  username: lewsnetter
-  password: <%= ENV['LEWSNETTER_DATABASE_PASSWORD'] %>
-  url: <%= ENV['DATABASE_URL'] %>
+  primary:
+    <<: *default
+    database: storage/lewsnetter_production.sqlite3
+  queue:
+    <<: *default
+    database: storage/lewsnetter_production_queue.sqlite3
+    migrations_paths: db/queue_migrate
+  cable:
+    <<: *default
+    database: storage/lewsnetter_production_cable.sqlite3
+    migrations_paths: db/cable_migrate

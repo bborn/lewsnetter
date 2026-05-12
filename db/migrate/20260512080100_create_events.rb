@@ -6,7 +6,7 @@ class CreateEvents < ActiveRecord::Migration[8.1]
 
       t.string :name, null: false
       t.datetime :occurred_at, null: false
-      t.jsonb :properties, null: false, default: {}
+      t.json :properties, null: false, default: {}
 
       t.timestamps
     end

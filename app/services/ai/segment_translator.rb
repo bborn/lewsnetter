@@ -74,13 +74,15 @@ module AI
     def system_prompt
       <<~PROMPT
         You translate plain-English audience descriptions into a single SQL WHERE
-        predicate over the `subscribers` table. Subscribers have these columns:
+        predicate over the `subscribers` table. The database is SQLite.
+        Subscribers have these columns:
 
         #{ALLOWED_COLUMNS.join(", ")}
 
-        `custom_attributes` is a jsonb column. Reference its keys as
-        `custom_attributes->>'key_name'`. Cast for comparisons, e.g.
-        `(custom_attributes->>'plan')::text = 'pro'`.
+        `custom_attributes` is a JSON column. Reference its keys with SQLite's
+        json_extract function, e.g. `json_extract(custom_attributes, '$.plan')
+        = 'pro'`. Booleans on SQLite are stored as integers — use `subscribed
+        = 1` (true) and `subscribed = 0` (false), not `subscribed = true`.
 
         Observed custom_attributes keys + types for this team:
         #{custom_attribute_schema(@team).map { |k, t| "  - #{k} (#{t})" }.join("\n").presence || "  (none yet)"}
@@ -118,9 +120,10 @@ module AI
       end
 
       # Disallow references to other table names — we only allow bare column
-      # names from the subscribers table or `custom_attributes->>'…'` jsonb access.
-      # A simple heuristic: any identifier of the form `something.something`
-      # that isn't `custom_attributes.something` is suspicious.
+      # names from the subscribers table or `json_extract(custom_attributes,
+      # '$.key')` JSON access. A simple heuristic: any identifier of the
+      # form `something.something` that isn't `custom_attributes.something`
+      # is suspicious.
       predicate.scan(/\b([a-zA-Z_][a-zA-Z0-9_]*)\.([a-zA-Z_][a-zA-Z0-9_]*)/) do |left, _right|
         next if left.casecmp("subscribers").zero?
         errors << "Predicate references disallowed table: #{left}"
@@ -149,7 +152,10 @@ module AI
     def stub_result(errors: [])
       scope = @team.subscribers.subscribed
       Result.new(
-        sql_predicate: "subscribed = true",
+        # SQLite stores booleans as integers (0/1). Using `= 1` keeps this
+        # literal predicate valid on SQLite while remaining equivalent to
+        # the prior Postgres `= true` form.
+        sql_predicate: "subscribed = 1",
         human_description: "All subscribed subscribers (stub mode — no LLM call)",
         sample_subscribers: scope.limit(MAX_SAMPLE).to_a,
         estimated_count: scope.count,

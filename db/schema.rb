@@ -11,12 +11,9 @@
 # It's strongly recommended that you check this file into your version control system.
 
 ActiveRecord::Schema[8.1].define(version: 2026_05_12_141635) do
-  # These are extensions that must be enabled in order to support this database
-  enable_extension "pg_catalog.plpgsql"
-
   create_table "account_onboarding_invitation_lists", force: :cascade do |t|
-    t.bigint "team_id", null: false
-    t.jsonb "invitations"
+    t.integer "team_id", null: false
+    t.json "invitations"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["team_id"], name: "index_account_onboarding_invitation_lists_on_team_id"
@@ -35,7 +32,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_141635) do
     t.string "name", null: false
     t.text "body"
     t.string "record_type", null: false
-    t.bigint "record_id", null: false
+    t.integer "record_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["record_type", "record_id", "name"], name: "index_action_text_rich_texts_uniqueness", unique: true
@@ -44,8 +41,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_141635) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
-    t.bigint "record_id", null: false
-    t.bigint "blob_id", null: false
+    t.integer "record_id", null: false
+    t.integer "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
     t.index ["blob_id"], name: "index_active_storage_attachments_on_blob_id"
     t.index ["record_type", "record_id", "name", "blob_id"], name: "index_active_storage_attachments_uniqueness", unique: true
@@ -64,14 +61,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_141635) do
   end
 
   create_table "active_storage_variant_records", force: :cascade do |t|
-    t.bigint "blob_id", null: false
+    t.integer "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
   end
 
   create_table "addresses", force: :cascade do |t|
     t.string "addressable_type", null: false
-    t.bigint "addressable_id", null: false
+    t.integer "addressable_id", null: false
     t.string "address_one"
     t.string "address_two"
     t.string "city"
@@ -86,8 +83,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_141635) do
 
   create_table "campaigns", force: :cascade do |t|
     t.integer "team_id", null: false
-    t.bigint "email_template_id"
-    t.bigint "segment_id"
+    t.integer "email_template_id"
+    t.integer "segment_id"
     t.integer "sender_address_id"
     t.string "subject"
     t.string "preheader"
@@ -96,7 +93,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_141635) do
     t.string "status", default: "draft", null: false
     t.datetime "scheduled_for"
     t.datetime "sent_at"
-    t.jsonb "stats", default: {}, null: false
+    t.json "stats", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["email_template_id"], name: "index_campaigns_on_email_template_id"
@@ -120,10 +117,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_141635) do
 
   create_table "events", force: :cascade do |t|
     t.integer "team_id", null: false
-    t.bigint "subscriber_id", null: false
+    t.integer "subscriber_id", null: false
     t.string "name", null: false
     t.datetime "occurred_at", null: false
-    t.jsonb "properties", default: {}, null: false
+    t.json "properties", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["subscriber_id", "name"], name: "index_events_on_subscriber_id_and_name"
@@ -134,8 +131,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_141635) do
   end
 
   create_table "integrations_stripe_installations", force: :cascade do |t|
-    t.bigint "team_id", null: false
-    t.bigint "oauth_stripe_account_id", null: false
+    t.integer "team_id", null: false
+    t.integer "oauth_stripe_account_id", null: false
     t.string "name"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -143,40 +140,40 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_141635) do
     t.index ["team_id"], name: "index_integrations_stripe_installations_on_team_id"
   end
 
-  create_table "invitations", id: :serial, force: :cascade do |t|
+  create_table "invitations", force: :cascade do |t|
     t.string "email"
     t.string "uuid"
     t.integer "from_membership_id"
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
     t.integer "team_id"
-    t.bigint "invitation_list_id"
+    t.integer "invitation_list_id"
     t.index ["invitation_list_id"], name: "index_invitations_on_invitation_list_id"
     t.index ["team_id"], name: "index_invitations_on_team_id"
   end
 
   create_table "mailkick_subscriptions", force: :cascade do |t|
     t.string "subscriber_type"
-    t.bigint "subscriber_id"
+    t.integer "subscriber_id"
     t.string "list"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["subscriber_type", "subscriber_id", "list"], name: "index_mailkick_subscriptions_on_subscriber_and_list", unique: true
   end
 
-  create_table "memberships", id: :serial, force: :cascade do |t|
+  create_table "memberships", force: :cascade do |t|
     t.integer "user_id"
     t.integer "team_id"
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
-    t.bigint "invitation_id"
+    t.integer "invitation_id"
     t.string "user_first_name"
     t.string "user_last_name"
     t.string "user_profile_photo_id"
     t.string "user_email"
-    t.bigint "added_by_id"
-    t.bigint "platform_agent_of_id"
-    t.jsonb "role_ids", default: []
+    t.integer "added_by_id"
+    t.integer "platform_agent_of_id"
+    t.json "role_ids", default: []
     t.boolean "platform_agent", default: false
     t.index ["added_by_id"], name: "index_memberships_on_added_by_id"
     t.index ["invitation_id"], name: "index_memberships_on_invitation_id"
@@ -186,8 +183,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_141635) do
   end
 
   create_table "oauth_access_grants", force: :cascade do |t|
-    t.bigint "resource_owner_id", null: false
-    t.bigint "application_id", null: false
+    t.integer "resource_owner_id", null: false
+    t.integer "application_id", null: false
     t.string "token", null: false
     t.integer "expires_in", null: false
     t.text "redirect_uri", null: false
@@ -200,8 +197,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_141635) do
   end
 
   create_table "oauth_access_tokens", force: :cascade do |t|
-    t.bigint "resource_owner_id"
-    t.bigint "application_id", null: false
+    t.integer "resource_owner_id"
+    t.integer "application_id", null: false
     t.string "token", null: false
     t.string "refresh_token"
     t.integer "expires_in"
@@ -227,15 +224,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_141635) do
     t.boolean "confidential", default: true, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.bigint "team_id"
+    t.integer "team_id"
     t.index ["team_id"], name: "index_oauth_applications_on_team_id"
     t.index ["uid"], name: "index_oauth_applications_on_uid", unique: true
   end
 
   create_table "oauth_stripe_accounts", force: :cascade do |t|
     t.string "uid"
-    t.jsonb "data"
-    t.bigint "user_id"
+    t.json "data"
+    t.integer "user_id"
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
     t.index ["uid"], name: "index_oauth_stripe_accounts_on_uid", unique: true
@@ -243,7 +240,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_141635) do
   end
 
   create_table "scaffolding_absolutely_abstract_creative_concepts", force: :cascade do |t|
-    t.bigint "team_id", null: false
+    t.integer "team_id", null: false
     t.string "name"
     t.text "description"
     t.datetime "created_at", null: false
@@ -252,7 +249,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_141635) do
   end
 
   create_table "scaffolding_completely_concrete_tangible_things", force: :cascade do |t|
-    t.bigint "absolutely_abstract_creative_concept_id", null: false
+    t.integer "absolutely_abstract_creative_concept_id", null: false
     t.string "text_field_value"
     t.string "button_value"
     t.string "cloudinary_image_value"
@@ -266,19 +263,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_141635) do
     t.datetime "updated_at", null: false
     t.integer "sort_order"
     t.datetime "date_and_time_field_value", precision: nil
-    t.jsonb "multiple_button_values", default: []
-    t.jsonb "multiple_super_select_values", default: []
+    t.json "multiple_button_values", default: []
+    t.json "multiple_super_select_values", default: []
     t.string "color_picker_value"
     t.boolean "boolean_button_value"
     t.string "option_value"
-    t.jsonb "multiple_option_values", default: []
+    t.json "multiple_option_values", default: []
     t.boolean "boolean_checkbox_value"
     t.index ["absolutely_abstract_creative_concept_id"], name: "index_tangible_things_on_creative_concept_id"
   end
 
   create_table "scaffolding_completely_concrete_tangible_things_assignments", force: :cascade do |t|
-    t.bigint "tangible_thing_id"
-    t.bigint "membership_id"
+    t.integer "tangible_thing_id"
+    t.integer "membership_id"
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
     t.index ["membership_id"], name: "index_tangible_things_assignments_on_membership_id"
@@ -288,7 +285,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_141635) do
   create_table "segments", force: :cascade do |t|
     t.integer "team_id", null: false
     t.string "name", null: false
-    t.jsonb "definition", default: {}, null: false
+    t.json "definition", default: {}, null: false
     t.text "natural_language_source"
     t.integer "computed_count"
     t.datetime "last_computed_at"
@@ -299,7 +296,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_141635) do
   end
 
   create_table "sender_addresses", force: :cascade do |t|
-    t.bigint "team_id", null: false
+    t.integer "team_id", null: false
     t.string "email"
     t.string "name"
     t.boolean "verified", default: false
@@ -314,7 +311,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_141635) do
     t.string "external_id"
     t.string "email", null: false
     t.string "name"
-    t.jsonb "custom_attributes", default: {}, null: false
+    t.json "custom_attributes", default: {}, null: false
     t.boolean "subscribed", default: true, null: false
     t.datetime "unsubscribed_at"
     t.datetime "complained_at"
@@ -322,12 +319,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_141635) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["team_id", "email"], name: "index_subscribers_on_team_id_and_email"
-    t.index ["team_id", "external_id"], name: "index_subscribers_on_team_id_and_external_id", unique: true, where: "(external_id IS NOT NULL)"
+    t.index ["team_id", "external_id"], name: "index_subscribers_on_team_id_and_external_id", unique: true, where: "external_id IS NOT NULL"
     t.index ["team_id", "subscribed"], name: "index_subscribers_on_team_id_and_subscribed"
     t.index ["team_id"], name: "index_subscribers_on_team_id"
   end
 
-  create_table "teams", id: :serial, force: :cascade do |t|
+  create_table "teams", force: :cascade do |t|
     t.string "name"
     t.string "slug"
     t.datetime "created_at", precision: nil, null: false
@@ -337,7 +334,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_141635) do
     t.string "locale"
   end
 
-  create_table "users", id: :serial, force: :cascade do |t|
+  create_table "users", force: :cascade do |t|
     t.string "email", default: "", null: false
     t.string "encrypted_password", default: "", null: false
     t.string "reset_password_token"
@@ -346,8 +343,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_141635) do
     t.integer "sign_in_count", default: 0, null: false
     t.datetime "current_sign_in_at", precision: nil
     t.datetime "last_sign_in_at", precision: nil
-    t.inet "current_sign_in_ip"
-    t.inet "last_sign_in_ip"
+    t.string "current_sign_in_ip"
+    t.string "last_sign_in_ip"
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
     t.integer "current_team_id"
@@ -356,7 +353,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_141635) do
     t.string "time_zone"
     t.datetime "last_seen_at", precision: nil
     t.string "profile_photo_id"
-    t.jsonb "ability_cache"
+    t.json "ability_cache"
     t.datetime "last_notification_email_sent_at", precision: nil
     t.boolean "former_user", default: false, null: false
     t.string "encrypted_otp_secret"
@@ -364,9 +361,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_141635) do
     t.string "encrypted_otp_secret_salt"
     t.integer "consumed_timestep"
     t.boolean "otp_required_for_login"
-    t.string "otp_backup_codes", array: true
+    t.json "otp_backup_codes"
     t.string "locale"
-    t.bigint "platform_agent_of_id"
+    t.integer "platform_agent_of_id"
     t.string "otp_secret"
     t.integer "failed_attempts", default: 0, null: false
     t.string "unlock_token"
@@ -378,7 +375,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_141635) do
   end
 
   create_table "webhooks_incoming_bullet_train_webhooks", force: :cascade do |t|
-    t.jsonb "data"
+    t.json "data"
     t.datetime "processed_at", precision: nil
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
@@ -386,10 +383,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_141635) do
   end
 
   create_table "webhooks_incoming_oauth_stripe_account_webhooks", force: :cascade do |t|
-    t.jsonb "data"
+    t.json "data"
     t.datetime "processed_at", precision: nil
     t.datetime "verified_at", precision: nil
-    t.bigint "oauth_stripe_account_id"
+    t.integer "oauth_stripe_account_id"
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
     t.index ["oauth_stripe_account_id"], name: "index_stripe_webhooks_on_stripe_account_id"
@@ -418,13 +415,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_141635) do
   end
 
   create_table "webhooks_outgoing_endpoints", force: :cascade do |t|
-    t.bigint "team_id"
+    t.integer "team_id"
     t.text "url"
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
     t.string "name"
-    t.jsonb "event_type_ids", default: []
-    t.bigint "scaffolding_absolutely_abstract_creative_concept_id"
+    t.json "event_type_ids", default: []
+    t.integer "scaffolding_absolutely_abstract_creative_concept_id"
     t.integer "api_version", null: false
     t.datetime "deactivation_limit_reached_at"
     t.datetime "deactivated_at"
@@ -438,12 +435,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_141635) do
   create_table "webhooks_outgoing_events", force: :cascade do |t|
     t.integer "subject_id"
     t.string "subject_type"
-    t.jsonb "data"
+    t.json "data"
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
-    t.bigint "team_id"
+    t.integer "team_id"
     t.string "uuid"
-    t.jsonb "payload"
+    t.json "payload"
     t.string "event_type_id"
     t.integer "api_version", null: false
     t.index ["team_id"], name: "index_webhooks_outgoing_events_on_team_id"

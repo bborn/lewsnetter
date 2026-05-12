@@ -1,5 +1,14 @@
 class UpdateMembershipsEmailToMatchUsers < ActiveRecord::Migration[8.0]
   def up
+    # On SQLite, ActiveRecord caches column information per model when it is
+    # first touched. Earlier migrations in this run touched `Membership` while
+    # the `admin` column still existed, then a later migration dropped it.
+    # Without a manual reset_column_information the cached column list still
+    # contains `admin` and the SELECT below ends up referencing a column that
+    # no longer exists in the schema.
+    Membership.reset_column_information
+    User.reset_column_information
+
     # Conceptually this migraiton is doing this:
     # User.find_each do |user|
     #  user.memberships.where.not(user_email: user.email).update(user_email: user.email)

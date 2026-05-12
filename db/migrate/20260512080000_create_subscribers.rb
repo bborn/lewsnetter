@@ -7,7 +7,7 @@ class CreateSubscribers < ActiveRecord::Migration[8.1]
       t.string :email, null: false
       t.string :name
 
-      t.jsonb :custom_attributes, null: false, default: {}
+      t.json :custom_attributes, null: false, default: {}
 
       t.boolean :subscribed, null: false, default: true
       t.datetime :unsubscribed_at

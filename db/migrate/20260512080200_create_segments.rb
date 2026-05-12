@@ -4,7 +4,7 @@ class CreateSegments < ActiveRecord::Migration[8.1]
       t.references :team, null: false, foreign_key: true, type: :integer
 
       t.string :name, null: false
-      t.jsonb :definition, null: false, default: {}
+      t.json :definition, null: false, default: {}
       t.text :natural_language_source
 
       t.integer :computed_count

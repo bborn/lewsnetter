@@ -14,8 +14,11 @@ gem "rails", "~> 8.1.0"
 # The modern asset pipeline for Rails [https://github.com/rails/propshaft]
 gem "propshaft"
 
-# Use postgresql as the database for Active Record
-gem "pg", ">= 0.18", "< 2.0"
+# Use SQLite as the database for Active Record (Rails 8 default).
+# We deliberately deviate from Bullet Train's Postgres default to lean on
+# Rails 8's SQLite-first model: one-file deploy, Litestream-to-S3 backup,
+# and no Redis service in the OSS / self-host story.
+gem "sqlite3", "~> 2.1"
 
 # Use the Puma web server [https://github.com/puma/puma]
 gem "puma", "~> 8.0"
@@ -151,7 +154,18 @@ gem "rqrcode"
 # Admin panel
 gem "avo", ">= 3.1.7"
 
-# Background processing
+# Background processing.
+# Rails 8 default — Solid Queue runs on a dedicated SQLite database (see
+# config/database.yml). Sidekiq is kept in the bundle for now because
+# Bullet Train's stock config references it; we just stop running the worker.
+gem "solid_queue"
+
+# Action Cable backed by SQLite — replaces Redis in development + production.
+gem "solid_cable"
+
+# Kept for now: Bullet Train still has Sidekiq hooks in some places. We
+# switched ActiveJob to Solid Queue in config/environments/*.rb so Sidekiq
+# is no longer the runtime queue; removal can happen as a follow-up commit.
 gem "sidekiq"
 
 # Protect the API routes via CORS
