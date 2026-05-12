@@ -20,11 +20,17 @@ module Ses
     def call
       ses = Ses::ClientFor.call(@team)
       account = ses.get_account
+      # IdentityInfo struct fields: identity_name, identity_type,
+      # sending_enabled, verification_status, verification_info. `verified`
+      # in our local shape is `sending_enabled` (the boolean SES actually
+      # gates send permission with). `verification_status` is the SUCCESS/
+      # PENDING/FAILED enum from the verification flow.
       identities = ses.list_email_identities.email_identities.map { |i|
         {
           identity: i.identity_name,
           type: i.identity_type,
-          verified: i.verified_for_sending_status
+          verified: i.sending_enabled,
+          verification_status: i.verification_status
         }
       }
       Result.new(
