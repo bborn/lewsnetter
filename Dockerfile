@@ -88,6 +88,10 @@ COPY . .
 # Precompile bootsnap code for faster boot times
 RUN bundle exec bootsnap precompile app/ lib/
 
+# Avo eagerly opens `log/avo.log` during app boot; assets:precompile runs the
+# full Rails initializer chain so the file must exist before precompile runs.
+RUN mkdir -p log && touch log/avo.log
+
 # Precompiling assets for production without requiring secret RAILS_MASTER_KEY
 RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
 
