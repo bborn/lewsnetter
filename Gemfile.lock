@@ -1,3 +1,9 @@
+PATH
+  remote: vendor/gems/lewsnetter-rails
+  specs:
+    lewsnetter-rails (0.1.0)
+      activejob (>= 6.1)
+
 GEM
   remote: https://rubygems.org/
   specs:
@@ -766,6 +772,7 @@ DEPENDENCIES
   jsbundling-rails
   knapsack_pro
   letter_opener
+  lewsnetter-rails!
   magic_test
   mailkick
   minitest
