@@ -1,0 +1,139 @@
+en:
+  campaigns: &campaigns
+    label: &label Campaigns
+    breadcrumbs:
+      label: *label
+    navigation:
+      label: *label
+      icon: fal fa-puzzle-piece
+    buttons: &buttons
+      new: Add New Campaign
+      create: Create Campaign
+      edit: Edit Campaign
+      update: Update Campaign
+      destroy: Remove Campaign
+      shorthand:
+        edit: Edit
+        destroy: Delete
+      confirmations:
+        # TODO customize for your use-case.
+        destroy: Are you sure you want to remove %{campaign_name}? This will also remove any child resources and can't be undone.
+    campaign:
+      buttons: *buttons
+    fields: &fields
+      id:
+        heading: Campaign ID
+      team_id:
+        heading: Team ID
+      subject:
+        _: &subject Subject
+        label: *subject
+        heading: *subject
+        api_title: *subject
+        api_description: *subject
+      preheader:
+        _: &preheader Preheader
+        label: *preheader
+        heading: *preheader
+        api_title: *preheader
+        api_description: *preheader
+      body_mjml:
+        _: &body_mjml Body Mjml
+        label: *body_mjml
+        heading: *body_mjml
+        api_title: *body_mjml
+        api_description: *body_mjml
+      status:
+        _: &status Status
+        label: *status
+        heading: *status
+        api_title: *status
+        api_description: *status
+      scheduled_for:
+        _: &scheduled_for Scheduled For
+        label: *scheduled_for
+        heading: *scheduled_for
+        api_title: *scheduled_for
+        api_description: *scheduled_for
+      email_template_id: &template
+        _: &email_template_id Template
+        label: *email_template_id
+        heading: *email_template_id
+        api_title: *email_template_id
+        api_description: *email_template_id
+        placeholder: None
+      template: *template
+      segment_id: &segment
+        _: &segment_id Segment
+        label: *segment_id
+        heading: *segment_id
+        api_title: *segment_id
+        api_description: *segment_id
+        placeholder: None
+      segment: *segment
+      # 🚅 super scaffolding will insert new fields above this line.
+      created_at:
+        _: &created_at Added
+        label: *created_at
+        heading: *created_at
+      updated_at:
+        _: &updated_at Updated
+        label: *updated_at
+        heading: *updated_at
+    api:
+      collection_actions: "Collection Actions for Campaigns"
+      index: "List Campaigns"
+      create: "Add a New Campaign"
+      member_actions: "Actions for an Individual Campaign"
+      show: "Retrieve a Campaign"
+      update: "Update a Campaign"
+      destroy: "Delete a Campaign"
+      fields: *fields
+    index:
+      section: "%{teams_possessive} Campaigns"
+      contexts:
+        team:
+          header: Campaigns
+          description: Below is a list of Campaigns that have been added for %{team_name}.
+          description_empty: No Campaigns have been added for %{team_name}.
+      fields: *fields
+      buttons: *buttons
+    show:
+      section: "%{campaign_name}"
+      header: Campaign Details
+      description: Below are the details we have for %{campaign_name}.
+      manage_description: You'll also find options for updating these details or removing %{campaign_name} from %{team_name} entirely.
+      fields: *fields
+      buttons: *buttons
+    form: &form
+      buttons: *buttons
+      fields: *fields
+    new:
+      section: "New Campaign for %{team_name}"
+      header: New Campaign Details
+      description: Please provide the details of the new Campaign you'd like to add to %{team_name}.
+      form: *form
+    edit:
+      section: "%{campaign_name}"
+      header: Edit Campaign Details
+      description: You can update the details or settings for %{campaign_name} below.
+      form: *form
+    notifications:
+      created: Campaign was successfully created.
+      updated: Campaign was successfully updated.
+      destroyed: Campaign was successfully destroyed.
+  account:
+    campaigns: *campaigns
+  activerecord:
+    attributes:
+      campaign:
+        subject: *subject
+        preheader: *preheader
+        body_mjml: *body_mjml
+        status: *status
+        scheduled_for: *scheduled_for
+        email_template_id: *email_template_id
+        segment_id: *segment_id
+        # 🚅 super scaffolding will insert new activerecord attributes above this line.
+        created_at: *created_at
+        updated_at: *updated_at

@@ -1,0 +1,8 @@
+<% email_template ||= @email_template %>
+<% team ||= @team || email_template&.team %>
+<%= render 'account/teams/breadcrumbs', team: team %>
+<%= render 'account/shared/breadcrumb', label: t('.label'), url: [:account, team, :email_templates] %>
+<% if email_template&.persisted? %>
+  <%= render 'account/shared/breadcrumb', label: email_template.label_string, url: [:account, email_template] %>
+<% end %>
+<%= render 'account/shared/breadcrumbs/actions', only_for: 'email_templates' %>

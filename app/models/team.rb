@@ -9,7 +9,7 @@ class Team < ApplicationRecord
   has_many :subscribers, dependent: :destroy
   has_many :events, dependent: :destroy
   has_many :segments, dependent: :destroy
-  has_many :templates, dependent: :destroy
+  has_many :email_templates, dependent: :destroy
   has_many :campaigns, dependent: :destroy
   # 🚅 add has_many associations above.
 

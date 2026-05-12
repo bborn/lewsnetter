@@ -2,7 +2,7 @@ class CreateCampaigns < ActiveRecord::Migration[8.1]
   def change
     create_table :campaigns do |t|
       t.references :team, null: false, foreign_key: true, type: :integer
-      t.references :template, foreign_key: true
+      t.references :email_template, foreign_key: true
       t.references :segment, foreign_key: true
 
       # SenderAddress model is added with the SES integration commit; reserve

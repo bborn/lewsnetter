@@ -34,6 +34,10 @@ shallow do
       resources :subscribers do
         resources :events
       end
+
+      resources :segments
+      resources :email_templates
+      resources :campaigns
     end
   end
 end

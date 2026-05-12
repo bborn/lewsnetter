@@ -3,6 +3,9 @@
 
   <% p.content_for :body do %>
     <%= render "account/subscribers/index", subscribers: @team.subscribers, hide_back: true %>
+    <%= render "account/segments/index", segments: @team.segments, hide_back: true %>
+    <%= render "account/email_templates/index", email_templates: @team.email_templates, hide_back: true %>
+    <%= render "account/campaigns/index", campaigns: @team.campaigns, hide_back: true %>
     <%# 🚅 super scaffolding will insert new children above this line. %>
     
     <%= render 'account/scaffolding/absolutely_abstract/creative_concepts/index', creative_concepts: @team.scaffolding_absolutely_abstract_creative_concepts, hide_back: true unless scaffolding_things_disabled? %>

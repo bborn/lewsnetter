@@ -86,7 +86,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_080400) do
 
   create_table "campaigns", force: :cascade do |t|
     t.integer "team_id", null: false
-    t.bigint "template_id"
+    t.bigint "email_template_id"
     t.bigint "segment_id"
     t.integer "sender_address_id"
     t.string "subject"
@@ -99,12 +99,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_080400) do
     t.jsonb "stats", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["email_template_id"], name: "index_campaigns_on_email_template_id"
     t.index ["segment_id"], name: "index_campaigns_on_segment_id"
     t.index ["sender_address_id"], name: "index_campaigns_on_sender_address_id"
     t.index ["team_id", "scheduled_for"], name: "index_campaigns_on_team_id_and_scheduled_for"
     t.index ["team_id", "status"], name: "index_campaigns_on_team_id_and_status"
     t.index ["team_id"], name: "index_campaigns_on_team_id"
-    t.index ["template_id"], name: "index_campaigns_on_template_id"
+  end
+
+  create_table "email_templates", force: :cascade do |t|
+    t.integer "team_id", null: false
+    t.string "name", null: false
+    t.text "mjml_body"
+    t.text "rendered_html"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["team_id", "name"], name: "index_email_templates_on_team_id_and_name"
+    t.index ["team_id"], name: "index_email_templates_on_team_id"
   end
 
   create_table "events", force: :cascade do |t|
@@ -306,17 +317,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_080400) do
     t.string "locale"
   end
 
-  create_table "templates", force: :cascade do |t|
-    t.integer "team_id", null: false
-    t.string "name", null: false
-    t.text "mjml_body"
-    t.text "rendered_html"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["team_id", "name"], name: "index_templates_on_team_id_and_name"
-    t.index ["team_id"], name: "index_templates_on_team_id"
-  end
-
   create_table "users", id: :serial, force: :cascade do |t|
     t.string "email", default: "", null: false
     t.string "encrypted_password", default: "", null: false
@@ -406,10 +406,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_080400) do
     t.jsonb "event_type_ids", default: []
     t.bigint "scaffolding_absolutely_abstract_creative_concept_id"
     t.integer "api_version", null: false
-    t.string "webhook_secret", null: false
     t.datetime "deactivation_limit_reached_at"
     t.datetime "deactivated_at"
     t.integer "consecutive_failed_deliveries", default: 0, null: false
+    t.string "webhook_secret", null: false
     t.index ["scaffolding_absolutely_abstract_creative_concept_id"], name: "index_endpoints_on_abstract_creative_concept_id"
     t.index ["team_id", "deactivated_at"], name: "idx_on_team_id_deactivated_at_d8a33babf2"
     t.index ["team_id"], name: "index_webhooks_outgoing_endpoints_on_team_id"
@@ -432,9 +432,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_080400) do
   add_foreign_key "account_onboarding_invitation_lists", "teams"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "campaigns", "email_templates"
   add_foreign_key "campaigns", "segments"
   add_foreign_key "campaigns", "teams"
-  add_foreign_key "campaigns", "templates"
+  add_foreign_key "email_templates", "teams"
   add_foreign_key "events", "subscribers"
   add_foreign_key "events", "teams"
   add_foreign_key "integrations_stripe_installations", "oauth_stripe_accounts"
@@ -456,7 +457,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_080400) do
   add_foreign_key "scaffolding_completely_concrete_tangible_things_assignments", "scaffolding_completely_concrete_tangible_things", column: "tangible_thing_id"
   add_foreign_key "segments", "teams"
   add_foreign_key "subscribers", "teams"
-  add_foreign_key "templates", "teams"
   add_foreign_key "users", "oauth_applications", column: "platform_agent_of_id"
   add_foreign_key "webhooks_outgoing_endpoints", "scaffolding_absolutely_abstract_creative_concepts"
   add_foreign_key "webhooks_outgoing_endpoints", "teams"

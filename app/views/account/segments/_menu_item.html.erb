@@ -1,0 +1,10 @@
+<% if can? :read, Segment.new(team: current_team) %>
+  <%= render 'account/shared/menu/item', {
+    url: main_app.polymorphic_path([:account, current_team, :segments]),
+    label: t('segments.navigation.label'),
+  } do |p| %>
+    <% p.icon do %>
+      <i class="<%= t('segments.navigation.icon') %>"></i>
+    <% end %>
+  <% end %>
+<% end %>

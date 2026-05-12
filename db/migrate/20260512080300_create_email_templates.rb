@@ -1,6 +1,6 @@
-class CreateTemplates < ActiveRecord::Migration[8.1]
+class CreateEmailTemplates < ActiveRecord::Migration[8.1]
   def change
-    create_table :templates do |t|
+    create_table :email_templates do |t|
       t.references :team, null: false, foreign_key: true, type: :integer
 
       t.string :name, null: false
@@ -10,6 +10,6 @@ class CreateTemplates < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    add_index :templates, [:team_id, :name]
+    add_index :email_templates, [:team_id, :name]
   end
 end

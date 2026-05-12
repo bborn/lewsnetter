@@ -115,7 +115,7 @@ Subscriber
   belongs_to :team
   external_id (FK to source app, unique per team)
   email, name
-  attributes :jsonb (plan, mrr, signed_up_at, custom keys)
+  custom_attributes :jsonb  # ANY keys/values the source app wants — see below
   subscribed :boolean (per-list state via mailkick)
   unsubscribed_at, complained_at, bounced_at
   has_many :events
@@ -157,6 +157,63 @@ Send (one row per recipient — only at Pro tier for personalization)
   ses_message_id
   delivered_at, opened_at, clicked_at, bounced_at, complained_at
 ```
+
+### Subscriber `custom_attributes` — arbitrary tenant-defined data
+
+Lewsnetter accepts **any** key/value pairs on a subscriber, just like Intercom / Customer.io / Segment. The source app decides what's worth syncing; Lewsnetter doesn't enforce a schema. No migration needed when a tenant wants to add a new attribute.
+
+Column is named `custom_attributes` (not `attributes`) because ActiveRecord reserves `attributes`. In the API payload it's surfaced as `attributes:` so it reads naturally.
+
+**Reference shape — what IK pushes today (from `User#analytics_data` + `Tenant#analytics_data`):**
+
+```ruby
+# Per-user attributes (the subscriber)
+{
+  email:                       "alicia@influencekit.com",
+  role:                        "admin",
+  is_admin:                    true,
+  tenant_type:                 "brand_account",
+  tokens_count:                42,
+  deliverables_count:          17,
+  partner_id:                  nil,
+  partner_name:                nil,
+  subdomain:                   "alicia",        # IK's tenant subdomain
+  affiliate_code:              "BORN20",
+  plan:                        "growth",
+  plan_status:                 "active",        # active / cancelled / past_due
+  tenant_id:                   1234,
+  flex_signup:                 false
+}
+
+# Per-tenant attributes IK also pushes (relevant for company-level segmentation)
+{
+  name:                        "Alicia's Brand",
+  tenant_type:                 "brand_account",
+  tabs_enabled:                "reports,calendar,partners",
+  plan:                        "growth",
+  plan_status:                 "active",
+  trial_days_remaining:        nil,
+  subdomain:                   "alicia",
+  affiliate:                   "bruno@ik.com",
+  affiliate_code:              "BORN20",
+  report_credits:              50,
+  assignments_quota:           100,
+  influencer_hub_campaigns:    3,
+  influencer_hub_assignments:  27,
+  topic_tags:                  "fashion,lifestyle,wellness"
+}
+```
+
+For Lewsnetter MVP we merge both shapes into a flat `custom_attributes` hash on the subscriber. Tenant-level attributes get a `tenant_` prefix (e.g. `tenant_subdomain`, `tenant_plan`, `tenant_mrr`) so the segment translator can disambiguate.
+
+**Indexing:** `custom_attributes` is a plain `jsonb` column with no index initially. Postgres handles `WHERE custom_attributes->>'plan' = 'growth'` fine up to a few hundred thousand rows. Add a GIN index when query latency demands it:
+
+```sql
+CREATE INDEX index_subscribers_on_custom_attributes
+  ON subscribers USING GIN (custom_attributes);
+```
+
+**Type handling:** All values pass through as-is (jsonb preserves types — string, number, boolean, null, nested object). The segment translator's prompt includes the *observed* set of keys + value types per tenant (sampled from `subscribers.custom_attributes`) so the LLM doesn't have to guess what's available.
 
 ## Sync architecture
 

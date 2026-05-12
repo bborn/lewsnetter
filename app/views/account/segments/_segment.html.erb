@@ -1,0 +1,25 @@
+<% team = @team || @team %>
+<% context ||= team %>
+<% collection ||= :segments %>
+<% hide_actions ||= false %>
+<% hide_back ||= false %>
+
+<% with_attribute_settings object: segment do %>
+  <tr data-id="<%= segment.id %>" class="group">
+    <%= render "shared/tables/checkbox", object: segment %>
+    <td><%= render 'shared/attributes/text', attribute: :name, url: [:account, segment] %></td>
+    <%# 🚅 super scaffolding will insert new fields above this line. %>
+    <td><%= render 'shared/attributes/date_and_time', attribute: :created_at %></td>
+    <td class="buttons">
+      <% unless hide_actions %>
+        <% if can? :edit, segment %>
+          <%= link_to t('.buttons.shorthand.edit'), [:edit, :account, segment], class: 'button-secondary button-smaller' %>
+        <% end %>
+        <% if can? :destroy, segment %>
+          <%= button_to t('.buttons.shorthand.destroy'), [:account, segment], method: :delete, data: { turbo_confirm: t('.buttons.confirmations.destroy', model_locales(segment)) }, class: 'button-secondary button-smaller' %>
+        <% end %>
+        <%# 🚅 super scaffolding will insert new action model buttons above this line. %>
+      <% end %>
+    </td>
+  </tr>
+<% end %>

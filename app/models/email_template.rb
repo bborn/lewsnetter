@@ -1,11 +1,11 @@
-class Segment < ApplicationRecord
+class EmailTemplate < ApplicationRecord
   # 🚅 add concerns above.
 
   # 🚅 add attribute accessors above.
 
   belongs_to :team
 
-  has_many :campaigns, dependent: :restrict_with_error
+  has_many :campaigns, dependent: :nullify
 
   validates :name, presence: true
   # 🚅 add belongs_to associations above.

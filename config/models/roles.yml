@@ -1,5 +1,8 @@
 default:
   models:
+    Campaign: read
+    EmailTemplate: read
+    Segment: read
     Event: read
     Subscriber: read
     Team: read
@@ -30,6 +33,9 @@ admin:
     - admin
     - editor
   models:
+    Campaign: manage
+    EmailTemplate: manage
+    Segment: manage
     Event: manage
     Subscriber: manage
     Team: manage

@@ -1,0 +1,25 @@
+<% cancel_path ||= campaign.persisted? ? [:account, campaign] : [:account, @team, :campaigns] %>
+
+<%= form_with model: campaign, url: (campaign.persisted? ? [:account, campaign] : [:account, @team, :campaigns]), class: 'form' do |form| %>
+  <%= render "shared/limits/form", form: form, cancel_path: cancel_path do %>
+    <%= render 'account/shared/forms/errors', form: form %>
+
+    <% with_field_settings form: form do %>
+      <%= render 'shared/fields/text_field', method: :subject, options: {autofocus: true} %>
+      <%= render 'shared/fields/text_field', method: :preheader %>
+      <%= render 'shared/fields/text_area', method: :body_mjml %>
+      <%= render 'shared/fields/text_field', method: :status %>
+      <%= render 'shared/fields/date_and_time_field', method: :scheduled_for %>
+      <%= render 'shared/fields/super_select', method: :email_template_id, options: {}, html_options: {},
+        choices: @campaign.valid_email_templates.map { |template| [template.label_string, template.id] } %>
+      <%= render 'shared/fields/super_select', method: :segment_id, options: {}, html_options: {},
+        choices: @campaign.valid_segments.map { |segment| [segment.label_string, segment.id] } %>
+      <%# 🚅 super scaffolding will insert new fields above this line. %>
+    <% end %>
+
+    <div class="buttons">
+      <%= form.submit (form.object.persisted? ? t('.buttons.update') : t('.buttons.create')), class: "button" %>
+      <%= link_to t('global.buttons.cancel'), cancel_path, class: "button-secondary" %>
+    </div>
+  <% end %>
+<% end %>
