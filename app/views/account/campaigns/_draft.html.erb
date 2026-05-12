@@ -1,0 +1,98 @@
+<%# Renders inside #campaign_draft turbo-frame.
+    Locals: draft (AI::CampaignDrafter::Draft), campaign (Campaign). %>
+<%= turbo_frame_tag "campaign_draft" do %>
+  <div class="p-4 my-4 border rounded-md bg-gray-50 dark:bg-sky-950 dark:border-sky-800">
+    <h3 class="text-lg font-semibold mb-2">
+      AI Campaign Draft
+      <% if draft.respond_to?(:stub?) && draft.stub? %>
+        <span class="text-xs font-normal text-gray-500 ml-2">(stub mode — no LLM call)</span>
+      <% end %>
+    </h3>
+
+    <% if draft.errors.present? %>
+      <div class="text-red-600 text-sm mb-2">
+        <ul class="list-disc list-inside">
+          <% draft.errors.each do |err| %>
+            <li><%= err %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+    <p class="text-sm mb-1"><strong>Pick a subject:</strong></p>
+    <div class="space-y-1 mb-3">
+      <% draft.subject_candidates.each_with_index do |cand, idx| %>
+        <label class="block text-sm cursor-pointer">
+          <input type="radio"
+                 name="ai_draft_subject"
+                 value="<%= cand.subject %>"
+                 <%= "checked" if idx.zero? %>
+                 data-ai-draft-subject="true" />
+          <strong><%= cand.subject %></strong>
+          <span class="text-gray-500 text-xs block ml-5"><%= cand.rationale %></span>
+        </label>
+      <% end %>
+    </div>
+
+    <p class="text-sm mb-1"><strong>Preheader:</strong> <span data-ai-draft-preheader-display><%= draft.preheader %></span></p>
+    <p class="text-sm mb-1"><strong>Suggested send time:</strong> <%= draft.suggested_send_time %></p>
+
+    <details class="mt-2">
+      <summary class="cursor-pointer text-sm font-medium">MJML body preview (<%= draft.mjml_body.length %> chars)</summary>
+      <pre class="bg-white dark:bg-sky-900 p-2 text-xs overflow-auto max-h-48 mt-1 border rounded"><%= draft.mjml_body %></pre>
+    </details>
+
+    <button type="button" class="button mt-3" data-ai-draft-apply="true">Apply to form</button>
+
+    <%# Inline data for the apply button to consume. %>
+    <script type="application/json" data-ai-draft-payload>
+      <%= raw({
+        preheader: draft.preheader,
+        mjml_body: draft.mjml_body,
+        subjects: draft.subject_candidates.map(&:subject)
+      }.to_json) %>
+    </script>
+
+    <script>
+      (function() {
+        var root = document.currentScript.parentElement;
+        var payloadEl = root.querySelector('[data-ai-draft-payload]');
+        if (!payloadEl) return;
+        var payload;
+        try { payload = JSON.parse(payloadEl.textContent); } catch (e) { return; }
+
+        var subjectField = document.querySelector('input[name="campaign[subject]"]');
+        var preheaderField = document.querySelector('input[name="campaign[preheader]"]');
+        var bodyField = document.querySelector('textarea[name="campaign[body_mjml]"]');
+
+        // Live-update the subject input as radios change.
+        root.querySelectorAll('input[data-ai-draft-subject]').forEach(function(radio) {
+          radio.addEventListener('change', function() {
+            if (radio.checked && subjectField) subjectField.value = radio.value;
+          });
+        });
+
+        // Apply button copies preheader + mjml body into the form fields.
+        var applyBtn = root.querySelector('[data-ai-draft-apply]');
+        if (applyBtn) {
+          applyBtn.addEventListener('click', function() {
+            var checked = root.querySelector('input[data-ai-draft-subject]:checked');
+            if (checked && subjectField) subjectField.value = checked.value;
+            if (preheaderField) preheaderField.value = payload.preheader || '';
+            if (bodyField) bodyField.value = payload.mjml_body || '';
+            applyBtn.textContent = 'Applied';
+            applyBtn.disabled = true;
+            setTimeout(function() {
+              applyBtn.textContent = 'Apply to form';
+              applyBtn.disabled = false;
+            }, 1500);
+          });
+        }
+
+        // Pre-apply the chosen (first) subject so the field doesn't lag.
+        var initial = root.querySelector('input[data-ai-draft-subject]:checked');
+        if (initial && subjectField && !subjectField.value) subjectField.value = initial.value;
+      })();
+    </script>
+  </div>
+<% end %>

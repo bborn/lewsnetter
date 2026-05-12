@@ -1,5 +1,28 @@
 <% cancel_path ||= segment.persisted? ? [:account, segment] : [:account, @team, :segments] %>
 
+<%# AI segment translator — separate top-level form so it can submit
+    independently of the main segment form. Targets the #segment_preview frame. %>
+<%= form_with url: translate_account_team_segments_path(@team),
+              method: :post,
+              data: {turbo_frame: "segment_preview"},
+              html: {class: "mb-4 p-3 border rounded-md bg-gray-50 dark:bg-sky-950 dark:border-sky-800"} do |translate_form| %>
+  <label class="block text-sm font-medium mb-1">
+    Describe your audience in plain English
+  </label>
+  <%= translate_form.text_area :natural_language,
+        value: segment.natural_language_source,
+        class: "w-full p-2 border rounded-md mb-2",
+        rows: 2,
+        placeholder: "e.g. Subscribers on the Pro plan who joined in the last 30 days",
+        data: {ai_translate_source: true} %>
+  <button type="submit" class="button-secondary">Translate to predicate</button>
+  <span class="text-xs text-gray-500 ml-2">
+    Stub mode if no API key is configured.
+  </span>
+<% end %>
+
+<%= turbo_frame_tag "segment_preview" %>
+
 <%= form_with model: segment, url: (segment.persisted? ? [:account, segment] : [:account, @team, :segments]), class: 'form' do |form| %>
   <%= render "shared/limits/form", form: form, cancel_path: cancel_path do %>
     <%= render 'account/shared/forms/errors', form: form %>
@@ -16,3 +39,15 @@
     </div>
   <% end %>
 <% end %>
+
+<%# Keep the AI translator's textarea in sync with the segment form's natural_language_source field. %>
+<script>
+  (function() {
+    var src = document.querySelector('textarea[data-ai-translate-source]');
+    var dst = document.querySelector('textarea[name="segment[natural_language_source]"]');
+    if (src && dst) {
+      src.addEventListener('input', function() { dst.value = src.value; });
+      dst.addEventListener('input', function() { src.value = dst.value; });
+    }
+  })();
+</script>

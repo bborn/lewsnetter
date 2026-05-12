@@ -39,6 +39,15 @@
       <% end %>
     <% end %>
 
+    <% if @campaign.sent? %>
+      <%# Lazy-load the post-send analysis — can take 5-10s with a real LLM. %>
+      <%= turbo_frame_tag "postmortem", src: postmortem_account_campaign_path(@campaign), loading: "lazy" do %>
+        <div class="p-4 my-4 border rounded-md bg-gray-50 dark:bg-sky-950 dark:border-sky-800 text-sm text-gray-500">
+          Generating AI post-send analysis…
+        </div>
+      <% end %>
+    <% end %>
+
     <%# 🚅 super scaffolding will insert new children above this line. %>
   <% end %>
 <% end %>

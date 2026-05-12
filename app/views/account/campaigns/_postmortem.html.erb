@@ -1,0 +1,25 @@
+<%# Renders inside #postmortem turbo-frame.
+    Locals: campaign (Campaign), markdown (String). %>
+<%= turbo_frame_tag "postmortem" do %>
+  <div class="p-4 my-4 border rounded-md bg-gray-50 dark:bg-sky-950 dark:border-sky-800">
+    <h3 class="text-lg font-semibold mb-2">AI Post-send Analysis</h3>
+    <div class="prose dark:prose-invert max-w-none text-sm">
+      <%# Render the markdown verbatim if a renderer isn't available;
+          BulletTrain doesn't ship a default markdown helper. Convert the
+          simple subset (## headers + paragraphs) inline. %>
+      <%= raw markdown.to_s.split(/\n\n+/).map { |para|
+        if (m = para.match(/\A##\s+(.+)\z/))
+          "<h4 class=\"font-semibold mt-3 mb-1\">#{ERB::Util.html_escape(m[1])}</h4>"
+        elsif para.start_with?("*") && para.end_with?("*") && !para.include?("\n")
+          "<p class=\"italic text-xs text-gray-500\">#{ERB::Util.html_escape(para.gsub(/\A\*|\*\z/, ""))}</p>"
+        else
+          # Inline bold (**...**) and italics (*...*).
+          escaped = ERB::Util.html_escape(para)
+          escaped = escaped.gsub(/\*\*(.+?)\*\*/, "<strong>\\1</strong>")
+          escaped = escaped.gsub(/(?<!\*)\*([^*]+?)\*(?!\*)/, "<em>\\1</em>")
+          "<p class=\"mb-2\">#{escaped}</p>"
+        end
+      }.join("\n") %>
+    </div>
+  </div>
+<% end %>

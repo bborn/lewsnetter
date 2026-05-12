@@ -1,5 +1,29 @@
 <% cancel_path ||= campaign.persisted? ? [:account, campaign] : [:account, @team, :campaigns] %>
 
+<%# AI draft panel — only meaningful for persisted campaigns (member route).
+    For brand-new campaigns, the user saves once with a placeholder subject
+    then revisits the edit form to draft. %>
+<% if campaign.persisted? %>
+  <%= form_with url: draft_account_campaign_path(campaign),
+                method: :post,
+                data: {turbo_frame: "campaign_draft"},
+                html: {class: "mb-4 p-3 border rounded-md bg-gray-50 dark:bg-sky-950 dark:border-sky-800"} do |draft_form| %>
+    <label class="block text-sm font-medium mb-1">
+      Brief (5 bullets — what's this campaign about?)
+    </label>
+    <%= draft_form.text_area :brief,
+          class: "w-full p-2 border rounded-md mb-2",
+          rows: 5,
+          placeholder: "- The headline change\n- Why it matters\n- One feature highlight\n- A user quote or stat\n- The call to action" %>
+    <button type="submit" class="button-secondary">Draft with AI</button>
+    <span class="text-xs text-gray-500 ml-2">
+      Uses team voice samples + segment context. Stub mode if no API key.
+    </span>
+  <% end %>
+
+  <%= turbo_frame_tag "campaign_draft" %>
+<% end %>
+
 <%= form_with model: campaign, url: (campaign.persisted? ? [:account, campaign] : [:account, @team, :campaigns]), class: 'form' do |form| %>
   <%= render "shared/limits/form", form: form, cancel_path: cancel_path do %>
     <%= render 'account/shared/forms/errors', form: form %>

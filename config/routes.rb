@@ -83,11 +83,17 @@ Rails.application.routes.draw do
           resources :events
         end
 
-        resources :segments
+        resources :segments do
+          collection do
+            post :translate, to: "segment_translations#create"
+          end
+        end
         resources :email_templates
         resources :campaigns do
           member do
             post :send_now
+            post :draft, to: "campaign_drafts#create"
+            get :postmortem, to: "campaign_postmortems#show"
           end
         end
         resources :sender_addresses
