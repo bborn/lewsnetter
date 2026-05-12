@@ -1,15 +1,4 @@
-# `csv` was part of the Ruby stdlib through 3.3 and a default gem in 3.4+.
-# On Ruby 4.x it's no longer activated under Bundler unless declared in the
-# Gemfile. The csv gem IS installed on the system, so we push its lib
-# directory onto $LOAD_PATH and then require it. When/if `gem "csv"` lands
-# in the Gemfile this whole dance becomes a plain `require "csv"`.
-begin
-  require "csv"
-rescue LoadError
-  csv_lib = Dir["#{Gem.dir}/gems/csv-*/lib"].sort.last
-  $LOAD_PATH.unshift(csv_lib) if csv_lib
-  require "csv"
-end
+require "csv"
 
 # Streams a CSV file attached to a Subscribers::Import and upserts each row
 # as a Subscriber on the import's team. Idempotent: looks up by external_id

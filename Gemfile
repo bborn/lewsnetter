@@ -62,6 +62,9 @@ gem "aws-sdk-s3", require: false
 # A natural language date/time parser.
 gem "chronic"
 
+# Ruby 4 dropped `csv` from stdlib; pin the gem for ImportSubscribersJob.
+gem "csv"
+
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
   gem "debug", platforms: %i[mri mingw x64_mingw]

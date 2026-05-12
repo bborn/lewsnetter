@@ -274,6 +274,7 @@ GEM
       addressable
     cssbundling-rails (1.4.3)
       railties (>= 6.0.0)
+    csv (3.3.5)
     date (3.5.1)
     debug (1.11.1)
       irb (~> 1.10)
@@ -823,6 +824,7 @@ DEPENDENCIES
   chronic
   colorize
   cssbundling-rails
+  csv
   debug
   derailed_benchmarks
   devise (~> 5.0)
