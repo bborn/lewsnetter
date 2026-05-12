@@ -11,6 +11,7 @@ class Team < ApplicationRecord
   has_many :segments, dependent: :destroy
   has_many :email_templates, dependent: :destroy
   has_many :campaigns, dependent: :destroy
+  has_many :sender_addresses, dependent: :destroy
   # 🚅 add has_many associations above.
 
   # 🚅 add oauth providers above.

@@ -59,6 +59,16 @@ class Account::CampaignsController < Account::ApplicationController
     end
   end
 
+  # POST /account/campaigns/:id/send_now
+  def send_now
+    if @campaign.draft?
+      SendCampaignJob.perform_later(@campaign.id)
+      redirect_to [:account, @campaign], notice: "Campaign queued for sending."
+    else
+      redirect_to [:account, @campaign], alert: "Only draft campaigns can be sent."
+    end
+  end
+
   private
 
   if defined?(Api::V1::ApplicationController)

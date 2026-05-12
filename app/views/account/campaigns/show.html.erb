@@ -18,12 +18,16 @@
             <%= render 'shared/attributes/date_and_time', attribute: :scheduled_for %>
             <%= render 'shared/attributes/belongs_to', attribute: :email_template %>
             <%= render 'shared/attributes/belongs_to', attribute: :segment %>
+            <%= render 'shared/attributes/belongs_to', attribute: :sender_address %>
             <%# 🚅 super scaffolding will insert new fields above this line. %>
           <% end %>
         <% end %>
 
         <% box.actions do %>
           <%= link_to t('.buttons.edit'), [:edit, :account, @campaign], class: first_button_primary if can? :edit, @campaign %>
+          <% if @campaign.draft? && can?(:update, @campaign) %>
+            <%= button_to "Send now", send_now_account_campaign_path(@campaign), method: :post, class: first_button_primary, data: { turbo_confirm: "Send this campaign to all subscribed team subscribers?" } %>
+          <% end %>
           <%# 🚅 super scaffolding will insert new action model buttons above this line. %>
           <%= button_to t('.buttons.destroy'), [:account, @campaign], method: :delete, class: first_button_primary, data: { turbo_confirm: t('.buttons.confirmations.destroy', model_locales(@campaign)) } if can? :destroy, @campaign %>
           <%= link_to t('global.buttons.back'), [:account, @team, :campaigns], class: first_button_primary %>

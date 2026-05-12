@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_12_080400) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_12_141635) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -155,6 +155,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_080400) do
     t.index ["team_id"], name: "index_invitations_on_team_id"
   end
 
+  create_table "mailkick_subscriptions", force: :cascade do |t|
+    t.string "subscriber_type"
+    t.bigint "subscriber_id"
+    t.string "list"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["subscriber_type", "subscriber_id", "list"], name: "index_mailkick_subscriptions_on_subscriber_and_list", unique: true
+  end
+
   create_table "memberships", id: :serial, force: :cascade do |t|
     t.integer "user_id"
     t.integer "team_id"
@@ -287,6 +296,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_080400) do
     t.datetime "updated_at", null: false
     t.index ["team_id", "name"], name: "index_segments_on_team_id_and_name"
     t.index ["team_id"], name: "index_segments_on_team_id"
+  end
+
+  create_table "sender_addresses", force: :cascade do |t|
+    t.bigint "team_id", null: false
+    t.string "email"
+    t.string "name"
+    t.boolean "verified", default: false
+    t.string "ses_status"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["team_id"], name: "index_sender_addresses_on_team_id"
   end
 
   create_table "subscribers", force: :cascade do |t|
@@ -434,6 +454,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_080400) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "campaigns", "email_templates"
   add_foreign_key "campaigns", "segments"
+  add_foreign_key "campaigns", "sender_addresses"
   add_foreign_key "campaigns", "teams"
   add_foreign_key "email_templates", "teams"
   add_foreign_key "events", "subscribers"
@@ -456,6 +477,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_080400) do
   add_foreign_key "scaffolding_completely_concrete_tangible_things_assignments", "memberships"
   add_foreign_key "scaffolding_completely_concrete_tangible_things_assignments", "scaffolding_completely_concrete_tangible_things", column: "tangible_thing_id"
   add_foreign_key "segments", "teams"
+  add_foreign_key "sender_addresses", "teams"
   add_foreign_key "subscribers", "teams"
   add_foreign_key "users", "oauth_applications", column: "platform_agent_of_id"
   add_foreign_key "webhooks_outgoing_endpoints", "scaffolding_absolutely_abstract_creative_concepts"

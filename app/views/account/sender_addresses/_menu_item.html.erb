@@ -1,0 +1,10 @@
+<% if can? :read, SenderAddress.new(team: current_team) %>
+  <%= render 'account/shared/menu/item', {
+    url: main_app.polymorphic_path([:account, current_team, :sender_addresses]),
+    label: t('sender_addresses.navigation.label'),
+  } do |p| %>
+    <% p.icon do %>
+      <i class="<%= t('sender_addresses.navigation.icon') %>"></i>
+    <% end %>
+  <% end %>
+<% end %>

@@ -1,0 +1,28 @@
+<% team = @team || @team %>
+<% context ||= team %>
+<% collection ||= :sender_addresses %>
+<% hide_actions ||= false %>
+<% hide_back ||= false %>
+
+<% with_attribute_settings object: sender_address do %>
+  <tr data-id="<%= sender_address.id %>" class="group">
+    <%= render "shared/tables/checkbox", object: sender_address %>
+    <td><%= render 'shared/attributes/email', attribute: :email, url: [:account, sender_address] %></td>
+    <td><%= render 'shared/attributes/text', attribute: :name %></td>
+    <td class="text-center"><%= render 'shared/attributes/option', attribute: :verified %></td>
+    <td><%= render 'shared/attributes/text', attribute: :ses_status %></td>
+    <%# 🚅 super scaffolding will insert new fields above this line. %>
+    <td><%= render 'shared/attributes/date_and_time', attribute: :created_at %></td>
+    <td class="buttons">
+      <% unless hide_actions %>
+        <% if can? :edit, sender_address %>
+          <%= link_to t('.buttons.shorthand.edit'), [:edit, :account, sender_address], class: 'button-secondary button-smaller' %>
+        <% end %>
+        <% if can? :destroy, sender_address %>
+          <%= button_to t('.buttons.shorthand.destroy'), [:account, sender_address], method: :delete, data: { turbo_confirm: t('.buttons.confirmations.destroy', model_locales(sender_address)) }, class: 'button-secondary button-smaller' %>
+        <% end %>
+        <%# 🚅 super scaffolding will insert new action model buttons above this line. %>
+      <% end %>
+    </td>
+  </tr>
+<% end %>

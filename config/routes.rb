@@ -1,4 +1,10 @@
 Rails.application.routes.draw do
+  # Public unsubscribe endpoint. Mounted BEFORE the BulletTrain engines so it
+  # can be hit without authentication. Both GET (link click) and POST
+  # (RFC 8058 one-click) hit the same controller.
+  get "/unsubscribe/:token", to: "unsubscribe#update", as: :unsubscribe
+  post "/unsubscribe/:token", to: "unsubscribe#update"
+
   # See `config/routes/*.rb` to customize these configurations.
   draw "concerns"
   draw "devise"
@@ -79,7 +85,12 @@ Rails.application.routes.draw do
 
         resources :segments
         resources :email_templates
-        resources :campaigns
+        resources :campaigns do
+          member do
+            post :send_now
+          end
+        end
+        resources :sender_addresses
       end
     end
   end

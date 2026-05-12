@@ -1,5 +1,6 @@
 default:
   models:
+    SenderAddress: read
     Campaign: read
     EmailTemplate: read
     Segment: read
@@ -33,6 +34,7 @@ admin:
     - admin
     - editor
   models:
+    SenderAddress: manage
     Campaign: manage
     EmailTemplate: manage
     Segment: manage

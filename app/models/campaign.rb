@@ -8,6 +8,7 @@ class Campaign < ApplicationRecord
   belongs_to :team
   belongs_to :email_template, optional: true
   belongs_to :segment, optional: true
+  belongs_to :sender_address, optional: true
   # 🚅 add belongs_to associations above.
 
   # 🚅 add has_many associations above.
@@ -39,6 +40,10 @@ class Campaign < ApplicationRecord
 
   def valid_segments
     team.segments
+  end
+
+  def valid_sender_addresses
+    team.sender_addresses
   end
   # 🚅 add methods above.
 end

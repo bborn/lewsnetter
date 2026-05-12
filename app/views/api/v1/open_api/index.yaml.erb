@@ -27,6 +27,7 @@ components:
     <%= automatic_components_for Segment %>
     <%= automatic_components_for EmailTemplate %>
     <%= automatic_components_for Campaign %>
+    <%= automatic_components_for SenderAddress %>
     <%# 🚅 super scaffolding will insert new components above this line. %>
   parameters:
     id:
@@ -66,4 +67,5 @@ paths:
   <%= automatic_paths_for Segment, Team %>
   <%= automatic_paths_for EmailTemplate, Team %>
   <%= automatic_paths_for Campaign, Team %>
+  <%= automatic_paths_for SenderAddress, Team %>
   <%# 🚅 super scaffolding will insert new paths above this line. %>

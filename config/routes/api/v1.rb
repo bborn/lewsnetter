@@ -52,6 +52,7 @@ shallow do
       resources :segments
       resources :email_templates
       resources :campaigns
+      resources :sender_addresses
     end
   end
 end

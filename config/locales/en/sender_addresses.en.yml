@@ -1,0 +1,117 @@
+en:
+  sender_addresses: &sender_addresses
+    label: &label Sender Addresses
+    breadcrumbs:
+      label: *label
+    navigation:
+      label: *label
+      icon: ti ti-email
+    buttons: &buttons
+      new: Add New Sender Address
+      create: Create Sender Address
+      edit: Edit Sender Address
+      update: Update Sender Address
+      destroy: Remove Sender Address
+      shorthand:
+        edit: Edit
+        destroy: Delete
+      confirmations:
+        # TODO customize for your use-case.
+        destroy: Are you sure you want to remove %{sender_address_name}? This will also remove any child resources and can't be undone.
+    sender_address:
+      buttons: *buttons
+    fields: &fields
+      id:
+        heading: Sender Address ID
+      team_id:
+        heading: Team ID
+      email:
+        _: &email Email
+        label: *email
+        heading: *email
+        api_title: *email
+        api_description: *email
+      name:
+        _: &name Name
+        label: *name
+        heading: *name
+        api_title: *name
+        api_description: *name
+      verified:
+        _: &verified Verified
+        label: *verified
+        heading: *verified
+        api_title: *verified
+        api_description: *verified
+        options:
+          yes: "Yes"
+          no: "No"
+      ses_status:
+        _: &ses_status Ses Status
+        label: *ses_status
+        heading: *ses_status
+        api_title: *ses_status
+        api_description: *ses_status
+      # 🚅 super scaffolding will insert new fields above this line.
+      created_at:
+        _: &created_at Added
+        label: *created_at
+        heading: *created_at
+      updated_at:
+        _: &updated_at Updated
+        label: *updated_at
+        heading: *updated_at
+    api:
+      collection_actions: "Collection Actions for Sender Addresses"
+      index: "List Sender Addresses"
+      create: "Add a New Sender Address"
+      member_actions: "Actions for an Individual Sender Address"
+      show: "Retrieve a Sender Address"
+      update: "Update a Sender Address"
+      destroy: "Delete a Sender Address"
+      fields: *fields
+    index:
+      section: "%{teams_possessive} Sender Addresses"
+      contexts:
+        team:
+          header: Sender Addresses
+          description: Below is a list of Sender Addresses that have been added for %{team_name}.
+          description_empty: No Sender Addresses have been added for %{team_name}.
+      fields: *fields
+      buttons: *buttons
+    show:
+      section: "%{sender_address_name}"
+      header: Sender Address Details
+      description: Below are the details we have for %{sender_address_name}.
+      manage_description: You'll also find options for updating these details or removing %{sender_address_name} from %{team_name} entirely.
+      fields: *fields
+      buttons: *buttons
+    form: &form
+      buttons: *buttons
+      fields: *fields
+    new:
+      section: "New Sender Address for %{team_name}"
+      header: New Sender Address Details
+      description: Please provide the details of the new Sender Address you'd like to add to %{team_name}.
+      form: *form
+    edit:
+      section: "%{sender_address_name}"
+      header: Edit Sender Address Details
+      description: You can update the details or settings for %{sender_address_name} below.
+      form: *form
+    notifications:
+      created: Sender Address was successfully created.
+      updated: Sender Address was successfully updated.
+      destroyed: Sender Address was successfully destroyed.
+  account:
+    sender_addresses: *sender_addresses
+  activerecord:
+    attributes:
+      sender_address:
+        email: *email
+        name: *name
+        verified: *verified
+        ses_status: *ses_status
+        # 🚅 super scaffolding will insert new activerecord attributes above this line.
+        created_at: *created_at
+        updated_at: *updated_at

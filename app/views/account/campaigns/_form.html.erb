@@ -14,6 +14,8 @@
         choices: @campaign.valid_email_templates.map { |template| [template.label_string, template.id] } %>
       <%= render 'shared/fields/super_select', method: :segment_id, options: {}, html_options: {},
         choices: @campaign.valid_segments.map { |segment| [segment.label_string, segment.id] } %>
+      <%= render 'shared/fields/super_select', method: :sender_address_id, options: {}, html_options: {},
+        choices: @campaign.valid_sender_addresses.map { |sender| [sender.label_string, sender.id] } %>
       <%# 🚅 super scaffolding will insert new fields above this line. %>
     <% end %>
 
