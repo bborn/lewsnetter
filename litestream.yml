@@ -1,0 +1,46 @@
+# Litestream config for Lewsnetter's three production SQLite databases.
+#
+# Replicates to Cloudflare R2 (S3-compatible) so the box is disposable —
+# rebuilding the Hetzner server pulls the latest snapshot back on boot via
+# `litestream restore` in bin/docker-entrypoint.
+#
+# Env vars supplied by Kamal at runtime (see config/deploy.yml):
+#   LITESTREAM_REPLICA_BUCKET           lewsnetter-litestream
+#   LITESTREAM_REPLICA_ENDPOINT         https://<ACCOUNT_ID>.r2.cloudflarestorage.com
+#   LITESTREAM_REPLICA_REGION           auto
+#   LITESTREAM_REPLICA_ACCESS_KEY_ID    R2 access key (secret)
+#   LITESTREAM_REPLICA_SECRET_ACCESS_KEY R2 secret (secret)
+
+dbs:
+  - path: /rails/storage/lewsnetter_production.sqlite3
+    replicas:
+      - type: s3
+        bucket: ${LITESTREAM_REPLICA_BUCKET}
+        path: primary
+        endpoint: ${LITESTREAM_REPLICA_ENDPOINT}
+        access-key-id: ${LITESTREAM_REPLICA_ACCESS_KEY_ID}
+        secret-access-key: ${LITESTREAM_REPLICA_SECRET_ACCESS_KEY}
+        region: ${LITESTREAM_REPLICA_REGION}
+        force-path-style: true
+
+  - path: /rails/storage/lewsnetter_production_queue.sqlite3
+    replicas:
+      - type: s3
+        bucket: ${LITESTREAM_REPLICA_BUCKET}
+        path: queue
+        endpoint: ${LITESTREAM_REPLICA_ENDPOINT}
+        access-key-id: ${LITESTREAM_REPLICA_ACCESS_KEY_ID}
+        secret-access-key: ${LITESTREAM_REPLICA_SECRET_ACCESS_KEY}
+        region: ${LITESTREAM_REPLICA_REGION}
+        force-path-style: true
+
+  - path: /rails/storage/lewsnetter_production_cable.sqlite3
+    replicas:
+      - type: s3
+        bucket: ${LITESTREAM_REPLICA_BUCKET}
+        path: cable
+        endpoint: ${LITESTREAM_REPLICA_ENDPOINT}
+        access-key-id: ${LITESTREAM_REPLICA_ACCESS_KEY_ID}
+        secret-access-key: ${LITESTREAM_REPLICA_SECRET_ACCESS_KEY}
+        region: ${LITESTREAM_REPLICA_REGION}
+        force-path-style: true

@@ -195,6 +195,9 @@ group :development do
   gem "derailed_benchmarks"
   # stackprof has some native components and it may be harder to compile locally, so we leave it as optional
   # gem "stackprof"
+
+  # Kamal 2 — container-based deploys to a Hetzner box (see initiatives/lewsnetter-v2/DEPLOY.md).
+  gem "kamal", "~> 2.0"
 end
 
 group :test do

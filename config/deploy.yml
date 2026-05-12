@@ -1,0 +1,94 @@
+# Kamal 2 deploy config for Lewsnetter v2.
+#
+# Single Hetzner CPX21 box in Ashburn, VA (lewsnetter-app1, 178.156.185.100)
+# runs two container roles off the same image:
+#   - web    Rails + Litestream replicator + Solid Cable (Puma on :3000)
+#   - worker Solid Queue worker process
+#
+# SQLite databases live on a named volume (lewsnetter_storage) at /rails/storage.
+# Litestream streams them to Cloudflare R2 — see litestream.yml.
+#
+# Secrets live in .kamal/secrets (not committed) and GitHub Actions secrets
+# for CI deploys. See initiatives/lewsnetter-v2/DEPLOY.md.
+
+service: lewsnetter
+
+# Container image — pushed to GHCR by the build step on each deploy.
+image: bborn/lewsnetter
+
+servers:
+  web:
+    hosts:
+      - 178.156.185.100
+    options:
+      add-host: host.docker.internal:host-gateway
+    labels:
+      traefik.http.routers.lewsnetter.entrypoints: websecure
+      traefik.http.routers.lewsnetter.rule: Host(`lewsnetter.whinynil.co`)
+      traefik.http.routers.lewsnetter.tls.certresolver: letsencrypt
+  worker:
+    hosts:
+      - 178.156.185.100
+    cmd: bundle exec rake solid_queue:start
+
+# Kamal's built-in Traefik-based proxy handles TLS termination via
+# Let's Encrypt. Assumes DNS-only (gray cloud) Cloudflare so HTTP-01
+# validation can reach the box. If you flip Cloudflare to proxied mode,
+# switch ssl: false and let Cloudflare handle SSL termination.
+proxy:
+  ssl: true
+  host: lewsnetter.whinynil.co
+  forward_headers: true
+  app_port: 3000
+  healthcheck:
+    path: /up
+    interval: 20
+
+# Credentials for the image registry.
+registry:
+  server: ghcr.io
+  username: bborn
+  password:
+    - KAMAL_REGISTRY_PASSWORD
+
+# Inject ENV variables into containers.
+env:
+  clear:
+    RAILS_LOG_TO_STDOUT: "true"
+    RAILS_SERVE_STATIC_FILES: "true"
+    BASE_URL: "https://lewsnetter.whinynil.co"
+    HIDE_THINGS: "true"
+    HIDE_EXAMPLES: "true"
+    # Litestream bucket / endpoint (R2). Account ID is a placeholder until
+    # Bruno provisions the R2 bucket — update before the first real deploy.
+    LITESTREAM_REPLICA_BUCKET: lewsnetter-litestream
+    LITESTREAM_REPLICA_ENDPOINT: https://CLOUDFLARE_R2_ACCOUNT_ID.r2.cloudflarestorage.com
+    LITESTREAM_REPLICA_REGION: auto
+  secret:
+    - RAILS_MASTER_KEY
+    - LITESTREAM_REPLICA_ACCESS_KEY_ID
+    - LITESTREAM_REPLICA_SECRET_ACCESS_KEY
+
+# Persistent storage for SQLite databases + Active Storage uploads.
+# Bind on the host: /var/lib/docker/volumes/lewsnetter_storage/_data
+volumes:
+  - "lewsnetter_storage:/rails/storage"
+
+# Bridge fingerprinted assets between versions so in-flight requests don't 404.
+asset_path: /rails/public/assets
+
+builder:
+  arch: amd64
+
+# SSH config — using the dedicated lewsnetter-deploy keypair generated for
+# this server. `keys` lets kamal load the right key without depending on
+# ssh-agent state. In CI the workflow writes the private key to
+# ~/.ssh/id_ed25519 instead and the keys: list still works because that path
+# falls back to the default identity if the listed path doesn't exist on disk.
+ssh:
+  user: root
+  keys_only: false
+  keys: ["~/.ssh/lewsnetter_deploy"]
+
+# Note: top-level `healthcheck:` was removed in Kamal 2. The proxy block
+# above declares the health probe Kamal uses for rolling restarts (/up).

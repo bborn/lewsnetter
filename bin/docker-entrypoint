@@ -1,0 +1,47 @@
+#!/bin/bash -e
+
+# Lewsnetter production entrypoint.
+#
+# Responsibilities:
+#   1. Restore each SQLite database from R2 if the local file is missing
+#      (litestream-restore is a no-op when no replica or no local file exists).
+#   2. Run db:prepare on first boot so a fresh server has schema + seeds.
+#   3. If the command is `bin/rails server`, wrap it in `litestream replicate
+#      -exec` so the replicator runs alongside Puma and dies with it.
+#      Otherwise (e.g. worker role running `bin/rake solid_queue:start`),
+#      just exec the command directly — the web role's replicate covers all
+#      three databases.
+
+# Enable jemalloc for reduced memory usage and latency.
+if [ -z "${LD_PRELOAD+x}" ]; then
+  LD_PRELOAD=$(find /usr/lib -name libjemalloc.so.2 -print -quit)
+  export LD_PRELOAD
+fi
+
+restore_if_missing() {
+  local path="$1"
+  if [ ! -f "$path" ]; then
+    echo "litestream: restoring $path"
+    litestream restore -if-replica-exists -config /etc/litestream.yml "$path" || true
+  fi
+}
+
+# Restore each of the three SQLite databases if local file doesn't exist.
+restore_if_missing /rails/storage/lewsnetter_production.sqlite3
+restore_if_missing /rails/storage/lewsnetter_production_queue.sqlite3
+restore_if_missing /rails/storage/lewsnetter_production_cable.sqlite3
+
+# Prepare DBs on first boot (idempotent — does nothing if schema already
+# loaded). Only run if we're about to start the Rails server; workers should
+# wait for the web role to handle migrations.
+if [ "${1}" = "./bin/rails" ] && [ "${2}" = "server" ]; then
+  ./bin/rails db:prepare
+fi
+
+# Web role: wrap the server in litestream replicate so the replicator
+# streams writes to R2. Worker role: exec directly.
+if [ "${1}" = "./bin/rails" ] && [ "${2}" = "server" ]; then
+  exec litestream replicate -config /etc/litestream.yml -exec "$*"
+else
+  exec "$@"
+fi

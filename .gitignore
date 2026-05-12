@@ -94,6 +94,15 @@ erd.pdf
 CLAUDE.md
 
 # 🚅 add your files to ignore here.
+# Kamal secrets — file contains shell `$VAR` lookups that resolve at deploy
+# time. We never want to risk committing a real value here, so it's gitignored.
+/.kamal/secrets
+/.kamal/secrets-common
+
+# Local QA / agent tooling
 tmp/qa/
 .playwright-mcp/
 erd.pdf
+
+# Ignore key files for decrypting credentials and more.
+/config/*.key

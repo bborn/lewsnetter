@@ -39,7 +39,7 @@
 # Ignore CI service files.
 /.github
 
-# Ignore Kamal files.
+# Ignore Kamal files (only used on the host running `kamal deploy`).
 /config/deploy*.yml
 /.kamal
 
@@ -49,3 +49,17 @@
 # Ignore Docker-related files
 /.dockerignore
 /Dockerfile*
+/dev.Dockerfile
+/gitpod.Dockerfile
+
+# Agent / AI / QA tooling — not needed in the production image.
+/.claude/
+/CLAUDE.md
+/.playwright-mcp/
+/tmp/qa/
+/tmp/qa-reports/
+/initiatives/
+/coverage/
+/test/reports/
+/vendor/bundle/
+/erd.pdf
