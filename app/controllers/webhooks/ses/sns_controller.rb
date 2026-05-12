@@ -69,14 +69,28 @@ class Webhooks::Ses::SnsController < ApplicationController
       end
 
     team = config.team
-    case message["notificationType"]
+
+    # SES publishes two different notification shapes to SNS:
+    #   1. "SES Notifications" (legacy, set via VerifiedEmail/Identity): uses `notificationType`.
+    #   2. "SES Event Publishing" (configuration set → SNS destination, what we use): uses `eventType`.
+    # We accept either key so the handler works for both wirings.
+    event_type = message["eventType"] || message["notificationType"]
+    Rails.logger.info("[SNS] received event_type=#{event_type.inspect} team=#{team.id} topic=#{topic_arn}")
+
+    case event_type
     when "Bounce"
       handle_bounce(team, message["bounce"] || {})
     when "Complaint"
       handle_complaint(team, message["complaint"] || {})
+    when "Reject"
+      handle_reject(team, message["reject"] || {}, message["mail"] || {})
     when "Delivery"
       # We don't track per-recipient delivery yet — log and move on.
       Rails.logger.info("[SNS:delivery] team=#{team.id}")
+    when "RenderingFailure", "Send", "Open", "Click"
+      # Either not actionable (Send/Open/Click are positive signal we don't
+      # store yet) or a code bug to surface elsewhere (RenderingFailure).
+      Rails.logger.info("[SNS:#{event_type.to_s.downcase}] team=#{team.id}")
     end
   end
 
@@ -101,6 +115,23 @@ class Webhooks::Ses::SnsController < ApplicationController
 
       subscriber.update!(subscribed: false, bounced_at: Time.current)
       Rails.logger.info("[SNS:bounce] team=#{team.id} email=#{email} unsubscribed (permanent)")
+    end
+  end
+
+  # Reject events fire when SES refuses to send (e.g. message contains a
+  # virus, or content was flagged). The destination list lives on the
+  # `mail` envelope. We treat the recipient as bounced — the message
+  # never made it out and won't on a resend either.
+  def handle_reject(team, reject, mail)
+    reason = reject["reason"]
+    Array(mail["destination"]).each do |raw_email|
+      email = raw_email.to_s.downcase
+      next if email.blank?
+      subscriber = team.subscribers.find_by(email: email)
+      next unless subscriber
+
+      subscriber.update!(subscribed: false, bounced_at: Time.current)
+      Rails.logger.info("[SNS:reject] team=#{team.id} email=#{email} unsubscribed (reason=#{reason})")
     end
   end
 

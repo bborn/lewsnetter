@@ -126,6 +126,49 @@ class Webhooks::Ses::SnsControllerTest < ActionDispatch::IntegrationTest
     assert_response :bad_request
   end
 
+  test "Event Publishing shape (eventType) — permanent bounce unsubscribes the subscriber" do
+    # SES configuration set → SNS event destinations emit `eventType`,
+    # not `notificationType`. This is the shape that hits production.
+    payload = {
+      "Type" => "Notification",
+      "TopicArn" => @bounce_topic,
+      "Message" => {
+        "eventType" => "Bounce",
+        "mail" => {"destination" => ["victim@example.com"]},
+        "bounce" => {
+          "bounceType" => "Permanent",
+          "bouncedRecipients" => [{"emailAddress" => "victim@example.com"}]
+        }
+      }.to_json
+    }
+
+    post "/webhooks/ses/sns", params: payload.to_json, headers: {"CONTENT_TYPE" => "application/json"}
+    assert_response :ok
+
+    @subscriber.reload
+    assert_equal false, @subscriber.subscribed
+    assert_not_nil @subscriber.bounced_at
+  end
+
+  test "Event Publishing shape — Reject unsubscribes recipients listed in mail.destination" do
+    payload = {
+      "Type" => "Notification",
+      "TopicArn" => @bounce_topic,
+      "Message" => {
+        "eventType" => "Reject",
+        "mail" => {"destination" => ["victim@example.com"]},
+        "reject" => {"reason" => "Bad content"}
+      }.to_json
+    }
+
+    post "/webhooks/ses/sns", params: payload.to_json, headers: {"CONTENT_TYPE" => "application/json"}
+    assert_response :ok
+
+    @subscriber.reload
+    assert_equal false, @subscriber.subscribed
+    assert_not_nil @subscriber.bounced_at
+  end
+
   test "cross-tenant routing — a bounce on team A's topic does not unsubscribe team B's subscriber" do
     other_team = create(:team)
     other_team.subscribers.create!(email: "victim@example.com", external_id: "ov", subscribed: true)
