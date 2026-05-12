@@ -263,4 +263,19 @@ gem "active_hash"
 # You can add any Ruby gems you need below. By keeping them separate from our gems above, you'll avoid the likelihood
 # that you run into a merge conflict in the future.
 
+# Email sending via SES (SendBulkEmail, suppression list, bounce/complaint via SNS).
+gem "aws-sdk-sesv2", "~> 1.0"
+
+# Per-list subscription state + one-click unsubscribe + List-Unsubscribe headers + SES suppression sync.
+gem "mailkick"
+
+# MJML → responsive HTML for email templates. Wraps the mjml CLI.
+gem "mjml-rails"
+
+# Inline CSS at send time for clients that strip <style>.
+gem "premailer-rails"
+
+# LLM agent framework (already proven in IK Kit refactor).
+gem "ruby_llm"
+
 # 🚅 super scaffolding will insert new oauth providers above this line.

@@ -101,6 +101,21 @@ GEM
       zeitwerk (>= 2.6.12)
     avo-icons (0.1.4)
       inline_svg
+    aws-eventstream (1.4.0)
+    aws-partitions (1.1246.0)
+    aws-sdk-core (3.246.0)
+      aws-eventstream (~> 1, >= 1.3.0)
+      aws-partitions (~> 1, >= 1.992.0)
+      aws-sigv4 (~> 1.9)
+      base64
+      bigdecimal
+      jmespath (~> 1, >= 1.6.1)
+      logger
+    aws-sdk-sesv2 (1.97.0)
+      aws-sdk-core (~> 3, >= 3.244.0)
+      aws-sigv4 (~> 1.5)
+    aws-sigv4 (1.12.1)
+      aws-eventstream (~> 1, >= 1.0.2)
     base64 (0.3.0)
     bcrypt (3.1.22)
     benchmark-ips (2.14.0)
@@ -286,6 +301,7 @@ GEM
     erb (6.0.4)
     erubi (1.13.1)
     erubis (2.7.0)
+    event_stream_parser (1.0.0)
     factory_bot (6.6.0)
       activesupport (>= 6.1.0)
     factory_bot_rails (6.5.1)
@@ -301,6 +317,8 @@ GEM
       multipart-post (~> 2.0)
     faraday-net_http (3.4.2)
       net-http (~> 0.5)
+    faraday-retry (2.4.0)
+      faraday (~> 2.0)
     fastimage (2.4.1)
     ffi (1.17.4-aarch64-linux-gnu)
     ffi (1.17.4-arm64-darwin)
@@ -342,6 +360,7 @@ GEM
       jbuilder
       method_source
       rails (>= 5.0.0)
+    jmespath (1.6.2)
     jsbundling-rails (1.3.1)
       railties (>= 6.0.0)
     json (2.19.5)
@@ -373,6 +392,8 @@ GEM
       net-imap
       net-pop
       net-smtp
+    mailkick (2.0.0)
+      activesupport (>= 7.1)
     marcel (1.1.0)
     masamune-ast (2.0.2)
       activesupport
@@ -394,6 +415,7 @@ GEM
       ruby-progressbar
     minitest-retry (0.3.1)
       minitest (>= 5.0)
+    mjml-rails (5.0.0)
     msgpack (1.8.0)
     multi_xml (0.9.1)
       bigdecimal (>= 3.1, < 5)
@@ -602,6 +624,17 @@ GEM
       ffi (~> 1.12)
       logger
     ruby2_keywords (0.0.5)
+    ruby_llm (1.15.0)
+      base64
+      event_stream_parser (~> 1)
+      faraday (>= 1.10.0)
+      faraday-multipart (>= 1)
+      faraday-net_http (>= 1)
+      faraday-retry (>= 1)
+      marcel (~> 1)
+      ruby_llm-schema (~> 0)
+      zeitwerk (~> 2)
+    ruby_llm-schema (0.3.0)
     rubyzip (3.3.0)
     securerandom (0.4.1)
     selenium-webdriver (4.43.0)
@@ -698,6 +731,7 @@ PLATFORMS
 DEPENDENCIES
   active_hash
   avo (>= 3.1.7)
+  aws-sdk-sesv2 (~> 1.0)
   bootsnap
   bullet_train (= 1.45.1)
   bullet_train-api (= 1.45.1)
@@ -733,9 +767,11 @@ DEPENDENCIES
   knapsack_pro
   letter_opener
   magic_test
+  mailkick
   minitest
   minitest-reporters
   minitest-retry
+  mjml-rails
   parallel_tests
   pg (>= 0.18, < 2.0)
   premailer-rails
@@ -750,6 +786,7 @@ DEPENDENCIES
   redis (~> 5.4.0)
   rqrcode
   ruby-vips
+  ruby_llm
   selenium-webdriver
   sidekiq
   simplecov
