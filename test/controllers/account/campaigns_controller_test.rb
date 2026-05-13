@@ -129,6 +129,16 @@ class Account::CampaignsControllerTest < ActionDispatch::IntegrationTest
     refute_match(/Segment\s*\(optional\).*\(optional\)/m, response.body)
   end
 
+  # Regression for B6 (deep QA 2026-05-13): the "Scheduled For" label rendered
+  # with no input below it because the ejected `_field.html.erb` lost the
+  # content_for handoff from the gem's date_and_time_field partial. Pin a
+  # plain native datetime-local input so users can actually schedule.
+  test "edit page renders a visible scheduled_for input" do
+    get edit_account_campaign_url(@campaign)
+    assert_response :success
+    assert_select 'input[type="datetime-local"][name="campaign[scheduled_for]"]', 1
+  end
+
   test "preview_frame accepts POST with in-memory body and renders without saving" do
     @template.update!(
       mjml_body: <<~MJML

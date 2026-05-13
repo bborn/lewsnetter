@@ -219,7 +219,26 @@ select_classes = "block w-full rounded-md shadow-sm font-light text-base md:text
           </p>
         </div>
 
-        <%= render 'shared/fields/date_and_time_field', method: :scheduled_for %>
+        <%# B6: the gem's `shared/fields/date_and_time_field` partial relied on a
+            flatpickr-wrapped Stimulus widget that wasn't rendering through the
+            ejected `_field.html.erb` — the label appeared with no input below
+            it. Use a plain native `<input type="datetime-local">` so users can
+            actually pick a schedule. We pass the local-time iso8601 (no zone
+            suffix) because that's what `datetime-local` accepts; the column
+            type-casts it via Rails' default time zone. %>
+        <div class="mb-5">
+          <%= form.label :scheduled_for, "Scheduled For", class: "block text-sm font-medium" %>
+          <% scheduled_value = form.object.scheduled_for&.in_time_zone(Time.zone)&.strftime("%Y-%m-%dT%H:%M") %>
+          <div class="mt-1.5">
+            <%= form.datetime_field :scheduled_for,
+                  value: scheduled_value,
+                  class: "block w-full rounded-md border border-base-300 dark:border-base-900 bg-white dark:bg-base-800 dark:text-base-300 px-3 py-2 text-sm" %>
+          </div>
+          <p class="mt-1.5 text-xs text-base-500 dark:text-base-400">
+            Leave blank to send immediately when you hit "Send". Times are in
+            <%= Time.zone.name %>.
+          </p>
+        </div>
         <%# 🚅 super scaffolding will insert new fields above this line. %>
       </section>
     <% end %>
