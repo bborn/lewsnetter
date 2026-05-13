@@ -23,6 +23,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # ruby-vips (loaded via image_processing for Active Storage variants)
+      # dlopens libvips.so.42 at app boot. Without it, even `rails db:test:prepare`
+      # crashes before doing anything.
+      - name: Install system deps (libvips)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libvips42
+
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
