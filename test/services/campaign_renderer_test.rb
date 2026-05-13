@@ -220,6 +220,48 @@ class CampaignRendererTest < ActiveSupport::TestCase
     assert_includes result.html, "email.influencekit.com/unsubscribe/"
   end
 
+  test "{{key|fallback}} uses the value when the variable is present" do
+    @campaign.update!(subject: "Hi {{first_name|there}}")
+    result = CampaignRenderer.new(campaign: @campaign, subscriber: @subscriber).call
+    assert_equal "Hi Alice", result.subject
+  end
+
+  test "{{key|fallback}} uses the fallback when the value is blank" do
+    @subscriber.update!(name: "")
+    @campaign.update!(subject: "Hi {{first_name|there}}")
+    result = CampaignRenderer.new(campaign: @campaign, subscriber: @subscriber).call
+    assert_equal "Hi there", result.subject
+  end
+
+  test "{{key|fallback}} uses the fallback when the variable is unknown" do
+    @campaign.update!(subject: "Status: {{nonexistent_attr|n/a}}")
+    result = CampaignRenderer.new(campaign: @campaign, subscriber: @subscriber).call
+    assert_equal "Status: n/a", result.subject
+  end
+
+  test "{{key|fallback}} interpolates correctly inside a markdown URL" do
+    @template.update!(mjml_body: <<~MJML)
+      <mjml>
+        <mj-body>
+          {{body}}
+        </mj-body>
+      </mjml>
+    MJML
+    # Subscriber has no `subdomain` custom attribute → fallback "app" should
+    # be used in place of the missing value inside the link URL.
+    @campaign.update!(
+      body_mjml: nil,
+      body_markdown: "Visit your [dashboard](https://{{subdomain|app}}.influencekit.com/login)."
+    )
+
+    result = CampaignRenderer.new(campaign: @campaign, subscriber: @subscriber.reload).call
+
+    assert_includes result.html, "https://app.influencekit.com/login",
+      "expected {{subdomain|app}} fallback to render inside the markdown URL"
+    refute_includes result.html, "%7Bsubdomain",
+      "expected no URL-encoded braces in the rendered href"
+  end
+
   test "interpolates {{custom_attribute}} inside a markdown link URL" do
     # Use a template that hosts a {{body}} placeholder so the markdown path
     # is exercised (rather than the legacy body_mjml path).

@@ -133,8 +133,34 @@ class CampaignRenderer
 
   def substitute(string)
     return string if string.blank?
-    variables.reduce(string) do |out, (key, value)|
-      out.gsub("{{#{key}}}", value.to_s)
+    vars = variables
+    # Match {{key}} or {{key|fallback}} with optional whitespace around the key
+    # and pipe. Fallback can contain anything except '}' so it stops at the
+    # closing braces. Comparisons use the symbol form of the key.
+    #
+    # Behavior:
+    #   - {{known}} with a value → value
+    #   - {{known}} with blank value → "" (existing behavior — substitute even if empty)
+    #   - {{unknown}} (no fallback, key not in vars) → left in place so the
+    #     user notices the broken template
+    #   - {{key|fallback}} → fallback when key resolves blank (including unknown keys)
+    string.gsub(/\{\{\s*(\w+)\s*(?:\|([^}]*))?\s*\}\}/) do |match|
+      key = $1.to_sym
+      fallback = $2
+      has_fallback = !fallback.nil?
+      if vars.key?(key)
+        value = vars[key]
+        if value.to_s.strip.empty? && has_fallback
+          fallback.to_s.strip
+        else
+          value.to_s
+        end
+      elsif has_fallback
+        fallback.to_s.strip
+      else
+        # Unknown key, no fallback — leave the token intact.
+        match
+      end
     end
   end
 
