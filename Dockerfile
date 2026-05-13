@@ -86,6 +86,12 @@ RUN corepack enable && yarn install --frozen-lockfile
 # Copy application code
 COPY . .
 
+# Ensure bin scripts are executable BEFORE the cross-stage COPY. Some CI
+# checkouts arrive with the +x bit stripped on files docker COPY treats
+# preserving (the cause is environmental — gitconfig core.fileMode=false,
+# umask, or runner image). chmod is idempotent if the bit is already set.
+RUN chmod -R 0755 bin/
+
 # Precompile bootsnap code for faster boot times
 RUN bundle exec bootsnap precompile app/ lib/
 
@@ -104,10 +110,12 @@ FROM base
 COPY --from=build "${BUNDLE_PATH}" "${BUNDLE_PATH}"
 COPY --from=build /rails /rails
 
-# Guarantee the entrypoint is executable for the non-root runtime user.
-# Some CI runners drop the +x bit on bin/* scripts (we observed Permission
-# denied on /rails/bin/docker-entrypoint when CI-built images first boot).
-RUN chmod +x /rails/bin/docker-entrypoint /rails/bin/rails /rails/bin/rake
+# Some CI builds drop the +x bit on bin/* scripts (we hit Permission denied
+# on /rails/bin/docker-entrypoint when first deploying via GH Actions). Run
+# chmod here AND log the resulting permissions so future regressions are
+# obvious in the build log.
+RUN chmod 0755 /rails/bin/docker-entrypoint /rails/bin/rails /rails/bin/rake && \
+    ls -la /rails/bin/docker-entrypoint /rails/bin/rails /rails/bin/rake
 
 # Place litestream config at the canonical path.
 COPY litestream.yml /etc/litestream.yml
