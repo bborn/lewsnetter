@@ -1,0 +1,118 @@
+<%
+# Ejected from bullet_train-themes-light/app/views/themes/light/fields/_field.html.erb
+# Customizations vs. upstream:
+#   * Required fields get a red asterisk (text-red-500) after the label, with sr-only "(required)".
+#   * Optional fields (no presence validator) get a small "(optional)" suffix in gray.
+#   * The "Subscribed" checkbox on subscribers and other boolean toggles still flow through here.
+# Reference: https://bullettrain.co/docs/field-partials
+%>
+
+<%
+%i[label field error help after_help].each do |key|
+  if (content = content_for(key).presence)
+    flush_content_for key
+    partial.section key, content
+  end
+end
+%>
+
+<%
+form ||= current_fields_form
+# returns a struct with `label`, `placeholder`, and `help` methods.
+labels = labels_for(form, method)
+
+# Initialize options.
+options ||= {}
+other_options ||= {}
+
+options[:id] ||= form.field_id(method)
+options[:placeholder] ||= labels.placeholder if labels.placeholder
+
+other_options[:help] = [other_options[:help], labels.help].compact.join(" ")
+
+if !other_options.key?(:required)
+  other_options[:required] = options.fetch(:required) { presence_validated?(form.object, method) }
+end
+
+if other_options[:required]
+  options[:"aria-required"] = true
+end
+
+errors = [method, method.to_s.delete_suffix("_id").to_sym].uniq.map { |attribute| form.object.errors.full_messages_for(attribute) }.flatten
+has_errors = errors.any? || partial.error? || other_options[:error].present?
+
+options[:class] = "#{options[:class]} block w-full rounded-md shadow-sm font-light dark:bg-base-800 dark:text-base-300"
+options[:class] += " text-base md:text-sm"
+options[:class] += " disabled:bg-base-200 disabled:dark:bg-base-700"
+
+options[:class] += if has_errors
+  " pr-10 border-red-500 text-red-900 placeholder-red-500 outline-none focus:ring-red-500 focus:border-red-500 dark:text-base-300"
+else
+  " focus:ring-primary-500 focus:border-primary-500 border-base-300 dark:border-base-900"
+end
+
+# Boolean fields (check_box) don't follow the normal "required = must be true" pattern
+# (e.g. the "Subscribed" toggle) — skip the asterisk on them. `helper` is
+# undefined for partials that yield their own field markup (super_select,
+# ckeditor, trix_editor, emoji_field) so guard with defined?.
+is_boolean_field = defined?(helper) && helper.to_s == "check_box"
+suppress_optionality_marker = other_options[:suppress_optionality_marker] || is_boolean_field
+%>
+
+<div class="<%= 'required' if other_options[:required] %>">
+
+  <% # the label. %>
+  <% unless other_options[:supress_label] %>
+    <div class="<%= "sr-only" if other_options[:hide_label] == true %>">
+      <% if partial.label? %>
+        <%= partial.label %>
+      <% else %>
+        <% label = (other_options[:label].presence || labels.label || legacy_label_for(form, method)) %>
+        <% if suppress_optionality_marker %>
+          <%= form.label method, label&.html_safe, class: 'block', for: options[:id] %>
+        <% elsif other_options[:required] %>
+          <%= form.label method, class: 'block', for: options[:id] do %>
+            <%= label&.html_safe %><span class="text-red-500 ml-0.5" aria-hidden="true">*</span><span class="sr-only"> (required)</span>
+          <% end %>
+        <% else %>
+          <%= form.label method, class: 'block', for: options[:id] do %>
+            <%= label&.html_safe %><span class="ml-1 text-xs font-normal text-base-400 dark:text-base-500">(optional)</span>
+          <% end %>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <div class="mt-1.5">
+    <% if partial.field? %>
+      <%= partial.field %>
+    <% elsif defined?(helper) %>
+      <%= form.send(helper, method, options) %>
+    <% end %>
+  </div>
+
+  <% # any error messages. %>
+  <% if has_errors %>
+    <p class="mt-1.5 text-xs text-red-500">
+      <%= errors.map { |error| error + ". " }.join %>
+      <%= partial.error %>
+      <% if other_options[:hide_custom_error].blank? %>
+        <%= other_options[:error]&.html_safe %>
+      <% end %>
+    </p>
+  <% end %>
+
+  <% # any help text. %>
+  <% if partial.help? || other_options[:help].present? || partial.after_help? %>
+    <p class="mt-1.5 text-xs text-base-500 dark:text-base-400">
+      <%= partial.help %>
+      <%= other_options[:help]&.html_safe %>
+      <%= partial.after_help %>
+    </p>
+  <% end %>
+
+  <% if other_options[:icon] %>
+    <div class="pre-icon os-icon <%= other_options[:icon] %>"></div>
+  <% end %>
+
+</div>

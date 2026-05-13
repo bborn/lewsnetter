@@ -1,33 +1,165 @@
+<%# Segment show — ejected from BulletTrain default to render the segment's
+    description, compiled SQL predicate, recipient count, sample matching
+    subscribers, and any campaigns referencing this segment. %>
+<%
+  # Run the segment's predicate against the team's subscribers, swallowing
+  # any execution errors so the page still renders for a misconfigured
+  # segment. If the predicate is blank we show all subscribers (mirrors the
+  # behaviour of Segment#applies_to and SendCampaignJob).
+  predicate = @segment.predicate
+  matching_scope =
+    begin
+      @segment.applies_to(@team.subscribers)
+    rescue Segment::InvalidPredicate, ActiveRecord::StatementInvalid => _e
+      nil
+    end
+  match_count =
+    begin
+      matching_scope ? matching_scope.count : nil
+    rescue ActiveRecord::StatementInvalid
+      nil
+    end
+  sample_subscribers =
+    begin
+      matching_scope ? matching_scope.limit(5).to_a : []
+    rescue ActiveRecord::StatementInvalid
+      []
+    end
+  related_campaigns = @segment.respond_to?(:campaigns) ? @segment.campaigns.to_a : []
+%>
+
 <%= render 'account/shared/page' do |page| %>
-  <% page.title t('.section') %>
+  <% page.title @segment.name %>
   <% page.body do %>
     <%= cable_ready_updates_for @segment do %>
+
+      <%# Header card: name + description %>
       <%= render 'account/shared/box', divider: true do |box| %>
-        <% box.title t('.header') %>
+        <% box.title @segment.name %>
         <% box.description do %>
-          <%= t('.description') %>
-          <%= t('.manage_description') if can? :manage, @segment %>
+          Saved audience query. The predicate below is what we run against your
+          subscribers when a campaign sends.
         <% end %>
 
         <% box.body do %>
-          <% with_attribute_settings object: @segment, strategy: :label do %>
-            <%= render 'shared/attributes/text', attribute: :name %>
-            <%= render 'shared/attributes/text', attribute: :natural_language_source %>
-            <%# 🚅 super scaffolding will insert new fields above this line. %>
+          <dl class="space-y-3">
+            <% if @segment.natural_language_source.present? %>
+              <div>
+                <dt class="text-sm font-medium text-gray-500">Description</dt>
+                <dd class="mt-1 text-sm"><%= @segment.natural_language_source %></dd>
+              </div>
+            <% end %>
+          </dl>
+        <% end %>
+
+        <% box.actions do %>
+          <%= link_to "Edit segment", [:edit, :account, @segment], class: first_button_primary if can? :edit, @segment %>
+          <%= button_to "Remove segment", [:account, @segment],
+                method: :delete,
+                class: first_button_primary,
+                data: { turbo_confirm: t('.buttons.confirmations.destroy', model_locales(@segment)) } if can? :destroy, @segment %>
+          <%= link_to t('global.buttons.back'), [:account, @team, :segments], class: first_button_primary %>
+        <% end %>
+      <% end %>
+
+      <%# Predicate card %>
+      <%= render 'account/shared/box', divider: true do |box| %>
+        <% box.title "Predicate" %>
+        <% box.description do %>
+          Compiled SQL filter applied to your subscribers when this segment is
+          used. Scoped to subscribers columns + custom_attributes only.
+        <% end %>
+
+        <% box.body do %>
+          <% if predicate.present? %>
+            <pre class="bg-gray-100 dark:bg-sky-950 dark:border dark:border-sky-800 rounded-md p-3 overflow-x-auto whitespace-pre-wrap break-words"><code class="font-mono text-xs"><%= predicate %></code></pre>
+          <% else %>
+            <p class="text-sm text-gray-500">
+              No predicate set yet. Edit this segment and use the AI translator
+              to generate one, or write SQL directly.
+            </p>
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <%# Audience card: count + sample matching subscribers %>
+      <%= render 'account/shared/box', divider: true do |box| %>
+        <% box.title "Audience" %>
+        <% box.description do %>
+          Subscribers matching this segment right now.
+        <% end %>
+
+        <% box.body do %>
+          <% if match_count.nil? %>
+            <p class="text-sm text-red-600">
+              Couldn't run this segment's predicate — it may reference invalid
+              columns. Edit the segment to fix it.
+            </p>
+          <% else %>
+            <p class="text-sm mb-3">
+              <strong><%= match_count %></strong>
+              <%= "subscriber".pluralize(match_count) %> match right now.
+            </p>
+
+            <% if sample_subscribers.any? %>
+              <table class="w-full text-sm border-collapse">
+                <thead>
+                  <tr class="text-left border-b border-gray-200 dark:border-sky-800">
+                    <th class="py-1 pr-3 font-medium">Name</th>
+                    <th class="py-1 font-medium">Email</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% sample_subscribers.each do |s| %>
+                    <tr class="border-b border-gray-100 dark:border-sky-900">
+                      <td class="py-1 pr-3"><%= s.name.presence || "—" %></td>
+                      <td class="py-1 font-mono text-xs"><%= s.email %></td>
+                    </tr>
+                  <% end %>
+                </tbody>
+              </table>
+            <% end %>
           <% end %>
         <% end %>
 
         <% box.actions do %>
-          <%= link_to t('.buttons.edit'), [:edit, :account, @segment], class: first_button_primary if can? :edit, @segment %>
-          <%# 🚅 super scaffolding will insert new action model buttons above this line. %>
-          <%= button_to t('.buttons.destroy'), [:account, @segment], method: :delete, class: first_button_primary, data: { turbo_confirm: t('.buttons.confirmations.destroy', model_locales(@segment)) } if can? :destroy, @segment %>
-          <%= link_to t('global.buttons.back'), [:account, @team, :segments], class: first_button_primary %>
-        <% end %>
-
-        <% box.raw_footer do %>
-          <%# 🚅 super scaffolding will insert new action model index views above this line. %>
+          <%= link_to "Refresh", [:account, @segment], class: "button-secondary" %>
         <% end %>
       <% end %>
+
+      <%# Used-in-campaigns card: only render if Campaign belongs_to segment %>
+      <% if related_campaigns.any? %>
+        <%= render 'account/shared/box', divider: true do |box| %>
+          <% box.title "Used in" %>
+          <% box.description do %>
+            Campaigns that target this segment when they send.
+          <% end %>
+
+          <% box.body do %>
+            <ul class="text-sm space-y-1">
+              <% related_campaigns.each do |campaign| %>
+                <li>
+                  <%= link_to campaign.subject.presence || "Untitled campaign",
+                        [:account, campaign],
+                        class: "text-blue-600 hover:underline" %>
+                  <% if campaign.respond_to?(:status) %>
+                    <span class="ml-2 text-xs text-gray-500"><%= campaign.status %></span>
+                  <% end %>
+                </li>
+              <% end %>
+            </ul>
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <%# Footer metadata %>
+      <p class="text-xs text-gray-500 mt-3">
+        Created <%= l(@segment.created_at, format: :long) if @segment.created_at %>
+        <% if @segment.updated_at && @segment.updated_at != @segment.created_at %>
+          · updated <%= l(@segment.updated_at, format: :long) %>
+        <% end %>
+      </p>
+
     <% end %>
 
     <%# 🚅 super scaffolding will insert new children above this line. %>

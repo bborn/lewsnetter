@@ -7,7 +7,32 @@
     <% with_field_settings form: form do %>
       <%= render 'shared/fields/text_field', method: :name, options: {autofocus: true} %>
       <%= render 'shared/fields/text_area', method: :mjml_body,
-                 options: {rows: 20, class: "font-mono text-xs", placeholder: "<mjml>\n  <mj-body>\n    <mj-section>\n      <mj-column>\n        <mj-text>Hello {{first_name}}!</mj-text>\n      </mj-column>\n    </mj-section>\n  </mj-body>\n</mjml>"} %>
+                 options: {rows: 20, class: "font-mono text-xs", placeholder: "<mjml>\n  <mj-body>\n    <mj-section>\n      <mj-column>\n        <mj-text>Hello {{first_name}}!</mj-text>\n        {{body}}\n      </mj-column>\n    </mj-section>\n  </mj-body>\n</mjml>"} %>
+
+      <div class="-mt-2 space-y-2 text-xs text-base-500 dark:text-base-400">
+        <details class="rounded-md border border-base-200 dark:border-base-700 bg-base-50 dark:bg-base-800/40 px-3 py-2">
+          <summary class="cursor-pointer select-none font-medium text-base-700 dark:text-base-300">
+            What variables can I use?
+          </summary>
+          <ul class="mt-3 space-y-1.5 pl-1 leading-relaxed">
+            <li><code class="font-mono">{{first_name}}</code> &mdash; the subscriber's first name (best-effort split on space).</li>
+            <li><code class="font-mono">{{name}}</code> &mdash; the subscriber's full name as stored.</li>
+            <li><code class="font-mono">{{email}}</code> &mdash; the subscriber's email address.</li>
+            <li><code class="font-mono">{{external_id}}</code> &mdash; the subscriber's <code>external_id</code> (if set).</li>
+            <li><code class="font-mono">{{unsubscribe_url}}</code> &mdash; required by mailkick; the team-specific unsubscribe URL for this subscriber.</li>
+            <li><code class="font-mono">{{body}}</code> &mdash; for templates: the campaign's markdown body, compiled to MJML and injected here.</li>
+            <li>
+              Any key from a subscriber's <code class="font-mono">custom_attributes</code> is also available &mdash;
+              e.g. <code class="font-mono">{{plan}}</code>, <code class="font-mono">{{signup_source}}</code>.
+            </li>
+          </ul>
+        </details>
+        <p>
+          <a href="https://documentation.mjml.io/" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700 underline-offset-2 hover:underline">
+            MJML reference docs &#8599;
+          </a>
+        </p>
+      </div>
       <%# 🚅 super scaffolding will insert new fields above this line. %>
     <% end %>
 

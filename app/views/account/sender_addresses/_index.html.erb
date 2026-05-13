@@ -25,8 +25,9 @@
                 <%= render "shared/tables/select_all" %>
                 <th><%= t('.fields.email.heading') %></th>
                 <th><%= t('.fields.name.heading') %></th>
-                <th  class="text-center"><%= t('.fields.verified.heading') %></th>
-                <th><%= t('.fields.ses_status.heading') %></th>
+                <%# Single Status column replacing the previous redundant
+                    Verified + SES Status pair (U12). %>
+                <th>Status</th>
                 <%# 🚅 super scaffolding will insert new field headers above this line. %>
                 <th><%= t('.fields.created_at.heading') %></th>
                 <th class="text-right"></th>

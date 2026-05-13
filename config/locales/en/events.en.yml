@@ -60,29 +60,29 @@ en:
       contexts:
         subscriber:
           header: Events
-          description: Below is a list of Events that have been added for %{subscriber_name}.
-          description_empty: No Events have been added for %{subscriber_name}.
+          description: Engagement events recorded for this subscriber (opens, clicks, custom events).
+          description_empty: No events yet for this subscriber.
       fields: *fields
       buttons: *buttons
     show:
       section: "%{event_name}"
-      header: Event Details
-      description: Below are the details we have for %{event_name}.
-      manage_description: You'll also find options for updating these details or removing %{event_name} from %{subscriber_name} entirely.
+      header: Event
+      description: Details for this event.
+      manage_description: Update or remove this event.
       fields: *fields
       buttons: *buttons
     form: &form
       buttons: *buttons
       fields: *fields
     new:
-      section: "New Event for %{subscriber_name}"
-      header: New Event Details
-      description: Please provide the details of the new Event you'd like to add to %{subscriber_name}.
+      section: "Add an event"
+      header: Add an event
+      description: Record an engagement event for this subscriber.
       form: *form
     edit:
       section: "%{event_name}"
-      header: Edit Event Details
-      description: You can update the details or settings for %{event_name} below.
+      header: Edit event
+      description: Update this event.
       form: *form
     notifications:
       created: Event was successfully created.

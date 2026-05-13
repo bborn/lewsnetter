@@ -102,29 +102,29 @@ en:
       contexts:
         team:
           header: Campaigns
-          description: Below is a list of Campaigns that have been added for %{team_name}.
-          description_empty: No Campaigns have been added for %{team_name}.
+          description: Newsletters you've drafted, scheduled, or sent. Pick one to edit, send a test, or ship it.
+          description_empty: "Send your first newsletter. Subject, body, audience, ship it — it'll show up here once you compose one."
       fields: *fields
       buttons: *buttons
     show:
       section: "%{campaign_name}"
-      header: Campaign Details
-      description: Below are the details we have for %{campaign_name}.
-      manage_description: You'll also find options for updating these details or removing %{campaign_name} from %{team_name} entirely.
+      header: Campaign
+      description: Details for this campaign.
+      manage_description: Update content, audience, or scheduling — or remove the campaign.
       fields: *fields
       buttons: *buttons
     form: &form
       buttons: *buttons
       fields: *fields
     new:
-      section: "New Campaign for %{team_name}"
-      header: New Campaign Details
-      description: Please provide the details of the new Campaign you'd like to add to %{team_name}.
+      section: "Compose a campaign"
+      header: Compose a campaign
+      description: Draft a newsletter — subject, body, audience, schedule. You'll be able to preview and send a test before shipping it.
       form: *form
     edit:
       section: "%{campaign_name}"
-      header: Edit Campaign Details
-      description: You can update the details or settings for %{campaign_name} below.
+      header: Edit campaign
+      description: Update content, audience, or scheduling for this campaign.
       form: *form
     notifications:
       created: Campaign was successfully created.

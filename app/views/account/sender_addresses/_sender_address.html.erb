@@ -9,8 +9,10 @@
     <%= render "shared/tables/checkbox", object: sender_address %>
     <td><%= render 'shared/attributes/email', attribute: :email, url: [:account, sender_address] %></td>
     <td><%= render 'shared/attributes/text', attribute: :name %></td>
-    <td class="text-center"><%= render 'shared/attributes/option', attribute: :verified %></td>
-    <td><%= render 'shared/attributes/text', attribute: :ses_status %></td>
+    <%# Single Status pill replaces the previous Verified + SES Status
+        columns (U12). Maps raw ses_status enum values to humane labels
+        via sender_address_status_pill (defined in status_pill_helper). %>
+    <td><%= sender_address_status_pill(sender_address) %></td>
     <%# 🚅 super scaffolding will insert new fields above this line. %>
     <td><%= render 'shared/attributes/date_and_time', attribute: :created_at %></td>
     <td class="buttons">

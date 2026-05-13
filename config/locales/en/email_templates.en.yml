@@ -32,11 +32,12 @@ en:
         api_title: *name
         api_description: *name
       mjml_body:
-        _: &mjml_body Mjml Body
+        _: &mjml_body MJML source
         label: *mjml_body
         heading: *mjml_body
         api_title: *mjml_body
         api_description: *mjml_body
+        help: "The reusable email layout (header, footer, brand colors). Use <code>{{body}}</code> as a placeholder for each campaign's content. <code>{{first_name}}</code>, <code>{{name}}</code>, <code>{{email}}</code>, and <code>{{unsubscribe_url}}</code> are also available."
       # 🚅 super scaffolding will insert new fields above this line.
       created_at:
         _: &created_at Added
@@ -60,29 +61,29 @@ en:
       contexts:
         team:
           header: Email Templates
-          description: Below is a list of Email Templates that have been added for %{team_name}.
-          description_empty: No Email Templates have been added for %{team_name}.
+          description: Reusable layouts (logo, footer, brand colors) for your sends. Build a template once and use it across many campaigns.
+          description_empty: "Templates are the reusable layout for your sends — logo, footer, brand colors. Build one and reuse it across every campaign."
       fields: *fields
       buttons: *buttons
     show:
       section: "%{email_template_name}"
-      header: Email Template Details
-      description: Below are the details we have for %{email_template_name}.
-      manage_description: You'll also find options for updating these details or removing %{email_template_name} from %{team_name} entirely.
+      header: Email template
+      description: Reusable layout for your campaigns.
+      manage_description: Update the MJML or remove this template.
       fields: *fields
       buttons: *buttons
     form: &form
       buttons: *buttons
       fields: *fields
     new:
-      section: "New Email Template for %{team_name}"
-      header: New Email Template Details
-      description: Please provide the details of the new Email Template you'd like to add to %{team_name}.
+      section: "Create a template"
+      header: Create a template
+      description: Define the reusable layout for your sends (logo, footer, brand colors). Use <code>{{body}}</code> where each campaign's content should appear.
       form: *form
     edit:
       section: "%{email_template_name}"
-      header: Edit Email Template Details
-      description: You can update the details or settings for %{email_template_name} below.
+      header: Edit template
+      description: Update the MJML source for this template.
       form: *form
     notifications:
       created: Email Template was successfully created.

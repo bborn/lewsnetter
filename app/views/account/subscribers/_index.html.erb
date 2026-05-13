@@ -13,7 +13,9 @@
     <%= render 'account/shared/box', pagy: pagy do |box| %>
       <% box.title t(".contexts.#{context.class.name.underscore}.header") %>
       <% box.description do %>
-        <%= t(".contexts.#{context.class.name.underscore}.description#{"_empty" unless subscribers.any?}") %>
+        <% if subscribers.any? %>
+          <%= t(".contexts.#{context.class.name.underscore}.description") %>
+        <% end %>
         <%= render "shared/limits/index", model: subscribers.model %>
       <% end %>
 
@@ -36,6 +38,19 @@
               <%= render partial: 'account/subscribers/subscriber', collection: subscribers %>
             </tbody>
           </table>
+        <% elsif context == team && can?(:create, Subscriber.new(team: team)) %>
+          <div class="text-center py-12 px-6">
+            <h2 class="text-xl font-semibold text-base-800 dark:text-base-200 mb-2">
+              Add your audience
+            </h2>
+            <p class="text-base-600 dark:text-base-400 max-w-md mx-auto mb-6">
+              Manually add subscribers one at a time, or import an existing list from CSV. There's one audience per team &mdash; target subsets with Segments later.
+            </p>
+            <div class="flex flex-wrap gap-3 justify-center">
+              <%= link_to "Add subscriber", [:new, :account, team, :subscriber], class: "button" %>
+              <%= link_to "Import from CSV", new_account_team_subscribers_import_path(team), class: "button-secondary" %>
+            </div>
+          </div>
         <% end %>
       <% end %>
 

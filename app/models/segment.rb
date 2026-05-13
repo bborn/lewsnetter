@@ -40,6 +40,19 @@ class Segment < ApplicationRecord
     definition.is_a?(Hash) ? definition["predicate"].to_s.strip.presence : nil
   end
 
+  # Virtual setter so the segment form can post a predicate alongside the
+  # other fields. We write into the `definition` JSON column rather than
+  # introducing a new schema column. Blanks clear the predicate entirely.
+  def predicate=(value)
+    self.definition ||= {}
+    new_pred = value.to_s.strip
+    if new_pred.blank?
+      self.definition = definition.is_a?(Hash) ? definition.except("predicate") : {}
+    else
+      self.definition = (definition.is_a?(Hash) ? definition : {}).merge("predicate" => new_pred)
+    end
+  end
+
   # Apply this segment's predicate to an existing ActiveRecord scope and return
   # the narrowed scope. If there's no predicate the scope is returned as-is.
   # Raises Segment::InvalidPredicate if the stored predicate contains any

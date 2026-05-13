@@ -22,7 +22,9 @@
     <% end %>
   <% end %>
 
-  <% unless disable_developer_menu? %>
+  <%# TODO: re-add Developers section when Doorkeeper/Webhooks Platform features are user-visible.
+      Hidden during alpha because clicking through bounces users to "not authorized" pages (U21). %>
+  <% if false # disable_developer_menu? %>
     <%= render 'account/shared/menu/subsection', title: t('menus.main.labels.developers'), expand: expand do %>
       <%= render 'account/platform/applications/menu_item' %>
       <%= render 'account/webhooks/outgoing/endpoints/menu_item' if webhooks_enabled? %>

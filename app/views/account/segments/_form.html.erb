@@ -1,53 +1,85 @@
 <% cancel_path ||= segment.persisted? ? [:account, segment] : [:account, @team, :segments] %>
 
-<%# AI segment translator — separate top-level form so it can submit
-    independently of the main segment form. Targets the #segment_preview frame. %>
-<%= form_with url: translate_account_team_segments_path(@team),
-              method: :post,
-              data: {turbo_frame: "segment_preview"},
-              html: {class: "mb-4 p-3 border rounded-md bg-gray-50 dark:bg-sky-950 dark:border-sky-800"} do |translate_form| %>
-  <label class="block text-sm font-medium mb-1">
-    Describe your audience in plain English
-  </label>
-  <%= translate_form.text_area :natural_language,
-        value: segment.natural_language_source,
-        class: "w-full p-2 border rounded-md mb-2",
-        rows: 2,
-        placeholder: "e.g. Subscribers on the Pro plan who joined in the last 30 days",
-        data: {ai_translate_source: true} %>
-  <button type="submit" class="button-secondary">Translate to predicate</button>
-  <span class="text-xs text-gray-500 ml-2">
-    Stub mode if no API key is configured.
-  </span>
-<% end %>
+<%# Both the AI translator UI and the segment edit form live inside the
+    same Stimulus-controlled <div> so the controller's targets resolve
+    across both forms. The translator's <form> dispatches its submit
+    event (intercepted by `translate`) and the result panel writes into
+    the hidden predicate input on the main segment form below. %>
+<div data-controller="segment-translator"
+     data-segment-translator-url-value="<%= translate_account_team_segments_path(@team) %>">
 
-<%= turbo_frame_tag "segment_preview" %>
+  <form data-action="submit->segment-translator#translate"
+        class="mb-4 p-3 border rounded-md bg-gray-50 dark:bg-sky-950 dark:border-sky-800">
+    <label class="block text-sm font-medium mb-1" for="segment_translator_input">
+      Describe your audience in plain English
+    </label>
+    <textarea id="segment_translator_input"
+              data-segment-translator-target="input"
+              data-ai-translate-source="true"
+              rows="2"
+              class="w-full p-2 border rounded-md mb-2"
+              placeholder="e.g. Subscribers on the Pro plan who joined in the last 30 days"
+    ><%= segment.natural_language_source %></textarea>
+    <button type="submit"
+            class="button"
+            data-segment-translator-target="submit">
+      Translate to predicate
+    </button>
+    <span class="text-xs text-gray-500 ml-2">
+      Powered by Claude. Stub mode if no API key is configured.
+    </span>
+  </form>
 
-<%= form_with model: segment, url: (segment.persisted? ? [:account, segment] : [:account, @team, :segments]), class: 'form' do |form| %>
-  <%= render "shared/limits/form", form: form, cancel_path: cancel_path do %>
-    <%= render 'account/shared/forms/errors', form: form %>
+  <%# Inline result panel — populated by segment_translator_controller.js.
+      Hidden until the first translation returns. %>
+  <div data-segment-translator-target="panel" hidden></div>
 
-    <% with_field_settings form: form do %>
-      <%= render 'shared/fields/text_field', method: :name, options: {autofocus: true} %>
-      <%# natural_language_source is captured by the AI translator UI above and
-          mirrored here as a hidden field on submit. %>
-      <%= form.hidden_field :natural_language_source %>
+  <%= form_with model: segment, url: (segment.persisted? ? [:account, segment] : [:account, @team, :segments]), class: 'form' do |form| %>
+    <%= render "shared/limits/form", form: form, cancel_path: cancel_path do %>
+      <%= render 'account/shared/forms/errors', form: form %>
+
+      <% with_field_settings form: form do %>
+        <%= render 'shared/fields/text_field', method: :name, options: {autofocus: true} %>
+      <% end %>
+
+      <%# Description is the natural-language source captured by the AI
+          translator above and mirrored here. Relabeling from "Natural
+          Language Source" → "Description" per U32. Rendered with bare
+          form helpers (rather than a bullet_train field partial) so we
+          can attach a Stimulus target attribute. %>
+      <div class="form-group">
+        <%= form.label :natural_language_source, "Description", class: "block text-sm font-medium mb-1" %>
+        <%= form.text_area :natural_language_source,
+              rows: 2,
+              placeholder: "What this segment is — used by the AI translator above.",
+              class: "w-full p-2 border rounded-md",
+              data: {segment_translator_target: "nlInput"} %>
+      </div>
+
+      <%# Compiled SQL predicate — virtual attribute on Segment writing
+          into definition["predicate"]. Filled by the AI translator's
+          Stimulus controller via target lookup. Editable by the user
+          when they click "Edit predicate" in the result panel. %>
+      <%= form.hidden_field :predicate, value: segment.predicate,
+            data: {segment_translator_target: "predicateInput"} %>
       <%# 🚅 super scaffolding will insert new fields above this line. %>
+
+      <div class="buttons">
+        <%= form.submit (form.object.persisted? ? t('.buttons.update') : t('.buttons.create')), class: "button" %>
+        <%= link_to t('global.buttons.cancel'), cancel_path, class: "button-secondary" %>
+      </div>
     <% end %>
-
-    <div class="buttons">
-      <%= form.submit (form.object.persisted? ? t('.buttons.update') : t('.buttons.create')), class: "button" %>
-      <%= link_to t('global.buttons.cancel'), cancel_path, class: "button-secondary" %>
-    </div>
   <% end %>
-<% end %>
+</div>
 
-<%# Keep the AI translator's textarea in sync with the segment form's natural_language_source field. %>
+<%# Keep the AI translator's textarea in sync with the segment form's
+    natural_language_source field — typing in either updates the other. %>
 <script>
   (function() {
     var src = document.querySelector('textarea[data-ai-translate-source]');
     var dst = document.querySelector('textarea[name="segment[natural_language_source]"]');
     if (src && dst) {
+      if (!dst.value && src.value) dst.value = src.value;
       src.addEventListener('input', function() { dst.value = src.value; });
       dst.addEventListener('input', function() { src.value = dst.value; });
     }

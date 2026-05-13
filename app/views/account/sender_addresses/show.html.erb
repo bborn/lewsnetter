@@ -14,28 +14,55 @@
             <%= render 'shared/attributes/email', attribute: :email %>
             <%= render 'shared/attributes/text', attribute: :name %>
 
-            <%# Verified + Ses Status are SES-derived (read only). %>
-            <%= render 'shared/attributes/attribute', object: @sender_address, attribute: :verified, strategy: :label do %>
-              <% if @sender_address.verified? %>
-                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
-                  <%= t('.badges.verified') %>
-                </span>
-              <% else %>
-                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
-                  <%= t('.badges.unverified') %>
-                </span>
-              <% end %>
-            <% end %>
+            <%# Single Status row replaces the previous redundant Verified
+                + SES Status pair (U12). Uses sender_address_status_pill
+                from app/helpers/status_pill_helper.rb. %>
             <%= render 'shared/attributes/attribute', object: @sender_address, attribute: :ses_status, strategy: :label do %>
-              <%= t("sender_addresses.fields.ses_status.values.#{@sender_address.ses_status.presence || 'unknown'}", default: @sender_address.ses_status.to_s.presence || t('.ses_status.unknown')) %>
+              <%= sender_address_status_pill(@sender_address) %>
             <% end %>
             <%# 🚅 super scaffolding will insert new fields above this line. %>
+          <% end %>
+
+          <%# Verification helper UI (U11). Shows a primary "Send
+              verification email" button when the address isn't verified,
+              with copy explaining what will happen. When verified, this
+              block falls back to a quiet re-check link tucked under the
+              status pill. %>
+          <% if @sender_address.verified? %>
+            <p class="mt-3 text-sm text-gray-500">
+              <% if can? :update, @sender_address %>
+                <%= button_to t('.buttons.recheck'),
+                      recheck_account_sender_address_path(@sender_address),
+                      method: :post,
+                      class: "text-blue-600 hover:underline bg-transparent border-0 p-0 cursor-pointer text-sm" %>
+                — re-query SES if you think this is stale.
+              <% end %>
+            </p>
+          <% else %>
+            <div class="mt-4 p-3 border rounded-md bg-yellow-50 border-yellow-200 dark:bg-yellow-950 dark:border-yellow-800">
+              <% if can? :update, @sender_address %>
+                <%= button_to "Send verification email",
+                      verify_with_ses_account_sender_address_path(@sender_address),
+                      method: :post,
+                      class: "button" %>
+                <p class="mt-2 text-sm text-gray-700 dark:text-gray-200">
+                  We'll ask Amazon SES to send you a confirmation link.
+                  Click the link in your inbox, then return here and click
+                  <strong>Re-check with SES</strong>.
+                </p>
+                <p class="mt-2 text-sm">
+                  <%= button_to t('.buttons.recheck'),
+                        recheck_account_sender_address_path(@sender_address),
+                        method: :post,
+                        class: "text-blue-600 hover:underline bg-transparent border-0 p-0 cursor-pointer text-sm" %>
+                </p>
+              <% end %>
+            </div>
           <% end %>
         <% end %>
 
         <% box.actions do %>
           <%= link_to t('.buttons.edit'), [:edit, :account, @sender_address], class: first_button_primary if can? :edit, @sender_address %>
-          <%= button_to t('.buttons.recheck'), recheck_account_sender_address_path(@sender_address), method: :post, class: first_button_primary if can? :update, @sender_address %>
           <%# 🚅 super scaffolding will insert new action model buttons above this line. %>
           <%= button_to t('.buttons.destroy'), [:account, @sender_address], method: :delete, class: first_button_primary, data: { turbo_confirm: t('.buttons.confirmations.destroy', model_locales(@sender_address)) } if can? :destroy, @sender_address %>
           <%= link_to t('global.buttons.back'), [:account, @team, :sender_addresses], class: first_button_primary %>

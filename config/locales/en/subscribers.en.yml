@@ -76,28 +76,28 @@ en:
         team:
           header: Subscribers
           description: Your team's full audience — everyone %{team_name} can email. Lewsnetter has one audience per team; use Segments below to filter it for a specific campaign.
-          description_empty: No Subscribers have been added for %{team_name} yet. Lewsnetter has one audience per team — add subscribers here and target them with Segments.
+          description_empty: "Add your audience. Manually add subscribers one at a time, or import an existing list from CSV. There's one audience per team; you can target subsets with Segments later."
       fields: *fields
       buttons: *buttons
     show:
       section: "%{subscriber_name}"
-      header: Subscriber Details
-      description: Below are the details we have for %{subscriber_name}.
-      manage_description: You'll also find options for updating these details or removing %{subscriber_name} from %{team_name} entirely.
+      header: Subscriber
+      description: Profile and engagement for this subscriber.
+      manage_description: Update their details or remove them from your list.
       fields: *fields
       buttons: *buttons
     form: &form
       buttons: *buttons
       fields: *fields
     new:
-      section: "New Subscriber for %{team_name}"
-      header: New Subscriber Details
-      description: Please provide the details of the new Subscriber you'd like to add to %{team_name}.
+      section: "Add a subscriber"
+      header: Add a subscriber
+      description: Add someone manually. To bulk-import an existing list, use Import from CSV.
       form: *form
     edit:
       section: "%{subscriber_name}"
-      header: Edit Subscriber Details
-      description: You can update the details or settings for %{subscriber_name} below.
+      header: Edit subscriber
+      description: Update this subscriber's details or subscription status.
       form: *form
     notifications:
       created: Subscriber was successfully created.

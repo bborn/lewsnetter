@@ -71,24 +71,90 @@ class Account::SenderAddressesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "success", sender_address.ses_status
   end
 
-  test "show page renders read-only verified badge and recheck button" do
+  test "show page renders verified status pill and recheck link when verified" do
     sender_address = @team.sender_addresses.create!(
       email: "verified@example.com", name: "V", verified: true, ses_status: "success"
     )
     get account_sender_address_url(sender_address)
     assert_response :success
-    assert_match(/Verified by SES/, response.body)
+    # New status pill replaces the old "Verified by SES" badge — see U12.
+    assert_match(/Verified/, response.body)
     assert_match(/Re-check with SES/, response.body)
+    # Verified state should NOT surface the big "Send verification email" CTA.
+    assert_no_match(/Send verification email/, response.body)
   end
 
-  test "show page renders unverified badge when verified is false" do
+  test "show page renders pending status and verify CTA when unverified" do
     sender_address = @team.sender_addresses.create!(
       email: "pending@example.com", name: "P", verified: false, ses_status: "pending"
     )
     get account_sender_address_url(sender_address)
     assert_response :success
-    assert_match(/Not verified/, response.body)
-    assert_match(/Verification pending/, response.body)
+    # Status pill — pending verification (humane label via status_pill_helper).
+    assert_match(/Pending verification/, response.body)
+    # Primary verify CTA appears for unverified addresses (U11).
+    assert_match(/Send verification email/, response.body)
+  end
+
+  test "verify_with_ses creates the email identity in SES and refreshes status" do
+    sender_address = @team.sender_addresses.create!(
+      email: "newbie@example.com", name: "Newbie", verified: false, ses_status: "not_in_ses"
+    )
+    fake = Object.new
+    create_calls = []
+    fake.define_singleton_method(:create_email_identity) do |args|
+      create_calls << args
+      Object.new
+    end
+    pending_status = Struct.new(:verified_for_sending_status).new("PENDING")
+    fake.define_singleton_method(:get_email_identity) { |_| pending_status }
+    install_client_stub(fake)
+
+    post verify_with_ses_account_sender_address_url(sender_address)
+
+    assert_response :redirect
+    assert_equal [{email_identity: "newbie@example.com"}], create_calls
+    sender_address.reload
+    assert_equal "pending", sender_address.ses_status
+    assert_equal false, sender_address.verified
+  end
+
+  test "verify_with_ses treats AlreadyExistsException as success and rechecks" do
+    sender_address = @team.sender_addresses.create!(
+      email: "known@example.com", name: "K", verified: false, ses_status: "not_in_ses"
+    )
+    fake = Object.new
+    fake.define_singleton_method(:create_email_identity) do |_args|
+      raise Aws::SESV2::Errors::AlreadyExistsException.new(nil, "exists")
+    end
+    success_status = Struct.new(:verified_for_sending_status).new("SUCCESS")
+    fake.define_singleton_method(:get_email_identity) { |_| success_status }
+    install_client_stub(fake)
+
+    post verify_with_ses_account_sender_address_url(sender_address)
+
+    assert_response :redirect
+    sender_address.reload
+    assert_equal true, sender_address.verified
+    assert_equal "success", sender_address.ses_status
+  end
+
+  test "verify_with_ses surfaces an alert when SES is unconfigured" do
+    sender_address = @team.sender_addresses.create!(
+      email: "noses@example.com", name: "NS", verified: false, ses_status: "unconfigured"
+    )
+    Ses::ClientFor.singleton_class.class_eval do
+      alias_method :_orig_call, :call unless method_defined?(:_orig_call)
+      define_method(:call) { |_team| raise Ses::ClientFor::NotConfigured, "no config" }
+    end
+
+    post verify_with_ses_account_sender_address_url(sender_address)
+
+    assert_response :redirect
+    follow_redirect!
+    # Unconfigured surfaces an alert flash, not a notice. Apostrophe is
+    # HTML-encoded when the flash is rendered.
+    assert_match(/SES credentials aren(&#39;|')t configured/i, response.body)
   end
 
   test "edit form omits :verified and :ses_status inputs" do

@@ -61,28 +61,28 @@ en:
         team:
           header: Segments
           description: Saved targets for campaigns. Filter your audience down for specific sends — or leave a campaign's Segment blank to send to everyone subscribed.
-          description_empty: Lewsnetter doesn't have separate lists — there's one audience per team. Use Segments to filter your audience for targeted campaigns, or leave a campaign's Segment blank to send to everyone subscribed.
+          description_empty: "Build your first segment. Saved targets for campaigns — send to just your power users, just paid customers, or just folks who haven't opened recent emails."
       fields: *fields
       buttons: *buttons
     show:
       section: "%{segment_name}"
-      header: Segment Details
-      description: Below are the details we have for %{segment_name}.
-      manage_description: You'll also find options for updating these details or removing %{segment_name} from %{team_name} entirely.
+      header: Segment
+      description: Details for this segment.
+      manage_description: Update the description or remove this segment.
       fields: *fields
       buttons: *buttons
     form: &form
       buttons: *buttons
       fields: *fields
     new:
-      section: "New Segment for %{team_name}"
-      header: New Segment Details
-      description: Please provide the details of the new Segment you'd like to add to %{team_name}.
+      section: "Create a segment"
+      header: Create a segment
+      description: Describe the audience you want to reach. Lewsnetter will translate it into a saved query you can reuse across campaigns.
       form: *form
     edit:
       section: "%{segment_name}"
-      header: Edit Segment Details
-      description: You can update the details or settings for %{segment_name} below.
+      header: Edit segment
+      description: Update this segment's description or predicate.
       form: *form
     notifications:
       created: Segment was successfully created.

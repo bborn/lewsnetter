@@ -2,7 +2,7 @@ class Account::SenderAddressesController < Account::ApplicationController
   account_load_and_authorize_resource :sender_address,
     through: :team,
     through_association: :sender_addresses,
-    member_actions: [:recheck]
+    member_actions: [:recheck, :verify_with_ses]
 
   # GET /account/teams/:team_id/sender_addresses
   # GET /account/teams/:team_id/sender_addresses.json
@@ -63,6 +63,24 @@ class Account::SenderAddressesController < Account::ApplicationController
   def recheck
     Ses::IdentityChecker.new(sender_address: @sender_address).call
     redirect_to [:account, @sender_address], notice: I18n.t("sender_addresses.notifications.rechecked")
+  end
+
+  # POST /account/sender_addresses/:id/verify_with_ses
+  #
+  # Adds the sender address as an SES email identity (which triggers SES to
+  # send a verification email to that address) and then re-checks status so
+  # the page reflects the new "pending" state. Used by the show page's
+  # primary "Send verification email" button when the address isn't yet
+  # verified (U11).
+  def verify_with_ses
+    result = Ses::IdentityCreator.new(sender_address: @sender_address).call
+    # Always refresh status after the create attempt — covers
+    # already_exists/domain_verified cases where SES already knew the
+    # identity and we want the latest verification state on the row.
+    Ses::IdentityChecker.new(sender_address: @sender_address).call if result.ok?
+
+    flash_key = result.ok? ? :notice : :alert
+    redirect_to [:account, @sender_address], flash_key => result.message
   end
 
   # DELETE /account/sender_addresses/:id

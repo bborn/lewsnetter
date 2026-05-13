@@ -8,13 +8,14 @@ class UnsubscribeController < ApplicationController
   skip_before_action :verify_authenticity_token, raise: false
   skip_before_action :authenticate_user!, raise: false
 
-  layout "public"
+  layout "unsubscribe"
 
   def update
     subscriber = find_subscriber
 
     if subscriber.nil?
       @status = :invalid
+      @unsubscribe_team_name = nil
       render :update, status: :not_found
       return
     end
@@ -37,6 +38,8 @@ class UnsubscribeController < ApplicationController
     )
 
     @subscriber = subscriber
+    @team = subscriber.team
+    @unsubscribe_team_name = @team&.name
     @status = :ok
     render :update
   end

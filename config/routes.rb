@@ -143,6 +143,10 @@ Rails.application.routes.draw do
         resources :sender_addresses do
           member do
             post :recheck
+            # Adds the address to SES (or re-uses an existing identity)
+            # which triggers SES to send a verification email. Surfaced
+            # on the show page when the address isn't yet verified (U11).
+            post :verify_with_ses
           end
         end
 

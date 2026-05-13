@@ -86,15 +86,15 @@ en:
       contexts:
         team:
           header: Sender Addresses
-          description: Below is a list of Sender Addresses that have been added for %{team_name}.
-          description_empty: No Sender Addresses have been added for %{team_name}.
+          description: The from-addresses your recipients see in their inbox. Each must be verified by Amazon SES before you can send from it.
+          description_empty: "Add a sender address. This is the from-address recipients see in their inbox — it must be verified by Amazon SES before you can send from it."
       fields: *fields
       buttons: *buttons
     show:
       section: "%{sender_address_name}"
-      header: Sender Address Details
-      description: Below are the details we have for %{sender_address_name}.
-      manage_description: You'll also find options for updating these details or removing %{sender_address_name} from %{team_name} entirely.
+      header: Sender address
+      description: From-address details and SES verification status.
+      manage_description: Update this sender address or remove it from your team.
       fields: *fields
       buttons: *buttons
       badges:
@@ -106,14 +106,14 @@ en:
       buttons: *buttons
       fields: *fields
     new:
-      section: "New Sender Address for %{team_name}"
-      header: New Sender Address Details
-      description: Please provide the details of the new Sender Address you'd like to add to %{team_name}.
+      section: "Add a sender address"
+      header: Add a sender address
+      description: The from-address recipients see in their inbox. Amazon SES must verify you own this address before you can send from it.
       form: *form
     edit:
       section: "%{sender_address_name}"
-      header: Edit Sender Address Details
-      description: You can update the details or settings for %{sender_address_name} below.
+      header: Edit sender address
+      description: Update this sender address.
       form: *form
     notifications:
       created: Sender Address was successfully created.

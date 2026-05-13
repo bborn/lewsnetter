@@ -37,4 +37,25 @@ class Account::SegmentTranslationsControllerTest < ActionDispatch::IntegrationTe
 
     assert_response :success
   end
+
+  test "create responds with a JSON payload usable by the Stimulus controller" do
+    @team.subscribers.create!(email: "a@example.com", name: "A", subscribed: true)
+    @team.subscribers.create!(email: "b@example.com", name: "B", subscribed: true)
+    AI::Base.force_stub = true
+    begin
+      post translate_account_team_segments_url(@team),
+        params: {natural_language: "all subscribers"},
+        as: :json
+    ensure
+      AI::Base.force_stub = false
+    end
+
+    assert_response :success
+    payload = JSON.parse(response.body)
+    assert payload.key?("sql_predicate"), "JSON shape should include sql_predicate"
+    assert payload.key?("estimated_count"), "JSON shape should include estimated_count"
+    assert payload.key?("sample_subscribers"), "JSON shape should include sample_subscribers"
+    assert payload.key?("errors")
+    assert payload["sample_subscribers"].is_a?(Array)
+  end
 end

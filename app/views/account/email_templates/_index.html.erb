@@ -13,7 +13,9 @@
     <%= render 'account/shared/box', pagy: pagy do |box| %>
       <% box.title t(".contexts.#{context.class.name.underscore}.header") %>
       <% box.description do %>
-        <%= t(".contexts.#{context.class.name.underscore}.description#{"_empty" unless email_templates.any?}") %>
+        <% if email_templates.any? %>
+          <%= t(".contexts.#{context.class.name.underscore}.description") %>
+        <% end %>
         <%= render "shared/limits/index", model: email_templates.model %>
       <% end %>
 
@@ -33,6 +35,16 @@
               <%= render partial: 'account/email_templates/email_template', collection: email_templates %>
             </tbody>
           </table>
+        <% elsif context == team && can?(:create, EmailTemplate.new(team: team)) %>
+          <div class="text-center py-12 px-6">
+            <h2 class="text-xl font-semibold text-base-800 dark:text-base-200 mb-2">
+              Create your first template
+            </h2>
+            <p class="text-base-600 dark:text-base-400 max-w-md mx-auto mb-6">
+              Templates are the reusable layout for your sends &mdash; logo, footer, brand colors. Build one and reuse it across every campaign.
+            </p>
+            <%= link_to "Create a template →", [:new, :account, team, :email_template], class: "button" %>
+          </div>
         <% end %>
       <% end %>
 

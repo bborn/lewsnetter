@@ -46,6 +46,9 @@ if defined?(Api::V1::ApplicationController)
           *permitted_fields,
           :name,
           :natural_language_source,
+          # `predicate` is a virtual attribute on Segment — writes into the
+          # `definition` JSON column. Surfaced via the AI-translator panel.
+          :predicate,
           # 🚅 super scaffolding will insert new fields above this line.
           *permitted_arrays,
           # 🚅 super scaffolding will insert new arrays above this line.
