@@ -2,7 +2,7 @@ class Account::CampaignsController < Account::ApplicationController
   account_load_and_authorize_resource :campaign,
     through: :team,
     through_association: :campaigns,
-    member_actions: [:send_now, :test_send, :preview_as, :preview_frame]
+    member_actions: [:send_now, :test_send, :preview_as, :preview_frame, :destroy_asset]
 
   # GET /account/teams/:team_id/campaigns
   # GET /account/teams/:team_id/campaigns.json
@@ -59,6 +59,20 @@ class Account::CampaignsController < Account::ApplicationController
     respond_to do |format|
       format.html { redirect_to [:account, @team, :campaigns], notice: I18n.t("campaigns.notifications.destroyed") }
       format.json { head :no_content }
+    end
+  end
+
+  # DELETE /account/campaigns/:id/assets/:asset_id
+  #
+  # Removes a single ActiveStorage attachment from this campaign. See
+  # Account::EmailTemplatesController#destroy_asset for the rationale.
+  def destroy_asset
+    attachment = @campaign.assets.attachments.find_by(id: params[:asset_id])
+    if attachment
+      attachment.purge_later
+      redirect_to [:edit, :account, @campaign], notice: "Asset removed."
+    else
+      redirect_to [:edit, :account, @campaign], alert: "Asset not found."
     end
   end
 

@@ -48,6 +48,10 @@ if defined?(Api::V1::ApplicationController)
           :mjml_body,
           # 🚅 super scaffolding will insert new fields above this line.
           *permitted_arrays,
+          # Image uploads (logos, hero images). `assets: []` lets the
+          # multipart form post several files in one submit; the model
+          # validates each blob is an image and under 5 MB.
+          assets: []
           # 🚅 super scaffolding will insert new arrays above this line.
         )
 

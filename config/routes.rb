@@ -143,6 +143,11 @@ Rails.application.routes.draw do
         resources :email_templates do
           member do
             get :preview_frame
+            # Asset uploads (images, primarily logos) are scoped per-template
+            # so the asset_id in the URL refers to an ActiveStorage::Attachment
+            # row. We `purge_later` rather than `purge` so a slow R2 delete
+            # doesn't block the redirect.
+            delete "assets/:asset_id", to: "email_templates#destroy_asset", as: :asset
           end
         end
         resources :campaigns do
@@ -157,6 +162,8 @@ Rails.application.routes.draw do
             # form values so the editor can live-render without persisting.
             get :preview_frame
             post :preview_frame
+            # See email_templates above — same purge_later pattern.
+            delete "assets/:asset_id", to: "campaigns#destroy_asset", as: :asset
           end
         end
         resources :sender_addresses do

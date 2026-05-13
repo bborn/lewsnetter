@@ -1,0 +1,134 @@
+<%#
+  Assets section for any form that has_many_attached :assets — currently
+  EmailTemplate and Campaign. Renders:
+    - a multi-file image picker styled like the CSV input on
+      account/subscribers/imports/new
+    - a list of already-attached assets with:
+        - 60x60 thumbnail
+        - filename
+        - the public-facing URL (rails_storage_proxy_url) + Copy URL button
+        - a Delete link that hits the destroy_asset member action
+
+  Required locals:
+    form     — the FormBuilder we're inside
+    resource — the parent record (EmailTemplate or Campaign). Used to
+               look up @template.assets / @campaign.assets and to build
+               the destroy_asset path (asset_account_email_template_path
+               vs asset_account_campaign_path).
+
+  We deliberately use `rails_storage_proxy_url(blob, host: …)` rather
+  than `url_for(blob)`:
+    - url_for produces a signed, time-expiring URL — useless for emails
+      that recipients open days/weeks later.
+    - rails_storage_proxy_url is non-expiring + lives on our domain.
+      Trade-off: bytes flow through Rails on every request. When we
+      configure the R2 bucket for public reads we can swap to a direct
+      r2.cloudflarestorage.com URL.
+%>
+
+<%
+  resource_name = resource.class.model_name.singular # "email_template" | "campaign"
+  destroy_asset_path = case resource
+  when EmailTemplate
+    ->(attachment) { asset_account_email_template_path(resource, asset_id: attachment.id) }
+  when Campaign
+    ->(attachment) { asset_account_campaign_path(resource, asset_id: attachment.id) }
+  else
+    raise "Unsupported asset host: #{resource.class}"
+  end
+%>
+
+<section class="mb-8 p-4 border rounded-md bg-white dark:bg-sky-950 dark:border-sky-800">
+  <header class="mb-4">
+    <h2 class="text-lg font-semibold">Assets</h2>
+    <p class="text-sm text-gray-500">
+      Upload images to host them on Cloudflare R2. Copy the URL and paste it into
+      your MJML as <code class="font-mono text-xs">&lt;mj-image src="…" /&gt;</code>
+      or into your markdown body as <code class="font-mono text-xs">![alt](url)</code>.
+    </p>
+  </header>
+
+  <div class="mb-4">
+    <%= form.label :assets, "Add images", class: "block text-sm font-medium" %>
+    <div class="mt-1.5">
+      <%# multipart: true is set on the surrounding form_with via html: option;
+          we still pass it on the file input so screen-readers + native validation
+          both treat this as a true file picker. %>
+      <%= form.file_field :assets,
+            multiple: true,
+            accept: "image/*",
+            class: "block w-full text-sm rounded-md border border-base-300 dark:border-base-900 bg-white dark:bg-base-800 dark:text-base-300 px-3 py-2 file:mr-3 file:rounded-md file:border-0 file:bg-primary-500 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white hover:file:bg-primary-600" %>
+    </div>
+    <p class="mt-1.5 text-xs text-base-500 dark:text-base-400">
+      Images only, 5MB max each. Multiple selection allowed.
+    </p>
+  </div>
+
+  <%# Only render attachments whose underlying ::Attachment row is persisted.
+      When a validation fails mid-update the in-memory has_many_attached
+      buffer contains the freshly-built (unsaved) attachment, and calling
+      rails_storage_proxy_url on its blob raises "Cannot get a signed_id
+      for a new record". %>
+  <% persisted_attachments = resource.persisted? ? resource.assets.attachments.select(&:persisted?) : [] %>
+  <% if persisted_attachments.any? %>
+    <ul class="space-y-3" data-testid="assets-list">
+      <% persisted_attachments.each do |attachment| %>
+        <% blob = attachment.blob %>
+        <% public_url = rails_storage_proxy_url(blob) %>
+        <li class="flex items-start gap-3 p-3 border rounded-md bg-base-50 dark:bg-base-800/40 border-base-200 dark:border-base-700"
+            data-controller="clipboard">
+          <%# Thumbnail. Tailwind's object-cover keeps the aspect ratio while
+              filling the box; for non-image blobs (shouldn't happen given
+              the model validator) we'd render a generic icon, but the
+              accept="image/*" + model validation gate covers us. %>
+          <div class="shrink-0 w-[60px] h-[60px] rounded-md overflow-hidden bg-white dark:bg-base-900 border border-base-200 dark:border-base-700">
+            <%= image_tag public_url,
+                  alt: blob.filename.to_s,
+                  class: "w-full h-full object-cover",
+                  loading: "lazy" %>
+          </div>
+
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-base-900 dark:text-base-100 truncate" title="<%= blob.filename %>">
+              <%= blob.filename %>
+            </p>
+            <p class="text-xs text-gray-500 mt-0.5">
+              <%= number_to_human_size(blob.byte_size) %>
+            </p>
+            <div class="mt-2 flex items-center gap-2">
+              <code class="flex-1 min-w-0 truncate text-xs font-mono px-2 py-1 rounded bg-white dark:bg-base-900 border border-base-200 dark:border-base-700 text-base-700 dark:text-base-300"
+                    data-clipboard-target="source"><%= public_url %></code>
+              <button type="button"
+                      data-clipboard-target="button"
+                      data-action="click->clipboard#copy"
+                      class="shrink-0 button-secondary text-xs">
+                Copy URL
+              </button>
+            </div>
+          </div>
+
+          <%# We use link_to + turbo_method:delete (not button_to) so the
+              delete control DOESN'T render a nested <form>. The whole
+              Assets section is inside the outer form_with, and Rails
+              7.1+ button_to inside a form silently emits its inputs
+              without the wrapping form — clicking the bare button then
+              submits the OUTER form (a PATCH to the resource) instead
+              of the asset DELETE. A Turbo-enhanced link sidesteps this
+              by going out via fetch instead of form submission. %>
+          <div class="shrink-0">
+            <%= link_to "Delete",
+                  destroy_asset_path.call(attachment),
+                  data: { turbo_method: :delete, turbo_confirm: "Delete this asset? This cannot be undone." },
+                  class: "button-secondary text-xs" %>
+          </div>
+        </li>
+      <% end %>
+    </ul>
+  <% elsif resource.persisted? %>
+    <p class="text-sm text-gray-500 italic">No assets uploaded yet.</p>
+  <% else %>
+    <p class="text-sm text-gray-500 italic">
+      Save this <%= resource_name.humanize.downcase %> first to start uploading assets.
+    </p>
+  <% end %>
+</section>

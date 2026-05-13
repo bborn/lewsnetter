@@ -1,6 +1,6 @@
 class Account::EmailTemplatesController < Account::ApplicationController
   account_load_and_authorize_resource :email_template, through: :team, through_association: :email_templates,
-    member_actions: [:preview_frame]
+    member_actions: [:preview_frame, :destroy_asset]
 
   # GET /account/teams/:team_id/email_templates
   # GET /account/teams/:team_id/email_templates.json
@@ -128,6 +128,23 @@ class Account::EmailTemplatesController < Account::ApplicationController
     respond_to do |format|
       format.html { redirect_to [:account, @team, :email_templates], notice: I18n.t("email_templates.notifications.destroyed") }
       format.json { head :no_content }
+    end
+  end
+
+  # DELETE /account/email_templates/:id/assets/:asset_id
+  #
+  # Removes a single ActiveStorage attachment from this template. Scoped to
+  # @email_template.assets.attachments so a hand-crafted asset_id can't
+  # purge a blob attached to a different record. `purge_later` enqueues the
+  # R2 delete on the Active Storage purge queue so the redirect is snappy
+  # even when the storage backend is slow.
+  def destroy_asset
+    attachment = @email_template.assets.attachments.find_by(id: params[:asset_id])
+    if attachment
+      attachment.purge_later
+      redirect_to [:edit, :account, @email_template], notice: "Asset removed."
+    else
+      redirect_to [:edit, :account, @email_template], alert: "Asset not found."
     end
   end
 

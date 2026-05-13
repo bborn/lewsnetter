@@ -3,6 +3,11 @@ class Campaign < ApplicationRecord
 
   STATUSES = %w[draft scheduled sending sent failed].freeze
 
+  # Mirror of EmailTemplate::ASSET_MAX_BYTES — keep these in lockstep.
+  # Per-attachment cap, not aggregate; uploading several small images
+  # is fine.
+  ASSET_MAX_BYTES = 5.megabytes
+
   # 🚅 add attribute accessors above.
 
   belongs_to :team
@@ -10,6 +15,11 @@ class Campaign < ApplicationRecord
   belongs_to :segment, optional: true
   belongs_to :sender_address, optional: true
   # 🚅 add belongs_to associations above.
+
+  # Per-campaign image attachments (logos, hero images, inline content).
+  # See EmailTemplate#assets for the design rationale (rails_storage_proxy_url,
+  # validation strategy, 5 MB cap).
+  has_many_attached :assets
 
   # 🚅 add has_many associations above.
 
@@ -25,6 +35,7 @@ class Campaign < ApplicationRecord
   validates :email_template, scope: true
   validates :segment, scope: true
   validate :body_present_in_some_form
+  validate :assets_must_be_images_under_max_size
   # 🚅 add validations above.
 
   # 🚅 add callbacks above.
@@ -114,5 +125,23 @@ class Campaign < ApplicationRecord
   def body_present_in_some_form
     return if body_markdown.present? || body_mjml.present? || email_template&.mjml_body.present?
     errors.add(:base, "Campaign needs a body (markdown), a raw MJML body, or an email template with body content.")
+  end
+
+  # See EmailTemplate#assets_must_be_images_under_max_size — kept parallel.
+  def assets_must_be_images_under_max_size
+    return unless assets.attached?
+
+    assets.each do |asset|
+      blob = asset.blob
+      content_type = blob.content_type.to_s
+      unless content_type.start_with?("image/")
+        errors.add(:assets, "must be an image (got #{content_type.presence || "unknown type"})")
+      end
+
+      if blob.byte_size > ASSET_MAX_BYTES
+        size_mb = (ASSET_MAX_BYTES / 1.megabyte.to_f).round
+        errors.add(:assets, "must be smaller than #{size_mb}MB")
+      end
+    end
   end
 end

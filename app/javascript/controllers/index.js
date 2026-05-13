@@ -20,6 +20,7 @@ import CampaignPreviewController from "./campaign_preview_controller"
 import SubscriberSearchController from "./subscriber_search_controller"
 import VariablePickerController from "./variable_picker_controller"
 import CodeEditorController from "./code_editor_controller"
+import ClipboardController from "./clipboard_controller"
 
 const application = Application.start()
 
@@ -52,6 +53,7 @@ application.register('campaign-preview', CampaignPreviewController)
 application.register('subscriber-search', SubscriberSearchController)
 application.register('variable-picker', VariablePickerController)
 application.register('code-editor', CodeEditorController)
+application.register('clipboard', ClipboardController)
 
 CableReady.initialize({ consumer })
 

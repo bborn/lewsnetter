@@ -75,7 +75,9 @@ select_classes = "block w-full rounded-md shadow-sm font-light text-base md:text
   </div>
 </section>
 
-<%= form_with model: campaign, url: (campaign.persisted? ? [:account, campaign] : [:account, @team, :campaigns]), class: 'form' do |form| %>
+<%# multipart: true so file uploads in the Assets section below encode
+    correctly — same rationale as the email_templates form. %>
+<%= form_with model: campaign, url: (campaign.persisted? ? [:account, campaign] : [:account, @team, :campaigns]), html: { multipart: true }, class: 'form' do |form| %>
   <%= render "shared/limits/form", form: form, cancel_path: cancel_path do %>
     <%= render 'account/shared/forms/errors', form: form %>
 
@@ -273,6 +275,8 @@ select_classes = "block w-full rounded-md shadow-sm font-light text-base md:text
         </div>
         <%# 🚅 super scaffolding will insert new fields above this line. %>
       </section>
+
+      <%= render "account/shared/assets/section", form: form, resource: campaign %>
     <% end %>
 
     <div class="buttons">

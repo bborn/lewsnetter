@@ -55,6 +55,9 @@ if defined?(Api::V1::ApplicationController)
           :sender_address_id,
           # 🚅 super scaffolding will insert new fields above this line.
           *permitted_arrays,
+          # Image uploads (logos, hero images). See EmailTemplate strong
+          # params for rationale.
+          assets: []
           # 🚅 super scaffolding will insert new arrays above this line.
         )
 

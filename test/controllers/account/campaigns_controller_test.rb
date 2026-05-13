@@ -168,6 +168,42 @@ class Account::CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_equal original_body, @campaign.body_markdown
   end
 
+  test "edit page renders the Assets section" do
+    get edit_account_campaign_url(@campaign)
+    assert_response :success
+    assert_match(/Assets/, response.body)
+    assert_select 'input[type="file"][name="campaign[assets][]"]', 1
+  end
+
+  test "update attaches an image asset to the campaign" do
+    file = fixture_file_upload("test-logo.png", "image/png")
+
+    assert_difference -> { @campaign.assets.count }, 1 do
+      patch account_campaign_url(@campaign), params: {
+        campaign: {assets: [file]}
+      }
+    end
+
+    assert_redirected_to account_campaign_url(@campaign)
+    @campaign.reload
+    assert_predicate @campaign.assets, :attached?
+  end
+
+  test "destroy_asset purges the campaign attachment" do
+    @campaign.assets.attach(
+      io: File.open(Rails.root.join("test/fixtures/files/test-logo.png")),
+      filename: "test-logo.png",
+      content_type: "image/png"
+    )
+    attachment = @campaign.assets.attachments.first
+
+    delete asset_account_campaign_url(@campaign, asset_id: attachment.id)
+
+    assert_redirected_to edit_account_campaign_url(@campaign)
+    @campaign.reload
+    refute_predicate @campaign.assets, :attached?
+  end
+
   test "preview_frame renders the campaign HTML inline" do
     @template.update!(
       mjml_body: <<~MJML

@@ -1,6 +1,9 @@
 <% cancel_path ||= email_template.persisted? ? [:account, email_template] : [:account, @team, :email_templates] %>
 
-<%= form_with model: email_template, url: (email_template.persisted? ? [:account, email_template] : [:account, @team, :email_templates]), class: 'form' do |form| %>
+<%# multipart: true so the form encodes file uploads correctly — required
+    by the Assets section (has_many_attached :assets). Without this the
+    file field silently submits filenames as plain strings. %>
+<%= form_with model: email_template, url: (email_template.persisted? ? [:account, email_template] : [:account, @team, :email_templates]), html: { multipart: true }, class: 'form' do |form| %>
   <%= render "shared/limits/form", form: form, cancel_path: cancel_path do %>
     <%= render 'account/shared/forms/errors', form: form %>
 
@@ -41,6 +44,8 @@
       </div>
       <%# 🚅 super scaffolding will insert new fields above this line. %>
     <% end %>
+
+    <%= render "account/shared/assets/section", form: form, resource: email_template %>
 
     <div class="buttons">
       <%= form.submit (form.object.persisted? ? t('.buttons.update') : t('.buttons.create')), class: "button" %>

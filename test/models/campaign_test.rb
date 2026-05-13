@@ -58,4 +58,42 @@ class CampaignTest < ActiveSupport::TestCase
   test "STATUSES constant covers the documented state machine values" do
     assert_equal %w[draft scheduled sending sent failed], Campaign::STATUSES
   end
+
+  test "accepts an attached image asset" do
+    @campaign.assets.attach(
+      io: File.open(Rails.root.join("test/fixtures/files/test-logo.png")),
+      filename: "test-logo.png",
+      content_type: "image/png"
+    )
+
+    assert @campaign.valid?, @campaign.errors.full_messages.to_sentence
+    assert_predicate @campaign.assets, :attached?
+    assert_equal 1, @campaign.assets.count
+  end
+
+  test "rejects a non-image asset" do
+    @campaign.assets.attach(
+      io: File.open(Rails.root.join("test/fixtures/files/not-an-image.txt")),
+      filename: "not-an-image.txt",
+      content_type: "text/plain"
+    )
+
+    refute @campaign.valid?
+    assert(@campaign.errors[:assets].any? { |m| m =~ /image/i },
+      "expected an :assets error mentioning 'image', got #{@campaign.errors[:assets].inspect}")
+  end
+
+  test "rejects an asset that exceeds the size limit" do
+    @campaign.assets.attach(
+      io: File.open(Rails.root.join("test/fixtures/files/test-logo.png")),
+      filename: "huge.png",
+      content_type: "image/png"
+    )
+    blob = @campaign.assets.last.blob
+    blob.update_column(:byte_size, Campaign::ASSET_MAX_BYTES + 1)
+
+    refute @campaign.valid?
+    assert(@campaign.errors[:assets].any? { |m| m =~ /smaller|MB|size/i },
+      "expected a size error, got #{@campaign.errors[:assets].inspect}")
+  end
 end
