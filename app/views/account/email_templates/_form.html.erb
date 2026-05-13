@@ -6,8 +6,14 @@
 
     <% with_field_settings form: form do %>
       <%= render 'shared/fields/text_field', method: :name, options: {autofocus: true} %>
+      <%# CodeMirror 6 wraps the textarea on connect — preserves all the
+          BulletTrain label/help/error rendering of the field partial while
+          giving authors a real code editor (line numbers, XML highlighting,
+          bracket matching, search). Falls back to a plain textarea if JS
+          is disabled. %>
       <%= render 'shared/fields/text_area', method: :mjml_body,
-                 options: {rows: 20, class: "font-mono text-xs", placeholder: "<mjml>\n  <mj-body>\n    <mj-section>\n      <mj-column>\n        <mj-text>Hello {{first_name}}!</mj-text>\n        {{body}}\n      </mj-column>\n    </mj-section>\n  </mj-body>\n</mjml>"} %>
+                 options: {rows: 20, class: "font-mono text-xs", placeholder: "<mjml>\n  <mj-body>\n    <mj-section>\n      <mj-column>\n        <mj-text>Hello {{first_name}}!</mj-text>\n        {{body}}\n      </mj-column>\n    </mj-section>\n  </mj-body>\n</mjml>",
+                   data: {controller: "code-editor", code_editor_language_value: "xml", code_editor_min_height_value: "520px"}} %>
 
       <div class="-mt-2 space-y-2 text-xs text-base-500 dark:text-base-400">
         <details class="rounded-md border border-base-200 dark:border-base-700 bg-base-50 dark:bg-base-800/40 px-3 py-2">
