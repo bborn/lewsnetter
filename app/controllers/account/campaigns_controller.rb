@@ -2,7 +2,7 @@ class Account::CampaignsController < Account::ApplicationController
   account_load_and_authorize_resource :campaign,
     through: :team,
     through_association: :campaigns,
-    member_actions: [:send_now, :test_send, :preview_frame]
+    member_actions: [:send_now, :test_send, :preview_as, :preview_frame]
 
   # GET /account/teams/:team_id/campaigns
   # GET /account/teams/:team_id/campaigns.json
