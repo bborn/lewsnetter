@@ -95,12 +95,19 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up SSH for Kamal
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          # printf %s preserves embedded newlines from the secret value;
+          # `echo "..."` in some shells silently mangles backslash sequences.
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+          # Sanity: confirm the key parses before we hand it to ssh.
+          ssh-keygen -y -f ~/.ssh/id_ed25519 > /dev/null
+          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
 
       # Kamal 2 reads named secrets from .kamal/secrets, which is gitignored
       # because it holds real credentials locally. Materialize it from GitHub
