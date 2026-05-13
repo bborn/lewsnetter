@@ -152,4 +152,130 @@ namespace :migrations do
 
     JSON.parse(response.body)
   end
+
+  desc "Enrich subscribers with tabs_enabled (and other company attrs) from Intercom Companies"
+  task enrich_tabs_enabled: :environment do
+    token = ENV.fetch("INTERCOM_TOKEN") { abort "Set INTERCOM_TOKEN" }
+    team_id = Integer(ENV.fetch("TEAM_ID", "1"))
+    api_version = ENV.fetch("INTERCOM_VERSION", "2.12")
+    only_tenant_type = ENV["ONLY_TENANT_TYPE"]
+    dry_run = ENV.fetch("DRY_RUN", "false") == "true"
+
+    team = Team.find(team_id)
+    puts "Enriching subscribers on Team ##{team.id} (#{team.name}) with company.tabs_enabled"
+    puts dry_run ? "DRY RUN — no writes." : "LIVE RUN"
+    puts
+
+    # Step 1: pull every company in the workspace.
+    companies_by_id = {}
+    page = 0
+    starting_after = nil
+    loop do
+      page += 1
+      uri = URI("https://api.intercom.io/companies/list")
+      uri.query = URI.encode_www_form(per_page: 60).then { |q| starting_after ? "#{q}&starting_after=#{starting_after}" : q }
+      req = Net::HTTP::Get.new(uri)
+      req["Authorization"] = "Bearer #{token}"
+      req["Accept"] = "application/json"
+      req["Intercom-Version"] = api_version
+      resp = Net::HTTP.start(uri.host, uri.port, use_ssl: true, read_timeout: 60) { |h| h.request(req) }
+      if resp.code.to_i >= 400
+        abort "Intercom /companies/list error #{resp.code}: #{resp.body[0, 500]}"
+      end
+      data = JSON.parse(resp.body)
+      (data["data"] || []).each { |c| companies_by_id[c["id"]] = c }
+      cursor = data.dig("pages", "next", "starting_after")
+      puts "Companies page #{page}: total #{companies_by_id.size} (cursor → #{cursor.to_s[0, 8] || "(end)"})"
+      break unless cursor.present?
+      starting_after = cursor
+    end
+
+    puts "Pulled #{companies_by_id.size} companies."
+    puts
+
+    # Step 2: walk the target subscribers (optionally filtered by tenant_type).
+    scope = team.subscribers
+    if only_tenant_type
+      scope = scope.where("json_extract(custom_attributes, '$.tenant_type') = ?", only_tenant_type)
+    end
+    total = scope.count
+    puts "Enriching #{total} subscriber(s)#{only_tenant_type ? " with tenant_type=#{only_tenant_type}" : ""}"
+    puts
+
+    updated = 0
+    skipped_no_intercom_id = 0
+    skipped_no_company = 0
+    errors = []
+
+    scope.find_each.with_index(1) do |sub, idx|
+      intercom_id = sub.custom_attributes["intercom_id"]
+      if intercom_id.blank?
+        skipped_no_intercom_id += 1
+        next
+      end
+
+      # Fetch the contact to get its companies list
+      uri = URI("https://api.intercom.io/contacts/#{intercom_id}")
+      req = Net::HTTP::Get.new(uri)
+      req["Authorization"] = "Bearer #{token}"
+      req["Accept"] = "application/json"
+      req["Intercom-Version"] = api_version
+      resp = Net::HTTP.start(uri.host, uri.port, use_ssl: true, read_timeout: 60) { |h| h.request(req) }
+      if resp.code.to_i >= 400
+        errors << {subscriber_id: sub.id, error: "Contact fetch #{resp.code}: #{resp.body[0, 200]}"}
+        next
+      end
+      contact = JSON.parse(resp.body)
+      company_ids = (contact.dig("companies", "data") || []).map { |c| c["id"] }
+      if company_ids.empty?
+        skipped_no_company += 1
+        next
+      end
+
+      # Merge tabs_enabled (and the whole company.custom_attributes for now) from each company
+      merged_tabs = []
+      merged_company_attrs = {}
+      company_ids.each do |cid|
+        co = companies_by_id[cid]
+        next unless co
+        attrs = co["custom_attributes"] || {}
+        merged_company_attrs.merge!(attrs.transform_keys { |k| "company_#{k}" })
+        if attrs["tabs_enabled"].is_a?(String)
+          merged_tabs.concat(attrs["tabs_enabled"].split(",").map(&:strip).reject(&:empty?))
+        elsif attrs["tabs_enabled"].is_a?(Array)
+          merged_tabs.concat(attrs["tabs_enabled"])
+        end
+      end
+
+      new_attrs = sub.custom_attributes.merge(merged_company_attrs)
+      new_attrs["tabs_enabled"] = merged_tabs.uniq.join(",") if merged_tabs.any?
+
+      if dry_run
+        updated += 1
+        puts "Would update sub##{sub.id} (#{sub.email}): tabs=#{merged_tabs.uniq.inspect} + #{merged_company_attrs.size} company attrs" if idx <= 5
+      else
+        sub.update!(custom_attributes: new_attrs)
+        updated += 1
+      end
+
+      if (idx % 50).zero?
+        puts "  ... #{idx}/#{total} processed (updated=#{updated}, skipped_no_company=#{skipped_no_company}, errors=#{errors.size})"
+      end
+
+      sleep 0.05 # gentle on Intercom (1000 req/min limit; this gives us 20 req/sec headroom)
+    end
+
+    puts
+    puts "Done."
+    puts "Total subscribers walked: #{total}"
+    puts "Enriched: #{updated}"
+    puts "Skipped (no intercom_id): #{skipped_no_intercom_id}"
+    puts "Skipped (no company): #{skipped_no_company}"
+    puts "Errors: #{errors.size}"
+    if errors.any?
+      puts
+      puts "First 10 errors:"
+      errors.first(10).each { |e| puts "  - sub##{e[:subscriber_id]}: #{e[:error]}" }
+    end
+  end
 end
