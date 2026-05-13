@@ -172,21 +172,22 @@ namespace :migrations do
     starting_after = nil
     loop do
       page += 1
-      uri = URI("https://api.intercom.io/companies/list")
-      uri.query = URI.encode_www_form(per_page: 60).then { |q| starting_after ? "#{q}&starting_after=#{starting_after}" : q }
+      uri = URI("https://api.intercom.io/companies/scroll")
+      uri.query = URI.encode_www_form(starting_after ? {scroll_param: starting_after} : {})
       req = Net::HTTP::Get.new(uri)
       req["Authorization"] = "Bearer #{token}"
       req["Accept"] = "application/json"
       req["Intercom-Version"] = api_version
       resp = Net::HTTP.start(uri.host, uri.port, use_ssl: true, read_timeout: 60) { |h| h.request(req) }
       if resp.code.to_i >= 400
-        abort "Intercom /companies/list error #{resp.code}: #{resp.body[0, 500]}"
+        abort "Intercom /companies/scroll error #{resp.code}: #{resp.body[0, 500]}"
       end
       data = JSON.parse(resp.body)
-      (data["data"] || []).each { |c| companies_by_id[c["id"]] = c }
-      cursor = data.dig("pages", "next", "starting_after")
-      puts "Companies page #{page}: total #{companies_by_id.size} (cursor → #{cursor.to_s[0, 8] || "(end)"})"
-      break unless cursor.present?
+      batch = data["data"] || []
+      batch.each { |c| companies_by_id[c["id"]] = c }
+      cursor = data["scroll_param"]
+      puts "Companies page #{page}: +#{batch.size} (total #{companies_by_id.size}, cursor → #{cursor.to_s[0, 8] || "(end)"})"
+      break if batch.empty? || cursor.blank?
       starting_after = cursor
     end
 
