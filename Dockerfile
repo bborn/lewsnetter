@@ -115,7 +115,10 @@ COPY --from=build /rails /rails
 # chmod here AND log the resulting permissions so future regressions are
 # obvious in the build log.
 RUN chmod 0755 /rails/bin/docker-entrypoint /rails/bin/rails /rails/bin/rake && \
-    ls -la /rails/bin/docker-entrypoint /rails/bin/rails /rails/bin/rake
+    ls -la /rails/bin/docker-entrypoint /rails/bin/rails /rails/bin/rake && \
+    echo "--- /rails contents:" && ls -la /rails && \
+    echo "--- /rails/config:" && ls -la /rails/config | head -20 && \
+    echo "--- /rails/config/boot.rb test:" && cat /rails/config/boot.rb
 
 # Place litestream config at the canonical path.
 COPY litestream.yml /etc/litestream.yml
