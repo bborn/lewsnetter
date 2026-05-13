@@ -18,6 +18,14 @@ module UnsubscribeUrlHelper
     host = team_host.presence ||
       default_host.presence ||
       Rails.application.config.action_mailer.default_url_options[:host]
+
+    # Test-send + preview paths render with an in-memory Subscriber.new (no
+    # id), but SGID requires a persisted model. Return a visibly-fake URL the
+    # author recognizes as "this is a preview, not a live unsubscribe link".
+    unless subscriber.persisted?
+      return "https://#{host}/unsubscribe/preview-only"
+    end
+
     token = subscriber.to_sgid(for: "unsubscribe", expires_in: 30.days).to_s
     "https://#{host}/unsubscribe/#{token}"
   end
