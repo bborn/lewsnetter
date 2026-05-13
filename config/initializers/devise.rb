@@ -24,8 +24,9 @@ Devise.setup do |config|
   # ==> Mailer Configuration
   # Configure the e-mail address which will be shown in Devise::Mailer,
   # note that it will be overwritten if you use your own mailer class
-  # with default "from" parameter.
-  config.mailer_sender = -> { I18n.t("application.support_email") }
+  # with default "from" parameter. Devise calls this with the mapping
+  # so the proc must accept at least one arg (devise-5.0.4 helpers.rb:52).
+  config.mailer_sender = ->(_mapping = nil) { I18n.t("application.support_email") }
 
   # Configure the class responsible to send e-mails.
   config.mailer = "DeviseMailer"
