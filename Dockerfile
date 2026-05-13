@@ -104,6 +104,11 @@ FROM base
 COPY --from=build "${BUNDLE_PATH}" "${BUNDLE_PATH}"
 COPY --from=build /rails /rails
 
+# Guarantee the entrypoint is executable for the non-root runtime user.
+# Some CI runners drop the +x bit on bin/* scripts (we observed Permission
+# denied on /rails/bin/docker-entrypoint when CI-built images first boot).
+RUN chmod +x /rails/bin/docker-entrypoint /rails/bin/rails /rails/bin/rake
+
 # Place litestream config at the canonical path.
 COPY litestream.yml /etc/litestream.yml
 
