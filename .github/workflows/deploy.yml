@@ -116,10 +116,10 @@ jobs:
           [ -n "$SERVER_IP" ] && ssh-keyscan -t rsa,ecdsa,ed25519 "$SERVER_IP" >> ~/.ssh/known_hosts 2>/dev/null || true
           chmod 600 ~/.ssh/known_hosts
 
-      # Kamal 2 reads named secrets from .kamal/secrets, which is gitignored
-      # because it holds real credentials locally. Materialize it from GitHub
-      # secrets right before deploy. Format: each line is sourced as bash, so
-      # multi-line PEM values must be quoted heredoc-style or single-line.
+      # Kamal 2 reads named secrets from .kamal/secrets (gitignored). The
+      # file is dotenv-parsed: single-line values are KEY=value, multi-line
+      # values (PEM) must be double-quoted with literal newlines. printf %s
+      # preserves embedded newlines from the GitHub secret value as-is.
       - name: Write .kamal/secrets and deploy
         env:
           KAMAL_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
@@ -132,13 +132,14 @@ jobs:
           mkdir -p .kamal
           umask 077
           {
-            printf 'KAMAL_REGISTRY_PASSWORD=%q\n' "$KAMAL_REGISTRY_PASSWORD"
-            printf 'RAILS_MASTER_KEY=%q\n'         "$RAILS_MASTER_KEY"
-            printf 'LITESTREAM_REPLICA_ACCESS_KEY_ID=%q\n'     "$LITESTREAM_REPLICA_ACCESS_KEY_ID"
-            printf 'LITESTREAM_REPLICA_SECRET_ACCESS_KEY=%q\n' "$LITESTREAM_REPLICA_SECRET_ACCESS_KEY"
-            # Multi-line PEM values: use $'...' bash quoting so newlines survive.
-            printf 'ORIGIN_CERT=%q\n' "$ORIGIN_CERT"
-            printf 'ORIGIN_KEY=%q\n'  "$ORIGIN_KEY"
+            printf 'KAMAL_REGISTRY_PASSWORD=%s\n' "$KAMAL_REGISTRY_PASSWORD"
+            printf 'RAILS_MASTER_KEY=%s\n'         "$RAILS_MASTER_KEY"
+            printf 'LITESTREAM_REPLICA_ACCESS_KEY_ID=%s\n'     "$LITESTREAM_REPLICA_ACCESS_KEY_ID"
+            printf 'LITESTREAM_REPLICA_SECRET_ACCESS_KEY=%s\n' "$LITESTREAM_REPLICA_SECRET_ACCESS_KEY"
+            # Dotenv multi-line: KEY="line1\nline2\n..." with real newlines
+            # inside the double quotes.
+            printf 'ORIGIN_CERT="%s"\n' "$ORIGIN_CERT"
+            printf 'ORIGIN_KEY="%s"\n'  "$ORIGIN_KEY"
           } > .kamal/secrets
           chmod 600 .kamal/secrets
           bundle exec kamal deploy
