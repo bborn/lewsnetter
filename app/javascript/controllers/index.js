@@ -1,5 +1,4 @@
 import { Application } from "@hotwired/stimulus"
-import { identifierForContextKey } from "stimulus/webpack-helpers"
 import { controllerDefinitions as bulletTrainControllers } from "@bullet-train/bullet-train"
 import { controllerDefinitions as bulletTrainFieldControllers } from "@bullet-train/fields"
 import { controllerDefinitions as bulletTrainSortableControllers } from "@bullet-train/bullet-train-sortable"
@@ -7,6 +6,17 @@ import ScrollReveal from 'stimulus-scroll-reveal'
 import RevealController from 'stimulus-reveal'
 import CableReady from 'cable_ready'
 import consumer from '../channels/consumer'
+
+// Explicit imports for this app's custom Stimulus controllers.
+// We used to rely on `import { context } from './**/*_controller.js'` (an
+// esbuild glob plugin), but that pipeline silently emitted an empty bundle
+// any time a transitive dep failed to resolve (e.g. easymde missing from
+// node_modules), which kept shipping a JS-less app to production. Explicit
+// registrations fail loud at build time instead.
+import SegmentTranslatorController from "./segment_translator_controller"
+import MarkdownEditorController from "./markdown_editor_controller"
+import AiDrafterController from "./ai_drafter_controller"
+import CampaignPreviewController from "./campaign_preview_controller"
 
 const application = Application.start()
 
@@ -17,25 +27,25 @@ const application = Application.start()
 // See https://stimulus.hotwired.dev/handbook/installing#debugging
 window.Stimulus = application
 
-// Load all the controllers within this directory and all subdirectories.
-// Controller files must be named *_controller.js.
-import { context as controllersContext } from './**/*_controller.js';
-
 application.register('reveal', RevealController)
 application.register('scroll-reveal', ScrollReveal)
 
-let controllers = Object.keys(controllersContext).map((filename) => ({
-  identifier: identifierForContextKey(filename),
-  controllerConstructor: controllersContext[filename] }))
-
-controllers = overrideByIdentifier([
+// Bullet Train's controllers come from the gems as an array of
+// { identifier, controllerConstructor } pairs. Load them first…
+let controllers = overrideByIdentifier([
   ...bulletTrainControllers,
   ...bulletTrainFieldControllers,
   ...bulletTrainSortableControllers,
-  ...controllers,
 ])
 
 application.load(controllers)
+
+// …then register this app's controllers explicitly so any missing import
+// surfaces as a build error rather than a silent dead button.
+application.register('segment-translator', SegmentTranslatorController)
+application.register('markdown-editor', MarkdownEditorController)
+application.register('ai-drafter', AiDrafterController)
+application.register('campaign-preview', CampaignPreviewController)
 
 CableReady.initialize({ consumer })
 
