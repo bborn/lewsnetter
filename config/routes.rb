@@ -135,6 +135,7 @@ Rails.application.routes.draw do
           member do
             post :send_now
             post :test_send
+            post :preview_as
             post :draft, to: "campaign_drafts#create"
             get :postmortem, to: "campaign_postmortems#show"
             # GET serves the saved-state preview (used as an iframe `src` for

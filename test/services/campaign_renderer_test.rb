@@ -219,4 +219,28 @@ class CampaignRendererTest < ActiveSupport::TestCase
     result = CampaignRenderer.new(campaign: @campaign, subscriber: @subscriber.reload).call
     assert_includes result.html, "email.influencekit.com/unsubscribe/"
   end
+
+  test "interpolates {{custom_attribute}} inside a markdown link URL" do
+    # Use a template that hosts a {{body}} placeholder so the markdown path
+    # is exercised (rather than the legacy body_mjml path).
+    @template.update!(mjml_body: <<~MJML)
+      <mjml>
+        <mj-body>
+          {{body}}
+        </mj-body>
+      </mjml>
+    MJML
+    @subscriber.update!(custom_attributes: {"subdomain" => "acme"})
+    @campaign.update!(
+      body_mjml: nil,
+      body_markdown: "Visit your [dashboard](https://{{subdomain}}.influencekit.com/login)."
+    )
+
+    result = CampaignRenderer.new(campaign: @campaign, subscriber: @subscriber.reload).call
+
+    assert_includes result.html, "https://acme.influencekit.com/login",
+      "expected the {{subdomain}} placeholder to be interpolated inside the markdown link URL"
+    refute_includes result.html, "%7Bsubdomain%7D",
+      "expected no URL-encoded braces in the rendered href"
+  end
 end

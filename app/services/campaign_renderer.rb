@@ -67,7 +67,17 @@ class CampaignRenderer
       template_mjml = @campaign.email_template&.mjml_body
       raise "Campaign #{@campaign.id} has body_markdown but no email_template to host {{body}}" if template_mjml.blank?
 
-      body_mj_section = markdown_to_mj_section(@campaign.body_markdown)
+      # Substitute variables in the markdown source BEFORE compiling to HTML.
+      # Commonmarker URL-encodes any `{` and `}` it finds in an href, so a link
+      # like `[Open](https://{{subdomain}}.example.com)` would become
+      # `https://%7B%7Bsubdomain%7D%7D.example.com` and the later substitute
+      # pass couldn't match the encoded form. Substituting first lets URL
+      # placeholders survive markdown rendering as real values.
+      # Plain-text `{{var}}` in body copy still works either way (Commonmarker
+      # passes braces through outside of URL contexts), and the later
+      # substitute on the full MJML is a safe no-op on already-replaced vars.
+      substituted_markdown = substitute(@campaign.body_markdown)
+      body_mj_section = markdown_to_mj_section(substituted_markdown)
       inject_body(template_mjml, body_mj_section)
     else
       source = @campaign.body_mjml.presence || @campaign.email_template&.mjml_body

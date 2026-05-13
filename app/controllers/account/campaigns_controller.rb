@@ -149,6 +149,61 @@ class Account::CampaignsController < Account::ApplicationController
     end
   end
 
+  # POST /account/campaigns/:id/preview_as
+  #
+  # Render the campaign with a real subscriber's data substituted in (so the
+  # author can verify {{first_name}}, {{custom.plan}}, etc.), then deliver
+  # the rendered email to the AUTHOR's inbox — not the subscriber's. Lets
+  # you eyeball "how does this look for a paid brand customer" without
+  # actually mailing them.
+  #
+  # Lookup order: subscriber by exact email match, then by external_id.
+  # If you pass `id`, that wins.
+  def preview_as
+    lookup = params[:preview_as].to_s.strip
+    if lookup.blank?
+      redirect_to([:account, @campaign], alert: "Enter an email address or external ID to preview as.") and return
+    end
+
+    target = @campaign.team.subscribers.find_by(email: lookup.downcase) ||
+      @campaign.team.subscribers.find_by(external_id: lookup)
+
+    unless target
+      redirect_to([:account, @campaign], alert: "No subscriber found matching '#{lookup}'.") and return
+    end
+
+    # Build an unpersisted Subscriber that copies the target's data but
+    # overrides email + external_id so:
+    #   1) SES delivers to current_user (not the real subscriber)
+    #   2) Unsubscribe URL becomes the preview sentinel (unpersisted)
+    preview_subscriber = Subscriber.new(
+      team: target.team,
+      email: current_user.email,
+      name: target.name,
+      external_id: "preview-as-#{target.id}",
+      subscribed: true,
+      custom_attributes: target.custom_attributes || {}
+    )
+
+    original_subject = @campaign.subject
+    @campaign.subject = "[PREVIEW AS #{target.email}] #{original_subject}"
+
+    begin
+      result = SesSender.send_bulk(campaign: @campaign, subscribers: [preview_subscriber])
+
+      if result.failed.empty? && result.message_ids.any?
+        redirect_to [:account, @campaign],
+          notice: "Preview rendered as #{target.email}, sent to your inbox (#{current_user.email})."
+      else
+        raw_error = result.failed.first&.dig(:error) || "Unknown error"
+        error = raw_error.to_s.sub(/\A(?:render_failed|send_failed):\s*/, "")
+        redirect_to [:account, @campaign], alert: "Preview send failed: #{error}"
+      end
+    ensure
+      @campaign.subject = original_subject
+    end
+  end
+
   private
 
   if defined?(Api::V1::ApplicationController)

@@ -46,6 +46,22 @@
                     class: "button-secondary",
                     form: { data: { turbo: false } },
                     data: { turbo_confirm: "Send a test of \"#{@campaign.subject}\" to #{current_user.email}?" } %>
+
+              <%# Preview-as: render with another subscriber's data (interpolation,
+                  custom_attributes), deliver to current_user. Inline form so we
+                  don't need a modal for what's essentially a single text input. %>
+              <%= form_with url: preview_as_account_campaign_path(@campaign),
+                            method: :post,
+                            html: { class: "inline-flex items-center gap-2", data: { turbo: false } } do |f| %>
+                <%= f.text_field :preview_as,
+                      placeholder: "Preview as… (email or external_id)",
+                      class: "block rounded-md shadow-sm font-light dark:bg-base-800 dark:text-base-300 text-sm border-base-300 dark:border-base-900 focus:ring-primary-500 focus:border-primary-500",
+                      style: "min-width: 260px;",
+                      aria: { label: "Subscriber email or external ID to render as" } %>
+                <%= f.submit "Send preview",
+                      class: "button-secondary",
+                      data: { turbo_confirm: "Render this campaign with that subscriber's data and send to #{current_user.email}?" } %>
+              <% end %>
             <% end %>
 
             <%= link_to "Preview", "#campaign-preview", class: "button-secondary" %>
