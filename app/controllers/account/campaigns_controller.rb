@@ -2,7 +2,7 @@ class Account::CampaignsController < Account::ApplicationController
   account_load_and_authorize_resource :campaign,
     through: :team,
     through_association: :campaigns,
-    member_actions: [:send_now, :test_send]
+    member_actions: [:send_now, :test_send, :preview_frame]
 
   # GET /account/teams/:team_id/campaigns
   # GET /account/teams/:team_id/campaigns.json
@@ -72,6 +72,27 @@ class Account::CampaignsController < Account::ApplicationController
     end
   end
 
+  # GET /account/campaigns/:id/preview_frame
+  #
+  # Returns the rendered HTML preview of the campaign, suitable for embedding
+  # as the `src` of an iframe on the edit form. Bypasses chrome — this is just
+  # the email's HTML body. Uses the campaign's currently persisted body /
+  # template / subject, so the user clicks "Refresh preview" after saving.
+  # If the preview can't be rendered (bad MJML/markdown/template), serves a
+  # minimal HTML error page so the iframe shows the user *why* rather than
+  # 500ing or going blank.
+  def preview_frame
+    html = @campaign.preview_html
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["Content-Security-Policy"] = "frame-ancestors 'self'"
+
+    if html.present?
+      render html: html.html_safe, layout: false, content_type: "text/html"
+    else
+      render html: preview_error_html.html_safe, layout: false, content_type: "text/html"
+    end
+  end
+
   # POST /account/campaigns/:id/test_send
   #
   # Sends a single rendered copy of the campaign to the current user using the
@@ -116,5 +137,26 @@ class Account::CampaignsController < Account::ApplicationController
   def process_params(strong_params)
     assign_date_and_time(strong_params, :scheduled_for)
     # 🚅 super scaffolding will insert processing for new fields above this line.
+  end
+
+  def preview_error_html
+    <<~HTML
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Preview unavailable</title>
+          <style>
+            body { font-family: ui-sans-serif, system-ui, sans-serif; padding: 24px; color: #92400e; background: #fffbeb; }
+            h1 { font-size: 16px; margin: 0 0 8px; }
+            p { font-size: 14px; margin: 0; }
+          </style>
+        </head>
+        <body>
+          <h1>Preview could not be rendered.</h1>
+          <p>Check that the campaign has a body (markdown or MJML) and a valid email template. Save your changes and click Refresh preview to retry.</p>
+        </body>
+      </html>
+    HTML
   end
 end

@@ -2,21 +2,28 @@
 
 module AI
   # Drafts a campaign from a brief: returns 5 subject candidates (each with a
-  # short rationale), a preheader, a complete MJML body, and a suggested send
-  # time. Pulls last-10 sent campaigns from the team as voice samples and
-  # optionally folds in the target segment's description + tone hint.
+  # short rationale), a preheader, a markdown body (the new authoring path),
+  # and a suggested send time. Pulls last-10 sent campaigns from the team as
+  # voice samples and optionally folds in the target segment's description +
+  # tone hint.
+  #
+  # The drafter returns markdown — not MJML — because the markdown body is
+  # composed into the email template's `{{body}}` placeholder at render time
+  # by CampaignRenderer. We also surface `mjml_body` for legacy callers that
+  # still want the raw MJML form (built from the same content), but new code
+  # should consume `markdown_body`.
   #
   # In stub mode, returns a deterministic boilerplate draft.
   class CampaignDrafter < Base
     SubjectCandidate = Struct.new(:subject, :rationale, keyword_init: true)
 
     Draft = Struct.new(
-      :subject_candidates, :preheader, :mjml_body, :suggested_send_time,
-      :errors, :stub,
+      :subject_candidates, :preheader, :markdown_body, :mjml_body,
+      :suggested_send_time, :errors, :stub,
       keyword_init: true
     ) do
       def success?
-        errors.blank? && mjml_body.present? && subject_candidates.present?
+        errors.blank? && markdown_body.present? && subject_candidates.present?
       end
 
       def stub?
@@ -52,15 +59,16 @@ module AI
       end
       candidates = candidates.reject { |c| c.subject.blank? }
 
-      mjml = parsed["mjml_body"].to_s
-      unless valid_mjml?(mjml)
-        return stub_draft(errors: ["LLM did not return a valid MJML document"])
+      markdown = parsed["markdown_body"].to_s
+      if markdown.blank?
+        return stub_draft(errors: ["LLM did not return a markdown_body"])
       end
 
       Draft.new(
         subject_candidates: candidates.presence || stub_subjects,
         preheader: parsed["preheader"].to_s,
-        mjml_body: mjml,
+        markdown_body: markdown,
+        mjml_body: markdown_to_mjml_fallback(markdown),
         suggested_send_time: parsed["suggested_send_time"].to_s.presence || "Tuesday 10am Eastern",
         errors: [],
         stub: false
@@ -84,7 +92,7 @@ module AI
             ... (exactly 5 candidates)
           ],
           "preheader": "the inbox preview text under the subject",
-          "mjml_body": "<mjml><mj-body>...</mj-body></mjml>",
+          "markdown_body": "## A heading\\n\\nParagraph text…\\n\\n- list item\\n\\n[Call to action →](https://example.com)",
           "suggested_send_time": "Tuesday 10am Eastern (or similar)"
         }
 
@@ -95,10 +103,14 @@ module AI
         #{tone_block}
 
         Requirements:
-        - MJML must be a complete document wrapped in <mjml><mj-body>…</mj-body></mjml>.
-        - Use <mj-section>, <mj-column>, <mj-text>, <mj-button> as appropriate.
-        - Keep it short: one hero, one body paragraph, one CTA.
+        - `markdown_body` is MARKDOWN, not HTML and not MJML. The email layout
+          (header, footer, unsubscribe link) is provided by a separate
+          template — your body fills the content area.
+        - Use ## for section headings (H2). Skip H1.
+        - Keep it short: one hero paragraph, 2-3 body paragraphs, one CTA link.
+        - CTAs are markdown links: `[Read more →](https://example.com)`
         - 5 distinct subject candidates exploring different angles.
+        - Output JSON only. No code fences, no surrounding prose.
       PROMPT
     end
 
@@ -108,8 +120,14 @@ module AI
 
     def voice_samples_block
       @team.campaigns.where(status: "sent").order(sent_at: :desc).limit(10).map { |c|
-        excerpt = c.body_mjml.to_s.gsub(/<[^>]+>/, " ").squish[0, 200]
-        "- subject: #{c.subject.inspect}\n  excerpt: #{excerpt.inspect}"
+        # Prefer the markdown source if available, fall back to the MJML
+        # stripped down to its text content for legacy campaigns.
+        excerpt = if c.body_markdown.present?
+          c.body_markdown.to_s
+        else
+          c.body_mjml.to_s.gsub(/<[^>]+>/, " ").squish
+        end
+        "- subject: #{c.subject.inspect}\n  excerpt: #{excerpt[0, 200].inspect}"
       }.join("\n")
     end
 
@@ -126,17 +144,43 @@ module AI
       "Tone: #{@tone}"
     end
 
-    def valid_mjml?(mjml)
-      return false if mjml.blank?
-      mjml.include?("<mjml") && mjml.include?("<mj-body") &&
-        mjml.include?("</mj-body>") && mjml.include?("</mjml>")
+    # Builds a complete MJML document around the markdown body's HTML render.
+    # Only used as a fallback for legacy callers (e.g. anything still reading
+    # `mjml_body` from the Draft struct). The render pipeline doesn't use this
+    # — it composes the markdown body into the template's {{body}} at render
+    # time via CampaignRenderer.
+    def markdown_to_mjml_fallback(markdown)
+      html = Commonmarker.to_html(markdown, options: {
+        parse: {smart: true},
+        render: {hardbreaks: false, unsafe: false},
+        extension: {header_ids: nil}
+      })
+      <<~MJML
+        <mjml>
+          <mj-body>
+            <mj-section>
+              <mj-column>
+                <mj-text>
+                  #{html}
+                </mj-text>
+              </mj-column>
+            </mj-section>
+          </mj-body>
+        </mjml>
+      MJML
+    rescue => _e
+      # If commonmarker is unavailable at the call site, return a minimal MJML
+      # stub. Callers that need real rendering should use the markdown_body
+      # field directly.
+      "<mjml><mj-body><mj-section><mj-column><mj-text>#{markdown}</mj-text></mj-column></mj-section></mj-body></mjml>"
     end
 
     def stub_draft(errors: [])
       Draft.new(
         subject_candidates: stub_subjects,
         preheader: "A quick note from #{@team.name}",
-        mjml_body: stub_mjml_body,
+        markdown_body: stub_markdown_body,
+        mjml_body: markdown_to_mjml_fallback(stub_markdown_body),
         suggested_send_time: "Tuesday 10am Eastern",
         errors: errors,
         stub: true
@@ -169,28 +213,20 @@ module AI
       ]
     end
 
-    def stub_mjml_body
-      <<~MJML
-        <mjml>
-          <mj-body>
-            <mj-section>
-              <mj-column>
-                <mj-text font-size="20px" font-weight="bold">
-                  Hello from #{@team.name}
-                </mj-text>
-                <mj-text>
-                  This is a stub-mode draft generated without an LLM. Replace
-                  this body with your actual campaign content, or set
-                  ANTHROPIC_API_KEY to get a real AI draft based on your brief.
-                </mj-text>
-                <mj-button href="https://example.com">
-                  Call to action
-                </mj-button>
-              </mj-column>
-            </mj-section>
-          </mj-body>
-        </mjml>
-      MJML
+    def stub_markdown_body
+      <<~MARKDOWN
+        ## Hello from #{@team.name}
+
+        This is a stub-mode draft generated without an LLM. Replace this body
+        with your actual campaign content, or set ANTHROPIC_API_KEY to get a
+        real AI draft based on your brief.
+
+        - Write in plain markdown
+        - Headings, lists, **emphasis**, [links](https://example.com)
+        - Keep it short and one-CTA
+
+        [Call to action →](https://example.com)
+      MARKDOWN
     end
   end
 end

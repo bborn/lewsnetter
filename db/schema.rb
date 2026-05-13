@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_12_220000) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_13_111654) do
   create_table "account_onboarding_invitation_lists", force: :cascade do |t|
     t.integer "team_id", null: false
     t.json "invitations"
@@ -96,6 +96,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_12_220000) do
     t.json "stats", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "body_markdown"
     t.index ["email_template_id"], name: "index_campaigns_on_email_template_id"
     t.index ["segment_id"], name: "index_campaigns_on_segment_id"
     t.index ["sender_address_id"], name: "index_campaigns_on_sender_address_id"

@@ -1,21 +1,33 @@
-# Renders a Campaign's MJML body into per-recipient HTML + text, performing
+# Renders a Campaign's body into per-recipient HTML + text, performing
 # variable substitution against the Subscriber's name / email / custom_attributes.
 #
-# The pipeline:
+# Two authoring paths are supported:
 #
-#   1. Pull MJML source from campaign.body_mjml (or fall back to the template).
-#   2. Substitute {{first_name}} / {{last_name}} / {{email}} / {{external_id}}
-#      and any top-level key from subscriber.custom_attributes.
-#   3. Compile MJML → HTML via mjml-rails.
-#   4. Inline CSS with Premailer (so Outlook + Gmail don't strip <style> blocks).
-#   5. Return html + a stripped plain-text alternative + the personalized
-#      subject + preheader.
+#   1. Markdown body (preferred): `campaign.body_markdown` is rendered to HTML
+#      with commonmarker (SAFE — no raw HTML pass-through) and substituted into
+#      the email template's `{{body}}` placeholder. If the template has no
+#      `{{body}}` placeholder, the rendered HTML is appended at the end of the
+#      template's `<mj-body>` as a final `<mj-section>`.
+#   2. Raw MJML body (legacy): `campaign.body_mjml` is used directly. This is
+#      kept working so existing campaigns don't break, but is no longer the
+#      foregrounded authoring path.
+#
+# After body resolution the pipeline is the same in both paths:
+#
+#   - Substitute {{first_name}} / {{last_name}} / {{email}} / {{external_id}} /
+#     {{unsubscribe_url}} and any top-level key from subscriber.custom_attributes.
+#   - Compile MJML → HTML via mjml-rails.
+#   - Inline CSS with Premailer (so Outlook + Gmail don't strip <style> blocks).
+#   - Return html + a stripped plain-text alternative + the personalized
+#     subject + preheader.
 #
 # Unknown variables (e.g. {{foo}} where the subscriber has no `foo` attribute)
 # are intentionally left in place so a user sending a test to themselves
 # notices the template is broken and fixes it.
 class CampaignRenderer
   Result = Struct.new(:html, :text, :subject, :preheader, keyword_init: true)
+
+  BODY_PLACEHOLDER = "{{body}}".freeze
 
   def initialize(campaign:, subscriber:)
     @campaign = campaign
@@ -36,7 +48,7 @@ class CampaignRenderer
 
   def render_html
     @render_html ||= begin
-      mjml_source = substitute(body_mjml)
+      mjml_source = substitute(resolved_mjml)
       raw_html = Mjml::Parser.new(nil, mjml_source).render
       Premailer.new(
         raw_html,
@@ -46,10 +58,67 @@ class CampaignRenderer
     end
   end
 
-  def body_mjml
-    source = @campaign.body_mjml.presence || @campaign.email_template&.mjml_body
-    raise "Campaign #{@campaign.id} has no body_mjml and no email_template body" if source.blank?
-    source
+  # Resolves the final MJML source to compile.
+  # - Markdown path: render markdown → HTML, substitute into template's
+  #   `{{body}}` placeholder (or append if missing).
+  # - Legacy path: use `campaign.body_mjml`, falling back to the template body.
+  def resolved_mjml
+    if @campaign.body_markdown.present?
+      template_mjml = @campaign.email_template&.mjml_body
+      raise "Campaign #{@campaign.id} has body_markdown but no email_template to host {{body}}" if template_mjml.blank?
+
+      body_mj_section = markdown_to_mj_section(@campaign.body_markdown)
+      inject_body(template_mjml, body_mj_section)
+    else
+      source = @campaign.body_mjml.presence || @campaign.email_template&.mjml_body
+      raise "Campaign #{@campaign.id} has no body_markdown, no body_mjml and no email_template body" if source.blank?
+      source
+    end
+  end
+
+  # Wraps the markdown-rendered HTML in an `<mj-section><mj-column><mj-text>`
+  # so it slots into a template body without breaking MJML structure.
+  def markdown_to_mj_section(markdown)
+    html = markdown_to_html(markdown)
+    <<~MJML
+      <mj-section>
+        <mj-column>
+          <mj-text>
+            #{html}
+          </mj-text>
+        </mj-column>
+      </mj-section>
+    MJML
+  end
+
+  def markdown_to_html(markdown)
+    # SAFE: no raw HTML pass-through. Users author markdown, not HTML.
+    # GFM-style features: tables, strikethrough, autolinks. No unsafe HTML.
+    # `header_ids: nil` disables the auto-anchor `<a class="anchor">` injection
+    # — email clients don't have a URL bar to copy fragment links from, and the
+    # extra `<a>` inside headings breaks Premailer's style inlining for headers.
+    Commonmarker.to_html(markdown.to_s, options: {
+      parse: {smart: true},
+      render: {hardbreaks: false, unsafe: false},
+      extension: {header_ids: nil}
+    })
+  end
+
+  # Substitutes the body MJML section into the template at `{{body}}`. If the
+  # template doesn't include the placeholder, appends the section just before
+  # `</mj-body>` so the body still renders (and the user notices the missing
+  # placeholder and can add it).
+  def inject_body(template_mjml, body_mj_section)
+    if template_mjml.include?(BODY_PLACEHOLDER)
+      template_mjml.sub(BODY_PLACEHOLDER, body_mj_section)
+    elsif template_mjml.include?("</mj-body>")
+      template_mjml.sub("</mj-body>", "#{body_mj_section}\n</mj-body>")
+    else
+      # Template has no </mj-body> — fall back to concatenating. This is
+      # almost certainly broken MJML but we'd rather render something and
+      # let the user fix it than swallow the error silently.
+      "#{template_mjml}\n#{body_mj_section}"
+    end
   end
 
   def substitute(string)
@@ -68,7 +137,7 @@ class CampaignRenderer
       last_name: last.to_s,
       email: @subscriber.email.to_s,
       external_id: @subscriber.external_id.to_s,
-      unsubscribe_url: UnsubscribeUrlHelper.url_for(subscriber: @subscriber)
+      unsubscribe_url: unsubscribe_url_for(@subscriber)
     }
 
     custom = (@subscriber.custom_attributes || {}).each_with_object({}) do |(k, v), h|
@@ -76,6 +145,16 @@ class CampaignRenderer
     end
 
     base.merge(custom)
+  end
+
+  # Resolves the unsubscribe URL for a subscriber. For persisted subscribers
+  # this is a signed GlobalID. For the in-memory placeholder subscriber used
+  # in preview mode (no persisted record, so no GlobalID) we substitute a
+  # readable placeholder so the preview doesn't blow up — the author sees the
+  # link shape without a real signed token.
+  def unsubscribe_url_for(subscriber)
+    return "#preview-unsubscribe" unless subscriber.persisted?
+    UnsubscribeUrlHelper.url_for(subscriber: subscriber)
   end
 
   def strip_to_text(html)

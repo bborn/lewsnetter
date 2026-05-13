@@ -17,7 +17,7 @@
           placeholder: "- The headline change\n- Why it matters\n- One feature highlight\n- A user quote or stat\n- The call to action" %>
     <button type="submit" class="button-secondary">Draft with AI</button>
     <span class="text-xs text-gray-500 ml-2">
-      Uses team voice samples + segment context. Stub mode if no API key.
+      Uses team voice samples + segment context. Returns markdown body. Stub mode if no API key.
     </span>
   <% end %>
 
@@ -31,8 +31,55 @@
     <% with_field_settings form: form do %>
       <%= render 'shared/fields/text_field', method: :subject, options: {autofocus: true} %>
       <%= render 'shared/fields/text_field', method: :preheader %>
-      <%= render 'shared/fields/text_area', method: :body_mjml,
-                 options: {rows: 20, class: "font-mono text-xs", placeholder: "<mjml>\n  <mj-body>\n    <mj-section>\n      <mj-column>\n        <mj-text>Hello {{first_name}}!</mj-text>\n      </mj-column>\n    </mj-section>\n  </mj-body>\n</mjml>"} %>
+
+      <%# Primary authoring path: markdown body. The template (selected below)
+          provides the chrome (logo, footer, unsubscribe); this body fills the
+          template's `{{body}}` placeholder. %>
+      <%= render 'shared/fields/text_area', method: :body_markdown,
+                 options: {rows: 24, class: "font-mono text-sm", placeholder: "## A heading\n\nWrite your campaign body in markdown.\n\n- Lists\n- Work\n- Naturally\n\n[Call to action →](https://example.com)"} %>
+
+      <%# Preview iframe — only meaningful once the campaign is persisted so the
+          backend has something to render. The "Refresh" button reloads the
+          frame so the author can iterate without a full page reload. %>
+      <% if campaign.persisted? %>
+        <div class="mb-6">
+          <div class="flex items-center justify-between mb-2">
+            <label class="block text-sm font-medium">Preview</label>
+            <button type="button"
+                    class="button-secondary text-xs"
+                    data-controller="campaign-preview"
+                    data-action="click->campaign-preview#refresh"
+                    data-campaign-preview-src-value="<%= preview_frame_account_campaign_path(campaign) %>">
+              Refresh preview
+            </button>
+          </div>
+          <div class="border rounded-md overflow-hidden bg-white dark:bg-base-900">
+            <iframe id="campaign_preview_frame"
+                    src="<%= preview_frame_account_campaign_path(campaign) %>"
+                    class="w-full"
+                    style="height: 640px; border: 0;"
+                    sandbox="allow-same-origin"
+                    title="Campaign preview"></iframe>
+          </div>
+          <p class="text-xs text-gray-500 mt-1">
+            Save your changes, then click <em>Refresh preview</em> to see them rendered with the email template chrome.
+          </p>
+        </div>
+      <% end %>
+
+      <%# Legacy raw MJML body — hidden behind a disclosure for the small
+          number of authors who want full MJML control. New work should go into
+          body_markdown above. %>
+      <details class="mb-6 p-3 border rounded-md bg-gray-50 dark:bg-sky-950 dark:border-sky-800">
+        <summary class="cursor-pointer text-sm font-medium">Show raw MJML (advanced)</summary>
+        <p class="text-xs text-gray-500 my-2">
+          Raw MJML overrides the markdown body + template. Use this only if you need to author
+          a complete MJML document inline. Most users should leave this blank.
+        </p>
+        <%= render 'shared/fields/text_area', method: :body_mjml,
+                   options: {rows: 16, class: "font-mono text-xs", placeholder: "<mjml>\n  <mj-body>\n    <mj-section>\n      <mj-column>\n        <mj-text>Hello {{first_name}}!</mj-text>\n      </mj-column>\n    </mj-section>\n  </mj-body>\n</mjml>"} %>
+      </details>
+
       <%= render 'shared/fields/text_field', method: :status %>
       <%= render 'shared/fields/date_and_time_field', method: :scheduled_for %>
       <%= render 'shared/fields/super_select', method: :email_template_id, options: {}, html_options: {},

@@ -58,4 +58,40 @@ class Account::CampaignsControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal original_subject, @campaign.reload.subject
   end
+
+  test "update persists body_markdown through campaign_params" do
+    new_markdown = "## My new heading\n\nBody copy with a [link](https://example.com)."
+
+    patch account_campaign_url(@campaign), params: {
+      campaign: {body_markdown: new_markdown}
+    }
+
+    @campaign.reload
+    assert_equal new_markdown, @campaign.body_markdown
+    # Legacy body_mjml left untouched — backward compat.
+    assert_equal @template.mjml_body, @campaign.body_mjml
+  end
+
+  test "preview_frame renders the campaign HTML inline" do
+    @template.update!(
+      mjml_body: <<~MJML
+        <mjml>
+          <mj-body>
+            <mj-section><mj-column><mj-text>TEMPLATE CHROME</mj-text></mj-column></mj-section>
+            {{body}}
+          </mj-body>
+        </mjml>
+      MJML
+    )
+    @campaign.update!(
+      body_markdown: "## Preview Heading\n\nPreview body.",
+      body_mjml: nil
+    )
+
+    get preview_frame_account_campaign_url(@campaign)
+
+    assert_response :success
+    assert_match(/Preview Heading/, response.body)
+    assert_match(/TEMPLATE CHROME/, response.body)
+  end
 end

@@ -11,7 +11,7 @@ module AI
       AI::Base.force_stub = false
     end
 
-    test "stub mode returns five subject candidates and a valid MJML body" do
+    test "stub mode returns five subject candidates and a markdown body" do
       draft = AI::CampaignDrafter.new(
         team: @team,
         brief: "- launch\n- value\n- cta"
@@ -22,10 +22,14 @@ module AI
       assert_equal 5, draft.subject_candidates.size
       assert(draft.subject_candidates.all? { |c| c.subject.present? && c.rationale.present? })
       assert_match(/Acme Co/, draft.primary_subject)
+      # Primary output is markdown — H2 headings, no MJML/HTML tags.
+      assert_match(/^##\s/m, draft.markdown_body)
+      assert_match(/Acme Co/, draft.markdown_body)
+      refute_match(/<mjml/, draft.markdown_body)
+      refute_match(/<mj-/, draft.markdown_body)
+      # mjml_body fallback still populated for legacy callers.
       assert_match(/<mjml/, draft.mjml_body)
       assert_match(/<\/mjml>/, draft.mjml_body)
-      assert_match(/<mj-body/, draft.mjml_body)
-      assert_match(/Acme Co/, draft.mjml_body)
       assert_equal "Tuesday 10am Eastern", draft.suggested_send_time
       assert_equal [], draft.errors
     end
@@ -49,11 +53,14 @@ module AI
       assert draft.success?
     end
 
-    test "valid_mjml? rejects non-MJML content" do
+    test "markdown_to_mjml_fallback wraps markdown HTML in a complete MJML document" do
       drafter = AI::CampaignDrafter.new(team: @team, brief: "x")
-      refute drafter.send(:valid_mjml?, "<html><body>hi</body></html>")
-      refute drafter.send(:valid_mjml?, "")
-      assert drafter.send(:valid_mjml?, "<mjml><mj-body><mj-section></mj-section></mj-body></mjml>")
+      mjml = drafter.send(:markdown_to_mjml_fallback, "## Hello\n\nWorld")
+      assert_match(/<mjml/, mjml)
+      assert_match(/<\/mjml>/, mjml)
+      assert_match(/<mj-body/, mjml)
+      assert_match(/<h2/, mjml)
+      assert_match(/Hello/, mjml)
     end
   end
 end

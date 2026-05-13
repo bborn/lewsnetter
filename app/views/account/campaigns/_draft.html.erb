@@ -38,8 +38,8 @@
     <p class="text-sm mb-1"><strong>Suggested send time:</strong> <%= draft.suggested_send_time %></p>
 
     <details class="mt-2">
-      <summary class="cursor-pointer text-sm font-medium">MJML body preview (<%= draft.mjml_body.length %> chars)</summary>
-      <pre class="bg-white dark:bg-sky-900 p-2 text-xs overflow-auto max-h-48 mt-1 border rounded"><%= draft.mjml_body %></pre>
+      <summary class="cursor-pointer text-sm font-medium">Markdown body preview (<%= draft.markdown_body.length %> chars)</summary>
+      <pre class="bg-white dark:bg-sky-900 p-2 text-xs overflow-auto max-h-48 mt-1 border rounded"><%= draft.markdown_body %></pre>
     </details>
 
     <button type="button" class="button mt-3" data-ai-draft-apply="true">Apply to form</button>
@@ -48,7 +48,7 @@
     <script type="application/json" data-ai-draft-payload>
       <%= raw({
         preheader: draft.preheader,
-        mjml_body: draft.mjml_body,
+        markdown_body: draft.markdown_body,
         subjects: draft.subject_candidates.map(&:subject)
       }.to_json) %>
     </script>
@@ -63,7 +63,7 @@
 
         var subjectField = document.querySelector('input[name="campaign[subject]"]');
         var preheaderField = document.querySelector('input[name="campaign[preheader]"]');
-        var bodyField = document.querySelector('textarea[name="campaign[body_mjml]"]');
+        var bodyField = document.querySelector('textarea[name="campaign[body_markdown]"]');
 
         // Live-update the subject input as radios change.
         root.querySelectorAll('input[data-ai-draft-subject]').forEach(function(radio) {
@@ -79,7 +79,7 @@
             var checked = root.querySelector('input[data-ai-draft-subject]:checked');
             if (checked && subjectField) subjectField.value = checked.value;
             if (preheaderField) preheaderField.value = payload.preheader || '';
-            if (bodyField) bodyField.value = payload.mjml_body || '';
+            if (bodyField) bodyField.value = payload.markdown_body || '';
             applyBtn.textContent = 'Applied';
             applyBtn.disabled = true;
             setTimeout(function() {

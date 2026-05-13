@@ -46,6 +46,7 @@ if defined?(Api::V1::ApplicationController)
           *permitted_fields,
           :subject,
           :preheader,
+          :body_markdown,
           :body_mjml,
           :status,
           :scheduled_for,

@@ -298,6 +298,11 @@ gem "mailkick"
 # MJML → responsive HTML for email templates. Wraps the mjml CLI.
 gem "mjml-rails"
 
+# Markdown → HTML for the campaign body authoring path. The body markdown is
+# rendered with SAFE options (no raw HTML) and substituted into the email
+# template's `{{body}}` placeholder before MJML compilation.
+gem "commonmarker"
+
 # `premailer-rails` is already included in Bullet Train's bundle above —
 # no need to duplicate here.
 

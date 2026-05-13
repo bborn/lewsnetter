@@ -19,7 +19,11 @@
           <% with_attribute_settings object: @campaign, strategy: :label do %>
             <%= render 'shared/attributes/text', attribute: :subject %>
             <%= render 'shared/attributes/text', attribute: :preheader %>
-            <%= render 'shared/attributes/text', attribute: :body_mjml %>
+            <% if @campaign.body_markdown.present? %>
+              <%= render 'shared/attributes/text', attribute: :body_markdown %>
+            <% else %>
+              <%= render 'shared/attributes/text', attribute: :body_mjml %>
+            <% end %>
             <%= render 'shared/attributes/text', attribute: :status %>
             <%= render 'shared/attributes/date_and_time', attribute: :scheduled_for %>
             <%= render 'shared/attributes/belongs_to', attribute: :email_template %>
@@ -85,7 +89,9 @@
           <strong><%= preview_subscriber.email %></strong>
           — the first subscribed subscriber on the team.
         <% else %>
-          Add at least one subscribed subscriber to enable the preview.
+          Rendered with a placeholder subscriber
+          (<strong>preview@example.com</strong>) — add real subscribers to
+          preview with your audience's data.
         <% end %>
       <% end %>
 
@@ -98,11 +104,6 @@
                     sandbox="allow-same-origin"
                     title="Campaign preview"></iframe>
           </div>
-        <% elsif preview_subscriber.nil? %>
-          <p class="text-sm text-base-500">
-            No subscribed subscribers yet — preview will appear here once you
-            add an audience.
-          </p>
         <% else %>
           <p class="text-sm text-amber-700 dark:text-amber-300">
             Preview could not be rendered — either the campaign has no body

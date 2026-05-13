@@ -137,6 +137,7 @@ Rails.application.routes.draw do
             post :test_send
             post :draft, to: "campaign_drafts#create"
             get :postmortem, to: "campaign_postmortems#show"
+            get :preview_frame
           end
         end
         resources :sender_addresses do

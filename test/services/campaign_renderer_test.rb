@@ -109,6 +109,94 @@ class CampaignRendererTest < ActiveSupport::TestCase
     assert_match %r{https://[^"\s]+/unsubscribe/[^"\s]+}, result.html
   end
 
+  test "markdown body is compiled through the template's {{body}} placeholder" do
+    @template.update!(mjml_body: <<~MJML)
+      <mjml>
+        <mj-body>
+          <mj-section><mj-column><mj-text>BRAND HEADER</mj-text></mj-column></mj-section>
+          {{body}}
+          <mj-section><mj-column><mj-text>FOOTER · <a href="{{unsubscribe_url}}">unsubscribe</a></mj-text></mj-column></mj-section>
+        </mj-body>
+      </mjml>
+    MJML
+    @campaign.update!(
+      body_markdown: "## Hello {{first_name}}\n\nWelcome to the **{{plan}}** plan.\n\n[Get started →](https://example.com/start)",
+      body_mjml: nil
+    )
+
+    result = CampaignRenderer.new(campaign: @campaign, subscriber: @subscriber).call
+
+    # Body content from markdown is present, rendered as HTML headings + paragraphs.
+    assert_includes result.html, "Hello Alice"
+    assert_includes result.html, "<h2"
+    assert_includes result.html, "Welcome to the"
+    assert_includes result.html, "<strong>growth</strong>"
+    assert_includes result.html, "Get started"
+    assert_includes result.html, "https://example.com/start"
+
+    # Chrome (header + footer) from the template is also present, surrounding the body.
+    assert_includes result.html, "BRAND HEADER"
+    assert_includes result.html, "FOOTER"
+
+    # Unsubscribe URL still got substituted in the footer.
+    refute_includes result.html, "{{unsubscribe_url}}"
+    assert_match %r{/unsubscribe/}, result.html
+
+    # The body markdown landed BEFORE the footer (correct slot order).
+    assert result.html.index("Hello Alice") < result.html.index("FOOTER"),
+      "expected markdown body to render before the template footer"
+    # And AFTER the header.
+    assert result.html.index("BRAND HEADER") < result.html.index("Hello Alice"),
+      "expected template header to render before the markdown body"
+  end
+
+  test "markdown body without {{body}} placeholder falls back to appending before </mj-body>" do
+    @template.update!(mjml_body: <<~MJML)
+      <mjml>
+        <mj-body>
+          <mj-section><mj-column><mj-text>TEMPLATE TOP</mj-text></mj-column></mj-section>
+        </mj-body>
+      </mjml>
+    MJML
+    @campaign.update!(
+      body_markdown: "## Markdown heading\n\nSome content.",
+      body_mjml: nil
+    )
+
+    result = CampaignRenderer.new(campaign: @campaign, subscriber: @subscriber).call
+
+    assert_includes result.html, "TEMPLATE TOP"
+    assert_includes result.html, "Markdown heading"
+    assert result.html.index("TEMPLATE TOP") < result.html.index("Markdown heading")
+  end
+
+  test "markdown body strips unsafe HTML (no raw script tags)" do
+    @template.update!(mjml_body: "<mjml><mj-body>{{body}}</mj-body></mjml>")
+    @campaign.update!(
+      body_markdown: "## Safe\n\n<script>alert('xss')</script>\n\n<iframe src=\"http://evil.com\"></iframe>",
+      body_mjml: nil
+    )
+
+    result = CampaignRenderer.new(campaign: @campaign, subscriber: @subscriber).call
+
+    refute_includes result.html, "<script>"
+    refute_includes result.html, "alert("
+    refute_includes result.html, "<iframe"
+  end
+
+  test "markdown path takes priority over body_mjml when both are present" do
+    @template.update!(mjml_body: "<mjml><mj-body>{{body}}</mj-body></mjml>")
+    @campaign.update!(
+      body_markdown: "## From markdown\n\nThis is the markdown body.",
+      body_mjml: "<mjml><mj-body><mj-section><mj-column><mj-text>From legacy MJML</mj-text></mj-column></mj-section></mj-body></mjml>"
+    )
+
+    result = CampaignRenderer.new(campaign: @campaign, subscriber: @subscriber).call
+
+    assert_includes result.html, "From markdown"
+    refute_includes result.html, "From legacy MJML"
+  end
+
   test "{{unsubscribe_url}} substitution honors the team's unsubscribe_host" do
     @team.build_ses_configuration(
       region: "us-east-1",

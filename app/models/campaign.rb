@@ -24,6 +24,7 @@ class Campaign < ApplicationRecord
   validates :status, inclusion: {in: STATUSES}
   validates :email_template, scope: true
   validates :segment, scope: true
+  validate :body_present_in_some_form
   # 🚅 add validations above.
 
   # 🚅 add callbacks above.
@@ -63,18 +64,47 @@ class Campaign < ApplicationRecord
     end
   end
 
-  # Renders the campaign's MJML body to HTML for an in-app preview. Uses the
-  # first subscribed subscriber on the team as a stand-in so variable
-  # substitution shows the user what a real recipient would see. Returns nil
-  # if the team has no subscribers OR rendering blows up (bad MJML, etc.) so
-  # the view can show a placeholder.
+  # Renders the campaign body to HTML for an in-app preview. Uses the first
+  # subscribed subscriber on the team as a stand-in so variable substitution
+  # shows the user what a real recipient would see. If there are no
+  # subscribed subscribers we build a transient placeholder subscriber so the
+  # author can still see their work-in-progress design rendered. Returns nil
+  # only if rendering blows up (bad MJML/markdown/template) so the view can
+  # show a placeholder.
   def preview_html(for_subscriber: nil)
-    subscriber = for_subscriber || team.subscribers.subscribed.order(:id).first
-    return nil unless subscriber
+    subscriber = for_subscriber ||
+      team.subscribers.subscribed.order(:id).first ||
+      placeholder_preview_subscriber
 
     CampaignRenderer.new(campaign: self, subscriber: subscriber).call.html
   rescue => _e
     nil
   end
+
+  # Whether the markdown authoring path is in use. Drives the preview pipeline
+  # + AI drafter output target.
+  def markdown_body?
+    body_markdown.present?
+  end
   # 🚅 add methods above.
+
+  private
+
+  # In-memory subscriber used when there are no real subscribers yet — lets
+  # authors see their work-in-progress preview before they've imported anyone.
+  def placeholder_preview_subscriber
+    Subscriber.new(
+      team: team,
+      email: "preview@example.com",
+      name: "Preview Recipient",
+      external_id: "preview",
+      subscribed: true,
+      custom_attributes: {}
+    )
+  end
+
+  def body_present_in_some_form
+    return if body_markdown.present? || body_mjml.present? || email_template&.mjml_body.present?
+    errors.add(:base, "Campaign needs a body (markdown), a raw MJML body, or an email template with body content.")
+  end
 end

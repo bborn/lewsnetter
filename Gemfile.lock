@@ -823,6 +823,7 @@ DEPENDENCIES
   capybara-lockstep
   chronic
   colorize
+  commonmarker
   cssbundling-rails
   csv
   debug

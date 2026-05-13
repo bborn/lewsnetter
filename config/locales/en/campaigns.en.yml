@@ -37,12 +37,19 @@ en:
         heading: *preheader
         api_title: *preheader
         api_description: *preheader
+      body_markdown:
+        _: &body_markdown Body
+        label: *body_markdown
+        heading: *body_markdown
+        api_title: *body_markdown
+        api_description: "Markdown body. Compiled into the email template's {{body}} placeholder at send time."
+        help: "Write your campaign body in markdown. Headings, lists, links, code, emphasis, blockquotes. The template provides the header + footer chrome."
       body_mjml:
-        _: &body_mjml Body Mjml
+        _: &body_mjml Raw MJML (advanced)
         label: *body_mjml
         heading: *body_mjml
         api_title: *body_mjml
-        api_description: *body_mjml
+        api_description: "Legacy raw MJML body. Used only when body_markdown is blank."
       status:
         _: &status Status
         label: *status
@@ -130,6 +137,7 @@ en:
       campaign:
         subject: *subject
         preheader: *preheader
+        body_markdown: *body_markdown
         body_mjml: *body_mjml
         status: *status
         scheduled_for: *scheduled_for
