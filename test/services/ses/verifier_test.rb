@@ -29,8 +29,8 @@ class Ses::VerifierTest < ActiveSupport::TestCase
       Struct.new(:max_24_hour_send, :sent_last_24_hours).new(50_000.0, 1234.0)
     )
     identities = [
-      Struct.new(:identity_name, :identity_type, :verified_for_sending_status).new(
-        "newsletter@example.com", "EMAIL_ADDRESS", true
+      Struct.new(:identity_name, :identity_type, :sending_enabled, :verification_status).new(
+        "newsletter@example.com", "EMAIL_ADDRESS", true, "SUCCESS"
       )
     ]
     stub_ses_client(
