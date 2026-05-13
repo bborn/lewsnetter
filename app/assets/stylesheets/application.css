@@ -2,7 +2,7 @@
 
    The $ThemeStylesheet path is evaluated via a postcss resolver, which finds the theme's
    main stylesheet within the theme's gem.
-   
+
    To control the order of the tailwindcss imports further, you can eject the theme's
    stylesheet locally using the following command, which will take precedence.
    > rake bullet_train:themes:light:eject_css
@@ -15,3 +15,43 @@
 /* If you need to customize your application's CSS, this is the place to do it. This helps
    avoid merge conflicts in the future when Rails or Bullet Train update their own CSS.
 */
+
+@layer components {
+  /* Status pill / badge component — used by status_pill_helper. Maps to:
+     - badge-neutral (gray) → draft, not_in_ses
+     - badge-info    (blue) → scheduled
+     - badge-warn    (amber) → sending, pending
+     - badge-success (green) → sent, verified
+     - badge-error   (red) → failed, verification_failed
+  */
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
+  }
+  .badge-neutral {
+    @apply bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200;
+  }
+  .badge-info {
+    @apply bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200;
+  }
+  .badge-warn {
+    @apply bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200;
+  }
+  .badge-success {
+    @apply bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200;
+  }
+  .badge-error {
+    @apply bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200;
+  }
+
+  /* Destructive button — red text, transparent background, red border on hover.
+     Inherits sizing + base rules from `.button` / `.button-secondary` defined
+     in the theme. Use as: <button class="button-secondary button-danger"> or
+     drop in `button-danger` on its own where the secondary chrome is already
+     applied via the button helper. */
+  .button-danger {
+    @apply text-red-600 bg-transparent;
+  }
+  .button-danger:hover {
+    @apply text-red-700 border-red-600;
+  }
+}

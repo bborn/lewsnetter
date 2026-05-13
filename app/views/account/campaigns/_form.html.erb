@@ -1,96 +1,154 @@
 <% cancel_path ||= campaign.persisted? ? [:account, campaign] : [:account, @team, :campaigns] %>
 
-<%# AI draft panel — only meaningful for persisted campaigns (member route).
-    For brand-new campaigns, the user saves once with a placeholder subject
-    then revisits the edit form to draft. %>
-<% if campaign.persisted? %>
-  <%= form_with url: draft_account_campaign_path(campaign),
-                method: :post,
-                data: {turbo_frame: "campaign_draft"},
-                html: {class: "mb-4 p-3 border rounded-md bg-gray-50 dark:bg-sky-950 dark:border-sky-800"} do |draft_form| %>
-    <label class="block text-sm font-medium mb-1">
-      Brief (5 bullets — what's this campaign about?)
-    </label>
-    <%= draft_form.text_area :brief,
-          class: "w-full p-2 border rounded-md mb-2",
-          rows: 5,
-          placeholder: "- The headline change\n- Why it matters\n- One feature highlight\n- A user quote or stat\n- The call to action" %>
-    <button type="submit" class="button-secondary">Draft with AI</button>
-    <span class="text-xs text-gray-500 ml-2">
-      Uses team voice samples + segment context. Returns markdown body. Stub mode if no API key.
-    </span>
-  <% end %>
+<%# ============================================================
+    Section 1 — Content (header + AI draft panel live outside the
+    main campaign form so we don't nest two forms in the DOM. The
+    rest of the Content fields render inside the form below.)
+    ============================================================ %>
+<section class="mb-8 p-4 border rounded-md bg-white dark:bg-sky-950 dark:border-sky-800">
+  <header class="mb-4">
+    <h2 class="text-lg font-semibold">Content</h2>
+    <p class="text-sm text-gray-500">What goes in the email. Draft a starting point with AI, then refine subject + body.</p>
+  </header>
 
-  <%= turbo_frame_tag "campaign_draft" %>
-<% end %>
+  <%# AI draft panel — shown on both new and edit. Backing endpoint requires
+      a persisted campaign; on new we show a disabled placeholder so the
+      authoring affordance is still discoverable. %>
+  <div class="mb-4">
+    <% if campaign.persisted? %>
+      <%= form_with url: draft_account_campaign_path(campaign),
+                    method: :post,
+                    data: {turbo_frame: "campaign_draft"},
+                    html: {class: "p-3 border rounded-md bg-gray-50 dark:bg-sky-950 dark:border-sky-800"} do |draft_form| %>
+        <label class="block text-sm font-medium mb-1">
+          Brief (5 bullets — what's this campaign about?)
+        </label>
+        <%= draft_form.text_area :brief,
+              class: "w-full p-2 border rounded-md mb-2",
+              rows: 5,
+              placeholder: "- The headline change\n- Why it matters\n- One feature highlight\n- A user quote or stat\n- The call to action" %>
+        <button type="submit" class="button">Draft with AI</button>
+        <span class="text-xs text-gray-500 ml-2">
+          Uses team voice samples + segment context. Returns markdown body. Stub mode if no API key.
+        </span>
+      <% end %>
+      <%= turbo_frame_tag "campaign_draft" %>
+    <% else %>
+      <div class="p-3 border rounded-md bg-gray-50 dark:bg-sky-950 dark:border-sky-800">
+        <label class="block text-sm font-medium mb-1">
+          Brief (5 bullets — what's this campaign about?)
+        </label>
+        <textarea class="w-full p-2 border rounded-md mb-2"
+                  rows="5"
+                  disabled
+                  placeholder="- The headline change&#10;- Why it matters&#10;- One feature highlight&#10;- A user quote or stat&#10;- The call to action"></textarea>
+        <button type="button" class="button" disabled>Draft with AI</button>
+        <span class="text-xs text-gray-500 ml-2">
+          Save the campaign once to unlock AI drafting.
+        </span>
+      </div>
+    <% end %>
+  </div>
+</section>
 
 <%= form_with model: campaign, url: (campaign.persisted? ? [:account, campaign] : [:account, @team, :campaigns]), class: 'form' do |form| %>
   <%= render "shared/limits/form", form: form, cancel_path: cancel_path do %>
     <%= render 'account/shared/forms/errors', form: form %>
 
     <% with_field_settings form: form do %>
-      <%= render 'shared/fields/text_field', method: :subject, options: {autofocus: true} %>
-      <%= render 'shared/fields/text_field', method: :preheader %>
 
-      <%# Primary authoring path: markdown body. The template (selected below)
-          provides the chrome (logo, footer, unsubscribe); this body fills the
-          template's `{{body}}` placeholder. %>
-      <%= render 'shared/fields/text_area', method: :body_markdown,
-                 options: {rows: 24, class: "font-mono text-sm", placeholder: "## A heading\n\nWrite your campaign body in markdown.\n\n- Lists\n- Work\n- Naturally\n\n[Call to action →](https://example.com)"} %>
+      <%# Continuation of Section 1 (Content): subject, preheader, body,
+          raw MJML disclosure, preview iframe. Visually a separate card so
+          the section header stays with the AI draft above. %>
+      <section class="mb-8 p-4 border rounded-md bg-white dark:bg-sky-950 dark:border-sky-800">
+        <%= render 'shared/fields/text_field', method: :subject, options: {autofocus: true} %>
+        <%= render 'shared/fields/text_field', method: :preheader %>
 
-      <%# Preview iframe — only meaningful once the campaign is persisted so the
-          backend has something to render. The "Refresh" button reloads the
-          frame so the author can iterate without a full page reload. %>
-      <% if campaign.persisted? %>
-        <div class="mb-6">
-          <div class="flex items-center justify-between mb-2">
-            <label class="block text-sm font-medium">Preview</label>
-            <button type="button"
-                    class="button-secondary text-xs"
-                    data-controller="campaign-preview"
-                    data-action="click->campaign-preview#refresh"
-                    data-campaign-preview-src-value="<%= preview_frame_account_campaign_path(campaign) %>">
-              Refresh preview
-            </button>
+        <%# Primary authoring path: markdown body. The template (selected below)
+            provides the chrome (logo, footer, unsubscribe); this body fills the
+            template's `{{body}}` placeholder. %>
+        <%= render 'shared/fields/text_area', method: :body_markdown,
+                   options: {rows: 24, class: "font-mono text-sm", placeholder: "## A heading\n\nWrite your campaign body in markdown.\n\n- Lists\n- Work\n- Naturally\n\n[Call to action →](https://example.com)"} %>
+
+        <%# Legacy raw MJML body — hidden behind a disclosure for the small
+            number of authors who want full MJML control. The warning lives
+            inside the <summary> element so users see it BEFORE expanding the
+            panel and pasting in MJML that would silently override their
+            markdown body. %>
+        <details class="mb-6 p-3 border rounded-md bg-gray-50 dark:bg-sky-950 dark:border-sky-800">
+          <summary class="cursor-pointer text-sm font-medium">
+            Show raw MJML (advanced — overrides markdown body)
+          </summary>
+          <%= render 'shared/fields/text_area', method: :body_mjml,
+                     options: {rows: 16, class: "font-mono text-xs mt-3", placeholder: "<mjml>\n  <mj-body>\n    <mj-section>\n      <mj-column>\n        <mj-text>Hello {{first_name}}!</mj-text>\n      </mj-column>\n    </mj-section>\n  </mj-body>\n</mjml>"} %>
+        </details>
+
+        <%# Preview iframe — only meaningful once the campaign is persisted so
+            the backend has something to render. Lives at the bottom of the
+            Content section so authors see their work without leaving the
+            section. %>
+        <% if campaign.persisted? %>
+          <div class="mb-2">
+            <div class="flex items-center justify-between mb-2">
+              <label class="block text-sm font-medium">Preview</label>
+              <button type="button"
+                      class="button-secondary text-xs"
+                      data-controller="campaign-preview"
+                      data-action="click->campaign-preview#refresh"
+                      data-campaign-preview-src-value="<%= preview_frame_account_campaign_path(campaign) %>">
+                Refresh preview
+              </button>
+            </div>
+            <div class="border rounded-md overflow-hidden bg-white dark:bg-base-900">
+              <iframe id="campaign_preview_frame"
+                      src="<%= preview_frame_account_campaign_path(campaign) %>"
+                      class="w-full"
+                      style="height: 640px; border: 0;"
+                      sandbox="allow-same-origin"
+                      title="Campaign preview"></iframe>
+            </div>
+            <p class="text-xs text-gray-500 mt-1">
+              Save your changes, then click <em>Refresh preview</em> to see them rendered with the email template chrome.
+            </p>
           </div>
-          <div class="border rounded-md overflow-hidden bg-white dark:bg-base-900">
-            <iframe id="campaign_preview_frame"
-                    src="<%= preview_frame_account_campaign_path(campaign) %>"
-                    class="w-full"
-                    style="height: 640px; border: 0;"
-                    sandbox="allow-same-origin"
-                    title="Campaign preview"></iframe>
-          </div>
-          <p class="text-xs text-gray-500 mt-1">
-            Save your changes, then click <em>Refresh preview</em> to see them rendered with the email template chrome.
-          </p>
-        </div>
-      <% end %>
+        <% end %>
+      </section>
 
-      <%# Legacy raw MJML body — hidden behind a disclosure for the small
-          number of authors who want full MJML control. New work should go into
-          body_markdown above. %>
-      <details class="mb-6 p-3 border rounded-md bg-gray-50 dark:bg-sky-950 dark:border-sky-800">
-        <summary class="cursor-pointer text-sm font-medium">Show raw MJML (advanced)</summary>
-        <p class="text-xs text-gray-500 my-2">
-          Raw MJML overrides the markdown body + template. Use this only if you need to author
-          a complete MJML document inline. Most users should leave this blank.
+      <%# ============================================================
+          Section 2 — Audience
+          ============================================================ %>
+      <section class="mb-8 p-4 border rounded-md bg-white dark:bg-sky-950 dark:border-sky-800">
+        <header class="mb-4">
+          <h2 class="text-lg font-semibold">Audience</h2>
+          <p class="text-sm text-gray-500">Who receives this campaign and which sender address sends it.</p>
+        </header>
+
+        <%= render 'shared/fields/super_select', method: :segment_id,
+          options: {include_blank: t('campaigns.fields.segment_id.placeholder', default: '— Send to everyone subscribed —')},
+          html_options: {},
+          choices: @campaign.valid_segments.map { |segment| [segment.label_string, segment.id] } %>
+        <p class="text-xs text-gray-500 -mt-3 mb-4 ml-1">
+          Choose a saved segment or leave blank to send to all subscribed.
         </p>
-        <%= render 'shared/fields/text_area', method: :body_mjml,
-                   options: {rows: 16, class: "font-mono text-xs", placeholder: "<mjml>\n  <mj-body>\n    <mj-section>\n      <mj-column>\n        <mj-text>Hello {{first_name}}!</mj-text>\n      </mj-column>\n    </mj-section>\n  </mj-body>\n</mjml>"} %>
-      </details>
 
-      <%= render 'shared/fields/text_field', method: :status %>
-      <%= render 'shared/fields/date_and_time_field', method: :scheduled_for %>
-      <%= render 'shared/fields/super_select', method: :email_template_id, options: {}, html_options: {},
-        choices: @campaign.valid_email_templates.map { |template| [template.label_string, template.id] } %>
-      <%= render 'shared/fields/super_select', method: :segment_id,
-        options: {include_blank: t('campaigns.fields.segment_id.placeholder', default: '— Send to everyone subscribed —')},
-        html_options: {},
-        choices: @campaign.valid_segments.map { |segment| [segment.label_string, segment.id] } %>
-      <%= render 'shared/fields/super_select', method: :sender_address_id, options: {}, html_options: {},
-        choices: @campaign.valid_sender_addresses.map { |sender| [sender.label_string, sender.id] } %>
-      <%# 🚅 super scaffolding will insert new fields above this line. %>
+        <%= render 'shared/fields/super_select', method: :sender_address_id, options: {}, html_options: {},
+          choices: @campaign.valid_sender_addresses.map { |sender| [sender.label_string, sender.id] } %>
+      </section>
+
+      <%# ============================================================
+          Section 3 — Settings
+          ============================================================ %>
+      <section class="mb-8 p-4 border rounded-md bg-white dark:bg-sky-950 dark:border-sky-800">
+        <header class="mb-4">
+          <h2 class="text-lg font-semibold">Settings</h2>
+          <p class="text-sm text-gray-500">Optional schedule + which email template provides the layout chrome.</p>
+        </header>
+
+        <%= render 'shared/fields/super_select', method: :email_template_id, options: {}, html_options: {},
+          choices: @campaign.valid_email_templates.map { |template| [template.label_string, template.id] } %>
+        <%= render 'shared/fields/date_and_time_field', method: :scheduled_for %>
+        <%# 🚅 super scaffolding will insert new fields above this line. %>
+      </section>
     <% end %>
 
     <div class="buttons">

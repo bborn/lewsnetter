@@ -4,20 +4,46 @@
 <% hide_actions ||= false %>
 <% hide_back ||= false %>
 
+<%
+  count = campaign.recipient_count
+  count_display =
+    if campaign.sent?
+      sent = campaign.stats.is_a?(Hash) ? campaign.stats["sent"] : nil
+      sent ? "#{sent} sent" : "—"
+    elsif count.nil?
+      "—"
+    else
+      "#{count} subscriber#{"s" unless count == 1}"
+    end
+
+  date_label, date_value =
+    if campaign.sent? && campaign.sent_at
+      ["Sent", campaign.sent_at]
+    elsif campaign.scheduled? && campaign.scheduled_for
+      ["Scheduled", campaign.scheduled_for]
+    else
+      ["Created", campaign.created_at]
+    end
+%>
+
 <% with_attribute_settings object: campaign do %>
   <tr data-id="<%= campaign.id %>" class="group">
     <%= render "shared/tables/checkbox", object: campaign %>
     <td><%= render 'shared/attributes/text', attribute: :subject, url: [:account, campaign] %></td>
-    <td><%= render 'shared/attributes/text', attribute: :preheader %></td>
+    <td><%= status_pill(campaign.status) %></td>
+    <td class="text-sm"><%= count_display %></td>
+    <td class="text-sm text-gray-500">
+      <span class="block text-xs uppercase tracking-wide text-gray-400"><%= date_label %></span>
+      <%= l(date_value.to_datetime, format: :short) if date_value %>
+    </td>
     <%# 🚅 super scaffolding will insert new fields above this line. %>
-    <td><%= render 'shared/attributes/date_and_time', attribute: :created_at %></td>
     <td class="buttons">
       <% unless hide_actions %>
         <% if can? :edit, campaign %>
           <%= link_to t('.buttons.shorthand.edit'), [:edit, :account, campaign], class: 'button-secondary button-smaller' %>
         <% end %>
         <% if can? :destroy, campaign %>
-          <%= button_to t('.buttons.shorthand.destroy'), [:account, campaign], method: :delete, data: { turbo_confirm: t('.buttons.confirmations.destroy', model_locales(campaign)) }, class: 'button-secondary button-smaller' %>
+          <%= button_to t('.buttons.shorthand.destroy'), [:account, campaign], method: :delete, data: { turbo_confirm: t('.buttons.confirmations.destroy', model_locales(campaign)) }, class: 'button-secondary button-smaller button-danger' %>
         <% end %>
         <%# 🚅 super scaffolding will insert new action model buttons above this line. %>
       <% end %>

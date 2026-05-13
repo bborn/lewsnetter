@@ -63,12 +63,16 @@ class Account::CampaignsController < Account::ApplicationController
   end
 
   # POST /account/campaigns/:id/send_now
+  #
+  # Gated on Campaign#sendable? so we don't allow a re-send of a campaign
+  # that's already in flight, completed, or failed. The job itself sets
+  # `sent_at` + `status = 'sent'` on success.
   def send_now
-    if @campaign.draft?
+    if @campaign.sendable?
       SendCampaignJob.perform_later(@campaign.id)
       redirect_to [:account, @campaign], notice: "Campaign queued for sending."
     else
-      redirect_to [:account, @campaign], alert: "Only draft campaigns can be sent."
+      redirect_to [:account, @campaign], alert: "Only draft or scheduled campaigns can be sent."
     end
   end
 

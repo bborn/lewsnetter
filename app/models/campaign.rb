@@ -35,6 +35,14 @@ class Campaign < ApplicationRecord
     define_method("#{s}?") { status == s }
   end
 
+  # Can this campaign be sent now? Only draft and scheduled campaigns are
+  # sendable — anything that is already in flight, completed, or failed should
+  # require an explicit re-draft or duplication step before going out again.
+  # The send-now flow + view buttons gate on this.
+  def sendable?
+    draft? || scheduled?
+  end
+
   def valid_email_templates
     team.email_templates
   end

@@ -72,6 +72,40 @@ class Account::CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_equal @template.mjml_body, @campaign.body_mjml
   end
 
+  test "show disables send when recipient_count is 0" do
+    # No subscribers on the team, no segment — recipient_count resolves to 0.
+    assert_equal 0, @campaign.recipient_count
+
+    get account_campaign_url(@campaign)
+
+    assert_response :success
+    # Disabled-state UI: a disabled button + the zero-recipient amber warning.
+    assert_match(/segment matches 0 subscribers|opacity-50 cursor-not-allowed/, response.body)
+    # Pivotal: there should NOT be an enabled send_now form when count is 0.
+    refute_match(/action="#{Regexp.escape(send_now_account_campaign_path(@campaign))}"/, response.body)
+  end
+
+  test "show renders Sent state copy when campaign is sent" do
+    @campaign.update!(status: "sent", sent_at: Time.utc(2026, 5, 12, 19, 15))
+
+    get account_campaign_url(@campaign)
+
+    assert_response :success
+    assert_match(/Sent to/m, response.body)
+    assert_match(/on May 12, 7:15 PM/, response.body)
+    # Sent campaigns should NOT show a Send button.
+    refute_match(/action="#{Regexp.escape(send_now_account_campaign_path(@campaign))}"/, response.body)
+  end
+
+  test "send_now is rejected when campaign is not sendable" do
+    @campaign.update!(status: "sent", sent_at: 1.hour.ago)
+
+    post send_now_account_campaign_url(@campaign)
+
+    assert_redirected_to account_campaign_url(@campaign)
+    assert_match(/Only draft or scheduled/, flash[:alert].to_s)
+  end
+
   test "preview_frame renders the campaign HTML inline" do
     @template.update!(
       mjml_body: <<~MJML
