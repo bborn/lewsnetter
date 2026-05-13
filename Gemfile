@@ -63,7 +63,10 @@ gem "aws-sdk-s3", require: false
 gem "chronic"
 
 # Ruby 4 dropped `csv` from stdlib; pin the gem for ImportSubscribersJob.
-gem "csv"
+# `require: "csv"` is important — without it, jobs that `require "csv"`
+# at file load time hit `LoadError` because the `csv` constant isn't
+# autoloaded into the controller/job process by Bundler.
+gem "csv", require: "csv"
 
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem

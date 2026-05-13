@@ -20,6 +20,18 @@ class Account::Subscribers::ImportsControllerTest < ActionDispatch::IntegrationT
     assert_response :success
   end
 
+  # Regression for B2 (deep QA 2026-05-13): the gem's `shared/fields/file_field`
+  # partial rendered the <input type=file> as `class="hidden"` waiting for a
+  # Stimulus drop-zone that wasn't wired up, leaving no way for users to pick a
+  # CSV. The form now renders an explicit visible file input.
+  test "new exposes a visible CSV file input" do
+    get new_account_team_subscribers_import_url(@team)
+    assert_response :success
+    assert_match(/<input[^>]+type="file"[^>]+name="subscribers_import\[csv\]"/, response.body)
+    refute_match(/<input[^>]+type="file"[^>]+class="[^"]*\bhidden\b/, response.body,
+      "CSV file input must not be hidden — users need to click it.")
+  end
+
   test "create attaches the csv and runs the import job (inline test adapter)" do
     file = fixture_file_upload("sample_subscribers.csv", "text/csv")
 

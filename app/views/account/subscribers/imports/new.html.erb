@@ -13,8 +13,37 @@
             class: 'form' do |form| %>
         <%= render 'account/shared/forms/errors', form: form %>
 
+        <%# B2: the gem's `shared/fields/file_field` partial wraps the
+            <input type=file> in a styled drop-zone but writes its markup
+            via `content_for :field`, which the ejected
+            `app/views/themes/light/fields/_field.html.erb` was not picking
+            up in this setup — leaving an `.hidden` input and nothing to
+            click. Render the input explicitly with the same field-wrapper
+            classes the rest of the app uses so users can actually pick a
+            CSV. The accompanying file_field_controller would have given us
+            a fancy drop zone; that's a polish item, not a blocker. %>
+        <div>
+          <%= form.label :csv, class: "block" do %>
+            CSV File<span class="text-red-500 ml-0.5" aria-hidden="true">*</span><span class="sr-only"> (required)</span>
+          <% end %>
+          <div class="mt-1.5">
+            <%= form.file_field :csv,
+                  accept: "text/csv,.csv",
+                  required: true,
+                  aria: {required: true},
+                  direct_upload: true,
+                  class: "block w-full text-sm rounded-md border border-base-300 dark:border-base-900 bg-white dark:bg-base-800 dark:text-base-300 px-3 py-2 file:mr-3 file:rounded-md file:border-0 file:bg-primary-500 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white hover:file:bg-primary-600" %>
+          </div>
+          <p class="mt-1.5 text-xs text-base-500 dark:text-base-400">
+            One row per subscriber. The header row must include
+            <code class="font-mono">email</code> at minimum;
+            <code class="font-mono">external_id</code>,
+            <code class="font-mono">name</code>, and
+            <code class="font-mono">subscribed</code> are also supported.
+          </p>
+        </div>
+
         <% with_field_settings form: form do %>
-          <%= render 'shared/fields/file_field', method: :csv %>
           <%= render 'shared/fields/text_area', method: :notes %>
         <% end %>
 
