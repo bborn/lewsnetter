@@ -50,7 +50,9 @@
 
       <% box.actions do %>
         <% unless hide_actions %>
-          <% if context == team %>
+          <%# B11: when the empty-state card is showing its own "Create a
+              template" button, suppress this second copy. %>
+          <% if context == team && email_templates.any? %>
             <% if can? :create, EmailTemplate.new(team: team) %>
               <%= link_to t('.buttons.new'), [:new, :account, team, :email_template], class: "#{first_button_primary(:email_template)} new" %>
             <% end %>

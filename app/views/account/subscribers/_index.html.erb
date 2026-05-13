@@ -56,7 +56,10 @@
 
       <% box.actions do %>
         <% unless hide_actions %>
-          <% if context == team %>
+          <%# B11: when the empty-state card is showing its own "Add
+              subscriber" + "Import from CSV" buttons, suppress this second
+              copy so they don't render twice on the same screen. %>
+          <% if context == team && subscribers.any? %>
             <% if can? :create, Subscriber.new(team: team) %>
               <%= link_to t('.buttons.new'), [:new, :account, team, :subscriber], class: "#{first_button_primary(:subscriber)} new" %>
             <% end %>

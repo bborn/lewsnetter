@@ -75,8 +75,11 @@ suppress_optionality_marker = other_options[:suppress_optionality_marker] || is_
             <%= label&.html_safe %><span class="text-red-500 ml-0.5" aria-hidden="true">*</span><span class="sr-only"> (required)</span>
           <% end %>
         <% else %>
+          <%# B13: explicit &nbsp; between the label and the "(optional)"
+              marker — `ml-1` alone collapses on inline-span runs in some
+              browsers so the label text glues to the marker. %>
           <%= form.label method, class: 'block', for: options[:id] do %>
-            <%= label&.html_safe %><span class="ml-1 text-xs font-normal text-base-400 dark:text-base-500">(optional)</span>
+            <%= label&.html_safe %><span class="ml-1 text-xs font-normal text-base-400 dark:text-base-500">&nbsp;(optional)</span>
           <% end %>
         <% end %>
       <% end %>

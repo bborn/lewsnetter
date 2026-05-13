@@ -138,7 +138,10 @@ class Account::CampaignsController < Account::ApplicationController
       if result.failed.empty? && result.message_ids.any?
         redirect_to [:account, @campaign], notice: "Test email sent to #{current_user.email}."
       else
-        error = result.failed.first&.dig(:error) || "Unknown error"
+        # B14: SesSender tags render errors with a `render_failed:` prefix for
+        # internal logging; that prefix shouldn't leak into the UI flash.
+        raw_error = result.failed.first&.dig(:error) || "Unknown error"
+        error = raw_error.to_s.sub(/\A(?:render_failed|send_failed):\s*/, "")
         redirect_to [:account, @campaign], alert: "Test send failed: #{error}"
       end
     ensure
