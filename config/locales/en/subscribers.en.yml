@@ -17,7 +17,7 @@ en:
         destroy: Delete
       confirmations:
         # TODO customize for your use-case.
-        destroy: Are you sure you want to remove %{subscriber_name}? This will also remove any child resources and can't be undone.
+        destroy: "Remove this subscriber from %{team_name}? This can't be undone."
     subscriber:
       buttons: *buttons
     fields: &fields
@@ -80,7 +80,7 @@ en:
       fields: *fields
       buttons: *buttons
     show:
-      section: "%{subscriber_name}"
+      section: "Subscriber"
       header: Subscriber
       description: Profile and engagement for this subscriber.
       manage_description: Update their details or remove them from your list.
@@ -95,7 +95,7 @@ en:
       description: Add someone manually. To bulk-import an existing list, use Import from CSV.
       form: *form
     edit:
-      section: "%{subscriber_name}"
+      section: "Edit subscriber"
       header: Edit subscriber
       description: Update this subscriber's details or subscription status.
       form: *form
