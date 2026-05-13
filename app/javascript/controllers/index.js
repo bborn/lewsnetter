@@ -17,6 +17,7 @@ import SegmentTranslatorController from "./segment_translator_controller"
 import MarkdownEditorController from "./markdown_editor_controller"
 import AiDrafterController from "./ai_drafter_controller"
 import CampaignPreviewController from "./campaign_preview_controller"
+import SubscriberSearchController from "./subscriber_search_controller"
 
 const application = Application.start()
 
@@ -46,6 +47,7 @@ application.register('segment-translator', SegmentTranslatorController)
 application.register('markdown-editor', MarkdownEditorController)
 application.register('ai-drafter', AiDrafterController)
 application.register('campaign-preview', CampaignPreviewController)
+application.register('subscriber-search', SubscriberSearchController)
 
 CableReady.initialize({ consumer })
 

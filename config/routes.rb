@@ -115,6 +115,11 @@ Rails.application.routes.draw do
         end
 
         resources :subscribers do
+          collection do
+            # Typeahead JSON for the "Preview as" autocomplete on the campaign
+            # show page. See Account::SubscribersController#search.
+            get :search
+          end
           resources :events
         end
 

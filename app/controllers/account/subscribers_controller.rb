@@ -1,10 +1,46 @@
 class Account::SubscribersController < Account::ApplicationController
-  account_load_and_authorize_resource :subscriber, through: :team, through_association: :subscribers
+  account_load_and_authorize_resource :subscriber, through: :team, through_association: :subscribers,
+    except: [:search]
 
   # GET /account/teams/:team_id/subscribers
   # GET /account/teams/:team_id/subscribers.json
   def index
     delegate_json_to_api
+  end
+
+  # GET /account/teams/:team_id/subscribers/search.json?q=...
+  #
+  # Lightweight typeahead endpoint for the "Preview as" autocomplete on the
+  # campaign show page. Matches against email / name / external_id, limited
+  # to 10 hits. Not paginated — UI is a quick narrow-then-pick affordance.
+  def search
+    @team = current_user.teams.find(params[:team_id])
+    authorize! :read, Subscriber.new(team: @team)
+
+    q = params[:q].to_s.strip
+    if q.blank?
+      render json: []
+      return
+    end
+
+    needle = "%#{q.downcase}%"
+    results = @team.subscribers
+      .where(
+        "LOWER(email) LIKE :n OR LOWER(name) LIKE :n OR LOWER(external_id) LIKE :n",
+        n: needle
+      )
+      .order(:email)
+      .limit(10)
+
+    render json: results.map { |s|
+      {
+        id: s.id,
+        email: s.email,
+        name: s.name,
+        external_id: s.external_id,
+        subscribed: s.subscribed
+      }
+    }
   end
 
   # GET /account/subscribers/:id
