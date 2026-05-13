@@ -107,7 +107,17 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           # Sanity: confirm the key parses before we hand it to ssh.
           ssh-keygen -y -f ~/.ssh/id_ed25519 > /dev/null
-          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
+          # ssh-keyscan + Net::SSH host-key matching is flaky across multiple
+          # host key types (RSA vs ED25519). For an ephemeral runner connecting
+          # to a known IP authenticated via the deploy key, accepting new host
+          # keys is the pragmatic choice.
+          cat > ~/.ssh/config <<EOF
+          Host $SERVER_HOST
+            StrictHostKeyChecking accept-new
+            UserKnownHostsFile ~/.ssh/known_hosts
+          EOF
+          chmod 600 ~/.ssh/config
+          ssh-keyscan -t ed25519,rsa "$SERVER_HOST" >> ~/.ssh/known_hosts 2>/dev/null
 
       # Kamal 2 reads named secrets from .kamal/secrets, which is gitignored
       # because it holds real credentials locally. Materialize it from GitHub

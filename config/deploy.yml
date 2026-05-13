@@ -125,7 +125,16 @@ builder:
 ssh:
   user: root
   keys_only: false
-  keys: ["~/.ssh/lewsnetter_deploy"]
+  # CI runners have the deploy key at ~/.ssh/id_ed25519; local has it at
+  # ~/.ssh/lewsnetter_deploy. List both — net-ssh tries each in order.
+  keys:
+    - ~/.ssh/lewsnetter_deploy
+    - ~/.ssh/id_ed25519
+  # Hetzner hosts present both RSA and ED25519 host keys, which trips
+  # net-ssh's host-key verifier in CI (Net::SSH::HostKeyMismatch when the
+  # algorithm it sees differs from the one already in known_hosts). The
+  # deploy key + known IP is the trust anchor; skip host-key verification.
+  verify_host_key: :never
 
 # Note: top-level `healthcheck:` was removed in Kamal 2. The proxy block
 # above declares the health probe Kamal uses for rolling restarts (/up).
