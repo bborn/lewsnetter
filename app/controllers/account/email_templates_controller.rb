@@ -1,5 +1,6 @@
 class Account::EmailTemplatesController < Account::ApplicationController
-  account_load_and_authorize_resource :email_template, through: :team, through_association: :email_templates
+  account_load_and_authorize_resource :email_template, through: :team, through_association: :email_templates,
+    member_actions: [:preview_frame]
 
   # GET /account/teams/:team_id/email_templates
   # GET /account/teams/:team_id/email_templates.json
@@ -12,6 +13,77 @@ class Account::EmailTemplatesController < Account::ApplicationController
   def show
     delegate_json_to_api
   end
+
+  # GET /account/email_templates/:id/preview_frame
+  #
+  # Renders the template chrome filled with a placeholder body so authors can
+  # SEE what their reusable layout looks like before they commit to using it
+  # on a real campaign. Built around an in-memory Campaign + sample
+  # Subscriber so we don't pollute the DB.
+  def preview_frame
+    fake_subscriber = Subscriber.new(
+      team: @email_template.team,
+      email: current_user.email,
+      name: [current_user.first_name, current_user.last_name].compact.join(" "),
+      external_id: "template-preview-#{current_user.id}",
+      subscribed: true,
+      custom_attributes: sample_custom_attributes
+    )
+
+    fake_campaign = Campaign.new(
+      team: @email_template.team,
+      email_template: @email_template,
+      subject: "Subject preview",
+      preheader: "Preheader preview",
+      body_markdown: sample_body_markdown,
+      body_mjml: nil,
+      status: "draft"
+    )
+
+    html =
+      begin
+        CampaignRenderer.new(campaign: fake_campaign, subscriber: fake_subscriber).call.html
+      rescue => e
+        Rails.logger.warn("[EmailTemplate#preview_frame] render failed: #{e.class}: #{e.message}")
+        <<~HTML
+          <!doctype html>
+          <html><body style="font-family: system-ui, sans-serif; padding: 32px; color: #b91c1c;">
+            <h1>Template preview failed</h1>
+            <p>Couldn't render this MJML. Open <em>Edit</em> and check the source for syntax errors.</p>
+            <pre style="white-space: pre-wrap; color: #6b7280;">#{ERB::Util.html_escape(e.message)}</pre>
+          </body></html>
+        HTML
+      end
+
+    render html: html.html_safe, layout: false # rubocop:disable Rails/OutputSafety
+  end
+
+  private
+
+  def sample_body_markdown
+    <<~MD
+      ## Section heading
+
+      This is sample body content so you can see how the template chrome wraps a
+      campaign. The real campaign body goes here when this template is used.
+
+      - Lists render in the template's body font
+      - **Bold**, *italic*, and [links](https://example.com) get the chrome's typography
+
+      [Sample call to action →](https://example.com)
+    MD
+  end
+
+  def sample_custom_attributes
+    # Pull a real subscriber's custom_attributes shape if any exist; otherwise
+    # fall back to a tiny synthetic set so {{plan}} / {{subdomain}} placeholders
+    # in the template don't render blank.
+    sample = @email_template.team.subscribers.where.not(custom_attributes: {}).first
+    return sample.custom_attributes if sample
+    {"plan" => "growth", "subdomain" => "acme", "tenant_type" => "brand"}
+  end
+
+  public
 
   # GET /account/teams/:team_id/email_templates/new
   def new

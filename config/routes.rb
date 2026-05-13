@@ -140,7 +140,11 @@ Rails.application.routes.draw do
             post :translate, to: "segment_translations#create"
           end
         end
-        resources :email_templates
+        resources :email_templates do
+          member do
+            get :preview_frame
+          end
+        end
         resources :campaigns do
           member do
             post :send_now
