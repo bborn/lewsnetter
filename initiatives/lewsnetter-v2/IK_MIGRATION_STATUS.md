@@ -1,8 +1,60 @@
 # IK Migration Status (Task 4)
 
+## 2026-05-13: Gem approach dropped
+
+**Decision:** the `lewsnetter-rails` gem is dropped. IK no longer depends on
+it; the path-vendored copy in this repo (`vendor/gems/lewsnetter-rails/`) has
+been deleted along with its Gemfile entry. Lewsnetter and IK now communicate
+exclusively over the public HTTP API.
+
+**Why:**
+
+- **Path-vendoring was friction in IK CI.** IK's `Gemfile.lock` referenced
+  `../lewsnetter/vendor/gems/lewsnetter-rails`, which requires a sibling
+  checkout of this repo on every machine that runs `bundle install` --
+  including CI. The two real fixes (extract to a public repo / vendor into
+  IK's own `vendor/cache`) are both more work than the integration is worth
+  in its current shape.
+- **One publisher doesn't justify the package overhead.** IK is the only
+  consumer today. A versioned gem buys nothing over a thin service module
+  when there's a single caller; it just adds a release dance every time the
+  HTTP contract or attribute mapping shifts.
+- **Bruno's running the live backfill from a one-off rake task in
+  Lewsnetter** (pulls from Intercom directly), which doesn't need the gem
+  at all. That removes the only near-term operational pressure to keep the
+  gem alive.
+
+**Going forward:**
+
+- Lewsnetter exposes the same HTTP API documented in `PLAN.md`. IK will
+  call it either via a small service module (something like
+  `app/services/lewsnetter_client.rb` -- maybe 50 lines, `Net::HTTP` or
+  `Faraday`) **or** continue to rely on the one-off rake task in this
+  repo for backfills. No gem in between.
+- The **bulk API contract is stable and documented**:
+  - `POST /api/v1/teams/:team_id/subscribers/bulk`
+  - NDJSON body (one JSON object per line, `\n` separated)
+  - Each line is a **flat** subscriber hash (no `{subscriber: ...}`
+    envelope -- that bug surfaced in the dry-run; see [Gem fix](#gem-fix-bulk_upsert-payload-shape)
+    below for the post-mortem)
+  - Idempotent upsert by `external_id`
+  - Bearer-token auth via `Authorization: Bearer <Platform::AccessToken>`
+- **If/when a second app consumes Lewsnetter** (Wovenmade, etc.) we revisit
+  the gem decision. Extracting then -- with two real consumers -- gives us
+  a much cleaner API surface than guessing at it from one. Not now.
+
+**What this means for the rest of this doc:** everything below was written
+when the gem was the integration plan. It's preserved as a historical record
+of the dry-run, the discovered payload-shape bug, and the proposed rollback
+path. The "rollback plan" has effectively been executed. Treat anything
+below as **archived context**, not active guidance.
+
+---
+
 **Drafted:** 2026-05-12
 **Owner:** Bruno
-**Status:** DONE_WITH_CONCERNS -- gem installed in IK, dry-run verified
+**Status:** SUPERSEDED -- see top-of-file note dated 2026-05-13.
+Originally: DONE_WITH_CONCERNS -- gem installed in IK, dry-run verified
 end-to-end against live Lewsnetter. Full backfill awaiting Bruno's "go"
 (see [Full backfill command](#full-backfill-command-bruno-runs-when-ready)).
 

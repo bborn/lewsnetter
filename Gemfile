@@ -318,7 +318,4 @@ gem "commonmarker"
 # LLM agent framework (already proven in IK Kit refactor).
 gem "ruby_llm"
 
-# Push subscribers + events to Lewsnetter (vendored in-tree until extracted).
-gem "lewsnetter-rails", path: "vendor/gems/lewsnetter-rails"
-
 # 🚅 super scaffolding will insert new oauth providers above this line.

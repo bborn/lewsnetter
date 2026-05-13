@@ -34,8 +34,8 @@ shallow do
       resources :subscribers do
         collection do
           # Push-API bulk endpoints. NDJSON body, idempotent upsert by
-          # external_id. Source apps wire to these from the lewsnetter-rails
-          # gem (or any HTTP client) for backfills.
+          # external_id. Source apps wire to these from any HTTP client
+          # for backfills.
           post :bulk
           delete "by_external_id/:external_id" => "subscribers#destroy_by_external_id",
             as: :destroy_by_external_id, constraints: {external_id: %r{[^/]+}}
