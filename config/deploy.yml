@@ -27,14 +27,37 @@ servers:
       - 178.156.185.100
     cmd: bundle exec rake solid_queue:start
 
-# Cloudflare proxy is ON in front of this app (orange-cloud). For the
-# first deploy we keep things simple: kamal-proxy serves plain HTTP,
-# Cloudflare terminates TLS at the edge in "Flexible" SSL mode. Once
-# the deploy is healthy we'll install the Cloudflare Origin CA cert
-# (stashed in .kamal/secrets as ORIGIN_CERT / ORIGIN_KEY) and flip the
-# CF SSL mode to "Full (Strict)" for end-to-end encryption.
+# Cloudflare proxy is ON in front of this app (orange-cloud). We terminate
+# TLS at kamal-proxy using a Cloudflare Origin CA certificate (cert + key
+# stashed in .kamal/secrets as ORIGIN_CERT / ORIGIN_KEY) so the CF→origin
+# leg is also encrypted. With this in place Bruno flips CF SSL mode from
+# "Flexible" to "Full (Strict)" in the dashboard — see
+# initiatives/lewsnetter-v2/SSL_FULL_STRICT_VERIFICATION.md.
+#
+# Mechanism: Option A — Kamal 2's native `proxy.ssl.{certificate_pem,
+# private_key_pem}` keys (see Kamal::Configuration::Proxy#custom_ssl_certificate?
+# and Kamal::Cli::App::SslCertificates). Kamal reads the named secrets from
+# .kamal/secrets and, before each app boot, uploads them to the host TLS
+# directory and bind-mounts them into the kamal-proxy container as
+# /home/kamal-proxy/.apps-config/<service>/<role>/tls/{cert,key}.pem. No
+# host-side bind-mount hook needed.
+#
+# Note: the current Origin CA cert SANs are *.whinynil.co + whinynil.co +
+# lewsnetter.whinynil.co. The cert does NOT cover email.influencekit.com,
+# which lives in a different CF zone — kamal-proxy will present this cert
+# for that hostname too. Until a multi-zone Origin CA cert is minted (or
+# kamal-proxy gains per-host cert support), the influencekit.com zone
+# should stay on CF "Flexible"; only the whinynil.co zone is safe to flip
+# to "Full (Strict)". Tracked as a follow-up.
 proxy:
-  ssl: false
+  ssl:
+    certificate_pem: ORIGIN_CERT
+    private_key_pem: ORIGIN_KEY
+  # Don't force HTTP→HTTPS at the origin. Cloudflare already redirects to
+  # HTTPS at the edge, and during the CF "Flexible" → "Full (Strict)"
+  # transition the CF→origin leg may still be plain HTTP for a short
+  # window — letting both ports serve avoids a redirect loop.
+  ssl_redirect: false
   # Multi-host: kamal-proxy will accept requests for any of these hostnames
   # and route to the same Rails app. The primary host is for the platform
   # itself; additional hosts are tenant-branded unsubscribe subdomains
@@ -77,8 +100,11 @@ env:
     - RAILS_MASTER_KEY
     - LITESTREAM_REPLICA_ACCESS_KEY_ID
     - LITESTREAM_REPLICA_SECRET_ACCESS_KEY
-    - ORIGIN_CERT
-    - ORIGIN_KEY
+    # Note: ORIGIN_CERT / ORIGIN_KEY are NOT exposed to the app containers.
+    # They're consumed by the proxy block above via Kamal's native
+    # `proxy.ssl.{certificate_pem,private_key_pem}` mechanism, which reads
+    # them directly from .kamal/secrets and uploads to the host before
+    # bind-mounting into the kamal-proxy container.
 
 # Persistent storage for SQLite databases + Active Storage uploads.
 # Bind on the host: /var/lib/docker/volumes/lewsnetter_storage/_data
