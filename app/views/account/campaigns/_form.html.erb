@@ -94,10 +94,42 @@ select_classes = "block w-full rounded-md shadow-sm font-light text-base md:text
             leak). Underlying textarea name still campaign[body_markdown]
             so form submit picks up the latest value via EasyMDE's forceSync. %>
         <div class="mb-6">
-          <label class="block text-sm font-medium" for="campaign_body_markdown">Body</label>
-          <p class="text-xs text-gray-500 mb-1.5">
-            Write in markdown. The template (selected below) wraps your content with header + footer chrome.
-          </p>
+          <div class="flex items-start justify-between gap-3 mb-1.5">
+            <div>
+              <label class="block text-sm font-medium" for="campaign_body_markdown">Body</label>
+              <p class="text-xs text-gray-500">
+                Write in markdown. The template (selected below) wraps your content with header + footer chrome.
+              </p>
+            </div>
+
+            <%# Variable picker — fetches the team's available {{vars}} on
+                first open and splices the selected token into the markdown
+                editor at the current cursor via the editor's public
+                insertAtCursor() method. %>
+            <div class="relative shrink-0"
+                 data-controller="variable-picker"
+                 data-variable-picker-url-value="<%= account_team_variables_path(@team) %>"
+                 data-variable-picker-editor-selector-value="#campaign_body_markdown">
+              <button type="button"
+                      class="button-secondary text-xs"
+                      data-variable-picker-target="button"
+                      data-action="click->variable-picker#toggle">
+                Insert variable
+              </button>
+              <div data-variable-picker-target="panel"
+                   class="absolute right-0 z-20 mt-1 w-72 bg-white dark:bg-base-800 rounded-md shadow-lg border border-base-200 dark:border-base-700 hidden">
+                <div class="p-2 border-b border-base-200 dark:border-base-700">
+                  <input type="text"
+                         placeholder="Filter variables…"
+                         data-variable-picker-target="search"
+                         data-action="input->variable-picker#filter"
+                         class="block w-full rounded-md shadow-sm font-light dark:bg-base-900 dark:text-base-300 text-sm border-base-300 dark:border-base-900 focus:ring-primary-500 focus:border-primary-500" />
+                </div>
+                <ul data-variable-picker-target="list"
+                    class="max-h-72 overflow-auto py-1"></ul>
+              </div>
+            </div>
+          </div>
           <%= form.text_area :body_markdown,
                 id: "campaign_body_markdown",
                 class: "block w-full",

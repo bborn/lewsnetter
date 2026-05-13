@@ -81,4 +81,13 @@ export default class extends Controller {
   getValue() {
     return this.editor ? this.editor.value() : (this.hasTextareaTarget ? this.textareaTarget.value : this.element.value)
   }
+
+  // Public API — used by variable_picker_controller to splice a
+  // `{{variable}}` token in at the current selection/cursor position.
+  insertAtCursor(text) {
+    if (!this.editor) return
+    const cm = this.editor.codemirror
+    cm.replaceSelection(text)
+    cm.focus()
+  }
 }

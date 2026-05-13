@@ -18,6 +18,7 @@ import MarkdownEditorController from "./markdown_editor_controller"
 import AiDrafterController from "./ai_drafter_controller"
 import CampaignPreviewController from "./campaign_preview_controller"
 import SubscriberSearchController from "./subscriber_search_controller"
+import VariablePickerController from "./variable_picker_controller"
 
 const application = Application.start()
 
@@ -48,6 +49,7 @@ application.register('markdown-editor', MarkdownEditorController)
 application.register('ai-drafter', AiDrafterController)
 application.register('campaign-preview', CampaignPreviewController)
 application.register('subscriber-search', SubscriberSearchController)
+application.register('variable-picker', VariablePickerController)
 
 CableReady.initialize({ consumer })
 

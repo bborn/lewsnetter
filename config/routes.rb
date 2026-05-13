@@ -114,6 +114,11 @@ Rails.application.routes.draw do
           # 🚅 super scaffolding will insert new integration installations above this line.
         end
 
+        # Variables (built-ins + custom_attribute keys) available for
+        # campaign interpolation. Drives the "Insert variable" picker on
+        # the campaign edit form.
+        get :variables, to: "team_variables#index", as: :variables
+
         resources :subscribers do
           collection do
             # Typeahead JSON for the "Preview as" autocomplete on the campaign
