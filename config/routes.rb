@@ -137,7 +137,11 @@ Rails.application.routes.draw do
             post :test_send
             post :draft, to: "campaign_drafts#create"
             get :postmortem, to: "campaign_postmortems#show"
+            # GET serves the saved-state preview (used as an iframe `src` for
+            # backwards compat and direct linking). POST accepts in-memory
+            # form values so the editor can live-render without persisting.
             get :preview_frame
+            post :preview_frame
           end
         end
         resources :sender_addresses do

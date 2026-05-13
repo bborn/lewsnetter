@@ -106,6 +106,58 @@ class Account::CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Only draft or scheduled/, flash[:alert].to_s)
   end
 
+  # The campaign edit form's Audience + Settings sections rely on visible
+  # native <select> dropdowns for segment, sender, and template. The
+  # upstream super_select / select2 chain wasn't surfacing a visible widget
+  # on this page (Bruno 2026-05-12), so we render plain selects directly.
+  # If this regresses, the dropdowns disappear and the campaign becomes
+  # unauthorable — pin the markup.
+  test "edit page renders visible select dropdowns for segment, sender, and template" do
+    # Need a segment for segment_id options to exist; the others are pre-seeded
+    # in setup (sender_address, email_template).
+    @team.segments.create!(name: "Subscribed only", predicate: {})
+
+    get edit_account_campaign_url(@campaign)
+    assert_response :success
+
+    # Native <select> elements with the matching name attribute MUST be present.
+    assert_select 'select[name="campaign[segment_id]"]', 1
+    assert_select 'select[name="campaign[sender_address_id]"]', 1
+    assert_select 'select[name="campaign[email_template_id]"]', 1
+
+    # And only one "(optional)" suffix per label — no double-marker bug.
+    refute_match(/Segment\s*\(optional\).*\(optional\)/m, response.body)
+  end
+
+  test "preview_frame accepts POST with in-memory body and renders without saving" do
+    @template.update!(
+      mjml_body: <<~MJML
+        <mjml>
+          <mj-body>
+            <mj-section><mj-column><mj-text>TEMPLATE CHROME</mj-text></mj-column></mj-section>
+            {{body}}
+          </mj-body>
+        </mjml>
+      MJML
+    )
+    original_body = "## Original\n\nThis is what's persisted."
+    @campaign.update!(body_markdown: original_body, body_mjml: nil)
+
+    overridden_body = "## Live edit\n\nThis only exists in the editor."
+
+    post preview_frame_account_campaign_url(@campaign),
+      params: {body_markdown: overridden_body, subject: "Live subject", preheader: "Live preheader"},
+      as: :json
+
+    assert_response :success
+    # The render uses the override, not the persisted body.
+    assert_match(/Live edit/, response.body)
+    refute_match(/Original/, response.body)
+    # And the campaign is NOT persisted — verify by reload.
+    @campaign.reload
+    assert_equal original_body, @campaign.body_markdown
+  end
+
   test "preview_frame renders the campaign HTML inline" do
     @template.update!(
       mjml_body: <<~MJML

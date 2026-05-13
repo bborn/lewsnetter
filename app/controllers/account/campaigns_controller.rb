@@ -76,19 +76,33 @@ class Account::CampaignsController < Account::ApplicationController
     end
   end
 
-  # GET /account/campaigns/:id/preview_frame
+  # GET  /account/campaigns/:id/preview_frame
+  # POST /account/campaigns/:id/preview_frame
   #
   # Returns the rendered HTML preview of the campaign, suitable for embedding
-  # as the `src` of an iframe on the edit form. Bypasses chrome — this is just
-  # the email's HTML body. Uses the campaign's currently persisted body /
-  # template / subject, so the user clicks "Refresh preview" after saving.
-  # If the preview can't be rendered (bad MJML/markdown/template), serves a
-  # minimal HTML error page so the iframe shows the user *why* rather than
+  # in an iframe on the edit form.
+  #
+  # GET renders the *persisted* campaign state — that's what direct iframe
+  # `src` access loads on first paint and the legacy "Refresh preview" button
+  # depended on. POST accepts the *in-memory* form values from the editor
+  # (body_markdown, body_mjml, subject, preheader, email_template_id) and
+  # renders without saving, so authors see their changes live without
+  # round-tripping through update. Body is read as either JSON or
+  # form-encoded, so the live editor can post JSON directly.
+  #
+  # The render result is bare email HTML — the iframe owns chrome via
+  # `srcdoc` (POST) or its standard sandbox (GET). On any render failure we
+  # serve a minimal error page so the iframe shows the user *why* rather than
   # 500ing or going blank.
   def preview_frame
-    html = @campaign.preview_html
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
     response.headers["Content-Security-Policy"] = "frame-ancestors 'self'"
+
+    html = if request.post?
+      preview_html_for_in_memory_changes
+    else
+      @campaign.preview_html
+    end
 
     if html.present?
       render html: html.html_safe, layout: false, content_type: "text/html"
@@ -141,6 +155,67 @@ class Account::CampaignsController < Account::ApplicationController
   def process_params(strong_params)
     assign_date_and_time(strong_params, :scheduled_for)
     # 🚅 super scaffolding will insert processing for new fields above this line.
+  end
+
+  # Renders the campaign with the in-memory form values applied, without
+  # persisting anything. Uses the existing preview_html pipeline so the output
+  # matches what a real send would render.
+  def preview_html_for_in_memory_changes
+    overrides = preview_overrides_params
+
+    # We mutate attributes in-memory and call preview_html, then roll back so
+    # ActiveRecord stays clean. We deliberately do NOT `assign_attributes`
+    # email_template_id without reloading the association — Rails caches the
+    # belongs_to lookup until the FK changes, but to be safe we explicitly
+    # nil the loaded association before reading the new template.
+    original = {
+      body_markdown: @campaign.body_markdown,
+      body_mjml: @campaign.body_mjml,
+      subject: @campaign.subject,
+      preheader: @campaign.preheader,
+      email_template_id: @campaign.email_template_id
+    }
+
+    begin
+      @campaign.body_markdown = overrides[:body_markdown] if overrides.key?(:body_markdown)
+      @campaign.body_mjml = overrides[:body_mjml] if overrides.key?(:body_mjml)
+      @campaign.subject = overrides[:subject] if overrides.key?(:subject)
+      @campaign.preheader = overrides[:preheader] if overrides.key?(:preheader)
+      if overrides.key?(:email_template_id)
+        @campaign.email_template_id = overrides[:email_template_id].presence
+        @campaign.email_template = nil # bust the belongs_to cache
+      end
+
+      @campaign.preview_html
+    ensure
+      original.each { |k, v| @campaign.send("#{k}=", v) }
+      @campaign.email_template = nil # force fresh load on next access
+    end
+  end
+
+  # Reads preview overrides from JSON body (preferred by the live editor) or
+  # form-encoded params. Blank values pass through so callers can clear a
+  # field for the preview.
+  def preview_overrides_params
+    json_body = nil
+    if request.content_type.to_s.start_with?("application/json")
+      raw = request.raw_post
+      if raw.present?
+        json_body = begin
+          JSON.parse(raw)
+        rescue JSON::ParserError
+          nil
+        end
+      end
+    end
+
+    src = json_body.is_a?(Hash) ? json_body : params.to_unsafe_h
+
+    {}.tap do |h|
+      %w[body_markdown body_mjml subject preheader email_template_id].each do |key|
+        h[key.to_sym] = src[key].to_s if src.key?(key)
+      end
+    end
   end
 
   def preview_error_html

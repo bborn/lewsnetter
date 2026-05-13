@@ -11,6 +11,12 @@
 */
 @import "$ThemeStylesheet";
 
+/* EasyMDE — markdown editor on the campaign edit page. Shipped via yarn as
+   `easymde`; the CSS bundles its own toolbar icons and CodeMirror chrome.
+   We import here (rather than in JS) so postcss + purgecss see the rules
+   and leave them intact. */
+@import "easymde/dist/easymde.min.css";
+
 /* ✅ YOUR APPLICATION'S CSS */
 /* If you need to customize your application's CSS, this is the place to do it. This helps
    avoid merge conflicts in the future when Rails or Bullet Train update their own CSS.
