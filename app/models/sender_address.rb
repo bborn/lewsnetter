@@ -12,7 +12,8 @@ class SenderAddress < ApplicationRecord
 
   # 🚅 add scopes above.
 
-  validates :email, presence: true
+  validates :email, presence: true,
+                    format: {with: URI::MailTo::EMAIL_REGEXP, message: "must be a valid email address"}
   # 🚅 add validations above.
 
   # 🚅 add callbacks above.
