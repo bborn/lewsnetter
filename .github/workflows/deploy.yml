@@ -102,10 +102,29 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Kamal deploy
+      # Kamal 2 reads named secrets from .kamal/secrets, which is gitignored
+      # because it holds real credentials locally. Materialize it from GitHub
+      # secrets right before deploy. Format: each line is sourced as bash, so
+      # multi-line PEM values must be quoted heredoc-style or single-line.
+      - name: Write .kamal/secrets and deploy
         env:
           KAMAL_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
           LITESTREAM_REPLICA_ACCESS_KEY_ID: ${{ secrets.LITESTREAM_REPLICA_ACCESS_KEY_ID }}
           LITESTREAM_REPLICA_SECRET_ACCESS_KEY: ${{ secrets.LITESTREAM_REPLICA_SECRET_ACCESS_KEY }}
-        run: bundle exec kamal deploy
+          ORIGIN_CERT: ${{ secrets.ORIGIN_CERT }}
+          ORIGIN_KEY: ${{ secrets.ORIGIN_KEY }}
+        run: |
+          mkdir -p .kamal
+          umask 077
+          {
+            printf 'KAMAL_REGISTRY_PASSWORD=%q\n' "$KAMAL_REGISTRY_PASSWORD"
+            printf 'RAILS_MASTER_KEY=%q\n'         "$RAILS_MASTER_KEY"
+            printf 'LITESTREAM_REPLICA_ACCESS_KEY_ID=%q\n'     "$LITESTREAM_REPLICA_ACCESS_KEY_ID"
+            printf 'LITESTREAM_REPLICA_SECRET_ACCESS_KEY=%q\n' "$LITESTREAM_REPLICA_SECRET_ACCESS_KEY"
+            # Multi-line PEM values: use $'...' bash quoting so newlines survive.
+            printf 'ORIGIN_CERT=%q\n' "$ORIGIN_CERT"
+            printf 'ORIGIN_KEY=%q\n'  "$ORIGIN_KEY"
+          } > .kamal/secrets
+          chmod 600 .kamal/secrets
+          bundle exec kamal deploy
