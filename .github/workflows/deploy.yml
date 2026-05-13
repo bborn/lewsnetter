@@ -48,6 +48,17 @@ jobs:
           corepack enable
           yarn install --immutable
 
+      # Tests render real ERB; sprockets/propshaft needs assets precompiled.
+      - name: Precompile assets
+        env:
+          RAILS_ENV: test
+          SECRET_KEY_BASE: dummy-secret-key-base-for-tests-only
+        run: bundle exec rails assets:precompile
+
+      # mjml-rails dispatches the CLI; install matches Gemfile bound version.
+      - name: Install MJML CLI
+        run: npm install -g mjml@5.2.1
+
       - name: Prepare test database
         run: bundle exec rails db:test:prepare
 
