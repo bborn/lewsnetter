@@ -283,34 +283,43 @@ Expected wall-clock at scale: ~1-2 minutes per 10K users at `batch_size: 500`
 
 To disable the integration in IK without redeploying the gem:
 
-**Option A -- disable the initializer (preferred):**
+**Option A -- comment out `Lewsnetter.configure` (DO NOT USE):**
 
 ```ruby
 # config/initializers/lewsnetter.rb -- replace the body with:
 # Lewsnetter integration disabled. To re-enable, restore the original file.
 ```
 
-The User model has `if respond_to?(:acts_as_lewsnetter_subscriber)` guard,
-which evaluates **at class-load time**. Since the Railtie still includes
-the concern, this guard alone won't stop the after_commit hooks. The
-*real* kill switch is the next option.
+This **does not work** as a kill switch. The Railtie loads the
+`Lewsnetter::Subscriber` concern on boot, so `User.acts_as_lewsnetter_subscriber`
+still runs at class-load time and registers the `after_commit` callbacks.
+Every User create/update will still fire `sync_to_lewsnetter!`, which then
+calls the client -- which raises `ConfigurationError` because nothing was
+configured. With `async: true` that's a Sidekiq job per User touch, all
+failing and retrying. **Skip this option.** A built-in kill switch
+(`Lewsnetter.disabled!` no-op flag) is a future improvement -- see the
+[Future work](#future-work--known-follow-ups) section below; it does not
+exist yet.
 
-**Option B -- remove the gem from Gemfile (clean kill):**
+**Option B -- remove the gem from Gemfile (the clean rollback):**
 
 ```ruby
 # Gemfile -- comment out:
 # gem "lewsnetter-rails", path: "../lewsnetter/vendor/gems/lewsnetter-rails"
 ```
 
-Then `bundle install` + restart. The `respond_to?` guard in User makes the
-model load cleanly without the gem, so this is a one-line revert.
+Then `bundle install` + restart. The `respond_to?(:acts_as_lewsnetter_subscriber)`
+guard in `app/models/user.rb` makes the model load cleanly without the gem
+(the entire block is skipped), so no callbacks are registered, no jobs are
+enqueued, no failures. This is the **only** supported rollback path today.
+One-line revert + bundle + restart.
 
-**Option C -- flip async off + no-op the client:**
+**Option C -- flip async off + no-op the client (also not recommended):**
 
 In `config/initializers/lewsnetter.rb`, set `c.api_key = nil` (or an
-invalid value). The client raises `ConfigurationError` at request time and
-the sync jobs error out. **Not ideal** -- floods Sidekiq's retry queue with
-failures. Don't pick this unless A/B are unavailable.
+invalid value). Same Sidekiq-flood problem as Option A: the after_commit
+callbacks still fire and every job retries on `ConfigurationError`. Don't
+pick this; use Option B.
 
 ---
 
@@ -347,6 +356,30 @@ failures. Don't pick this unless A/B are unavailable.
    notify IK. If a User's email bounces, IK still thinks it's deliverable.
    Future work: add a `Lewsnetter::WebhookReceiver` mountable engine to
    call back into the host app on suppression events.
+
+---
+
+## Future work / known follow-ups
+
+Filed during the Task 4 code review. None are blockers; track + tackle later.
+
+- **Token rotation procedure.** Today the IK Platform::AccessToken has no
+  documented rotate-without-downtime path. Need a procedure that mints
+  token N+1, updates IK credentials, redeploys, then revokes token N.
+- **Truncate ApiError response bodies.** `Lewsnetter::Client#handle_response`
+  embeds the full server body in error messages, which can leak large
+  payloads into logs / Honeybadger on a 5xx with a verbose error page.
+  Truncate to ~1KB and add an ellipsis. Gem-level change.
+- **Debounce after_commit on Authlogic touches.** Authlogic updates
+  `last_request_at` on every authenticated request. With `async: true`
+  that's one `Lewsnetter::SyncJob` enqueued per request per user. Worth
+  comparing the previous + current payload and short-circuiting when only
+  `last_request_at` / `updated_at` changed. Bigger gem change -- requires
+  the subscriber concern to track dirty attributes against a content hash.
+- **Built-in kill switch.** Add `Lewsnetter.disabled!` (or a config flag)
+  that no-ops `sync_to_lewsnetter!` / `delete_from_lewsnetter!` at the
+  callback site instead of letting them reach the client. Would make
+  Option A in the Rollback plan a real option. Tiny gem change.
 
 ---
 

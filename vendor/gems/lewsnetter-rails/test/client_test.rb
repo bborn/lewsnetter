@@ -58,9 +58,12 @@ class ClientTest < Minitest::Test
   def test_bulk_upsert_sends_ndjson
     FakeNetHttp.next_response = FakeResponse.new("200", {"processed" => 2}.to_json)
 
+    # The bulk endpoint expects FLAT subscriber hashes per NDJSON line --
+    # no `{subscriber: ...}` envelope. That wrapper is only used by the
+    # single-upsert JSON endpoint (`POST /subscribers` with `params.require(:subscriber)`).
     rows = [
-      {subscriber: {external_id: "1", email: "a@x.com"}},
-      {subscriber: {external_id: "2", email: "b@x.com"}}
+      {external_id: "1", email: "a@x.com", name: "Alice"},
+      {external_id: "2", email: "b@x.com", name: "Bob"}
     ]
     result = Lewsnetter.client.bulk_upsert_subscribers(rows)
 
@@ -69,7 +72,10 @@ class ClientTest < Minitest::Test
     assert_equal "application/x-ndjson", req["Content-Type"]
     lines = req.body.split("\n")
     assert_equal 2, lines.length
-    assert_equal "1", JSON.parse(lines[0])["subscriber"]["external_id"]
+    parsed = JSON.parse(lines[0])
+    assert_equal "1", parsed["external_id"]
+    assert_equal "a@x.com", parsed["email"]
+    refute parsed.key?("subscriber"), "bulk NDJSON lines must not wrap in subscriber envelope"
     assert_equal 2, result["processed"]
   end
 
