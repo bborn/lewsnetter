@@ -292,6 +292,15 @@ gem "aws-sdk-sesv2", "~> 1.0"
 # SNS client for confirming subscription handshakes from tenant SNS topics.
 gem "aws-sdk-sns", "~> 1.0"
 
+# ActionMailer adapter for SES v2 — used for SYSTEM mail (password reset,
+# invitations, Devise notifications). Separate from the marketing send
+# pipeline, which talks SES directly through Ses::ClientFor. Today we reuse
+# Team #1's SES credentials for system mail (single-tenant alpha). When we
+# open Lewsnetter to other tenants, system mail SHOULD move to a dedicated
+# transactional provider (Postmark) so a tenant's SES misconfiguration can't
+# break account flows.
+gem "aws-actionmailer-ses", "~> 1.1"
+
 # Per-list subscription state + one-click unsubscribe + List-Unsubscribe headers + SES suppression sync.
 gem "mailkick"
 

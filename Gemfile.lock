@@ -107,6 +107,10 @@ GEM
       zeitwerk (>= 2.6.12)
     avo-icons (0.1.4)
       inline_svg
+    aws-actionmailer-ses (1.1.0)
+      actionmailer (>= 7.1.0)
+      aws-sdk-ses (~> 1, >= 1.50.0)
+      aws-sdk-sesv2 (~> 1, >= 1.34.0)
     aws-eventstream (1.4.0)
     aws-partitions (1.1246.0)
     aws-sdk-core (3.246.0)
@@ -123,6 +127,9 @@ GEM
     aws-sdk-s3 (1.221.0)
       aws-sdk-core (~> 3, >= 3.244.0)
       aws-sdk-kms (~> 1)
+      aws-sigv4 (~> 1.5)
+    aws-sdk-ses (1.97.0)
+      aws-sdk-core (~> 3, >= 3.244.0)
       aws-sigv4 (~> 1.5)
     aws-sdk-sesv2 (1.97.0)
       aws-sdk-core (~> 3, >= 3.244.0)
@@ -797,6 +804,7 @@ PLATFORMS
 DEPENDENCIES
   active_hash
   avo (>= 3.1.7)
+  aws-actionmailer-ses (~> 1.1)
   aws-sdk-s3
   aws-sdk-sesv2 (~> 1.0)
   aws-sdk-sns (~> 1.0)

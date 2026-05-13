@@ -4,7 +4,7 @@ en:
     owner: Unidentified Developer
     description: "You can update this description in `config/locales/en/application.en.yml`."
     keywords: lewsnetter seo keywords
-    support_email: change.me@localhost
+    support_email: system@influencekit.com
     key: lewsnetter
   webhooks/outgoing/endpoints:
     fields:

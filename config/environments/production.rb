@@ -122,7 +122,22 @@ Rails.application.configure do
   # instead, you should add yours after the comment toward the
   # end of this file. 🚫 ✌️
 
-  if ENV["POSTMARK_API_TOKEN"].present?
+  # System mail (password reset, invitations, Devise notifications) routed
+  # through AWS SES v2 using credentials in Rails.application.credentials.
+  # Single-tenant alpha: reuses Team #1's verified SES identity for
+  # influencekit.com. When opening to other tenants, swap this branch out
+  # for a dedicated transactional provider (Postmark) — letting tenants'
+  # SES configs gate their own account-flow emails is operationally fragile.
+  system_mail = Rails.application.credentials.system_mail
+  if system_mail.present? && system_mail[:access_key_id].present?
+    config.action_mailer.delivery_method = :ses_v2
+    config.action_mailer.ses_v2_settings = {
+      region: system_mail[:region] || "us-east-1",
+      access_key_id: system_mail[:access_key_id],
+      secret_access_key: system_mail[:secret_access_key]
+    }
+
+  elsif ENV["POSTMARK_API_TOKEN"].present?
     config.action_mailer.delivery_method = :postmark
     config.action_mailer.postmark_settings = {
       api_token: ENV["POSTMARK_API_TOKEN"]

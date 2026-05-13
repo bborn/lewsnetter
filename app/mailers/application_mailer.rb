@@ -1,6 +1,8 @@
 class ApplicationMailer < ActionMailer::Base
   include Mailers::Base
 
+  default from: -> { I18n.t("application.support_email") }
+
   # RFC 8058 one-click unsubscribe support. Mailers that send to a specific
   # Subscriber should `mail(to: subscriber.email, subscriber: subscriber, ...)`
   # — we'll pull the subscriber out of the headers and rewrite the
