@@ -15,6 +15,47 @@ class Account::EmailSendingControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Email Sending/i, @response.body)
   end
 
+  # Regression for B8 (deep QA 2026-05-13): the AWS field labels disappeared
+  # because the form's `team_ses_configuration` scope didn't resolve a
+  # `labels_for` lookup under the `email_sending.fields.*` locale namespace.
+  # Pin explicit labels for every input so the form isn't a wall of bare
+  # textboxes.
+  test "show renders explicit labels for every AWS field" do
+    get account_team_email_sending_path(@team)
+    assert_response :success
+
+    expected_labels = [
+      "AWS Access Key ID",
+      "AWS Secret Access Key",
+      "AWS Region",
+      "SES Configuration Set",
+      "SNS Bounce Topic ARN",
+      "SNS Complaint Topic ARN",
+      "Unsubscribe Host"
+    ]
+
+    expected_labels.each do |label|
+      assert_match Regexp.new(Regexp.escape(label)), @response.body,
+        "Expected '#{label}' label to render in the email_sending form."
+    end
+  end
+
+  test "update accepts configuration_set_name" do
+    stub_verifier_result(status: "verified", sandbox: false, quota_max: 50_000, quota_sent: 100)
+
+    patch account_team_email_sending_path(@team), params: {
+      team_ses_configuration: {
+        encrypted_access_key_id: "AKIANEW",
+        encrypted_secret_access_key: "secretnew",
+        region: "us-west-2",
+        configuration_set_name: "my-custom-set"
+      }
+    }
+
+    config = @team.reload.ses_configuration
+    assert_equal "my-custom-set", config.configuration_set_name
+  end
+
   test "update saves credentials and triggers verification" do
     stub_verifier_result(status: "verified", sandbox: false, quota_max: 50_000, quota_sent: 100)
 

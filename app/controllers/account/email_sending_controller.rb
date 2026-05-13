@@ -113,6 +113,7 @@ class Account::EmailSendingController < Account::ApplicationController
       :encrypted_access_key_id,
       :encrypted_secret_access_key,
       :region,
+      :configuration_set_name,
       :sns_bounce_topic_arn,
       :sns_complaint_topic_arn,
       :unsubscribe_host

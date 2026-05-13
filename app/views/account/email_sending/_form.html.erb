@@ -10,7 +10,12 @@
       <%= render 'account/shared/forms/errors', form: form %>
 
       <% with_field_settings form: form do %>
-        <%# Once a key is saved we mask it: the input renders empty with a
+        <%# B8: pass explicit `other_options[:label]` for every AWS field so
+            the form actually shows "AWS Access Key ID", "AWS Region", etc.
+            Without these, `labels_for(form, :method)` returned nil under the
+            `team_ses_configuration` scope and the fields rendered as bare
+            inputs decorated only with "*" / "(optional)" — unusable.
+            Once a key is saved we mask it: the input renders empty with a
             masked placeholder so neither the encrypted ciphertext nor the
             decrypted cleartext leaks into the DOM. Submitting blank keeps
             the saved value (see controller's ses_configuration_params). %>
@@ -20,16 +25,26 @@
                      value: ses_configuration.configured? ? "" : ses_configuration.encrypted_access_key_id,
                      placeholder: ses_configuration.configured? ? "•••• #{ses_configuration.access_key_id_last_four} (leave blank to keep)" : "AKIA…",
                      autocomplete: "off"
-                   } %>
+                   },
+                   other_options: {label: "AWS Access Key ID"} %>
         <%= render 'shared/fields/password_field',
                    method: :encrypted_secret_access_key,
                    options: {
                      placeholder: ses_configuration.configured? ? "•••• (leave blank to keep)" : "AWS secret key",
                      autocomplete: "off"
-                   } %>
+                   },
+                   other_options: {label: "AWS Secret Access Key"} %>
         <%= render 'shared/fields/text_field',
                    method: :region,
-                   options: {placeholder: "us-east-1"} %>
+                   options: {placeholder: "us-east-1"},
+                   other_options: {label: "AWS Region"} %>
+        <%= render 'shared/fields/text_field',
+                   method: :configuration_set_name,
+                   options: {placeholder: "lewsnetter-default"},
+                   other_options: {
+                     label: "SES Configuration Set",
+                     help: "Required for bounce/complaint event tracking. Defaults to the shared lewsnetter-default set."
+                   } %>
       <% end %>
 
       <h3 class="text-lg font-bold mt-6 mb-2"><%= t('email_sending.show.sections.sns.header') %></h3>
@@ -41,10 +56,12 @@
       <% with_field_settings form: form do %>
         <%= render 'shared/fields/text_field',
                    method: :sns_bounce_topic_arn,
-                   options: {placeholder: "arn:aws:sns:us-east-1:…:bounce"} %>
+                   options: {placeholder: "arn:aws:sns:us-east-1:…:bounce"},
+                   other_options: {label: "SNS Bounce Topic ARN"} %>
         <%= render 'shared/fields/text_field',
                    method: :sns_complaint_topic_arn,
-                   options: {placeholder: "arn:aws:sns:us-east-1:…:complaint"} %>
+                   options: {placeholder: "arn:aws:sns:us-east-1:…:complaint"},
+                   other_options: {label: "SNS Complaint Topic ARN"} %>
       <% end %>
 
       <h3 class="text-lg font-bold mt-6 mb-2"><%= t('email_sending.show.sections.unsubscribe.header') %></h3>
@@ -55,7 +72,8 @@
       <% with_field_settings form: form do %>
         <%= render 'shared/fields/text_field',
                    method: :unsubscribe_host,
-                   options: {placeholder: "email.example.com"} %>
+                   options: {placeholder: "email.example.com"},
+                   other_options: {label: "Unsubscribe Host"} %>
       <% end %>
 
       <div class="buttons mt-4">
