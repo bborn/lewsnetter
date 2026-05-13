@@ -114,11 +114,14 @@ COPY --from=build /rails /rails
 # on /rails/bin/docker-entrypoint when first deploying via GH Actions). Run
 # chmod here AND log the resulting permissions so future regressions are
 # obvious in the build log.
-RUN chmod 0755 /rails/bin/docker-entrypoint /rails/bin/rails /rails/bin/rake && \
-    ls -la /rails/bin/docker-entrypoint /rails/bin/rails /rails/bin/rake && \
-    echo "--- /rails contents:" && ls -la /rails && \
-    echo "--- /rails/config:" && ls -la /rails/config | head -20 && \
-    echo "--- /rails/config/boot.rb test:" && cat /rails/config/boot.rb
+# Files copied from the build stage land as mode 600 (root-only) when the
+# CI runner's checkout used a restrictive umask (observed on ubuntu-latest
+# GH Actions; local kamal deploys from a developer machine didn't hit it
+# because umask 022 there yields 644). Make everything world-readable +
+# directories world-traversable, then re-apply +x to bin/.
+RUN find /rails -type d -exec chmod 0755 {} + && \
+    find /rails -type f -exec chmod 0644 {} + && \
+    chmod 0755 /rails/bin/*
 
 # Place litestream config at the canonical path.
 COPY litestream.yml /etc/litestream.yml
