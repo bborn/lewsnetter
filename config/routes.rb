@@ -65,6 +65,17 @@ Rails.application.routes.draw do
     # 🚅 super scaffolding will insert new api versions above this line.
   end
 
+  # Friendlier-than-404 redirect for bare shallow paths. BulletTrain's shallow
+  # routes only mount `/account/:resource/:id` (show/edit/destroy) and the
+  # bare `/account/:resource` lives under a team scope. We send users to
+  # /account so they can pick a team rather than face a hard 404. No UI in
+  # the app links here today; this is for hand-typed URLs and stale bookmarks.
+  get "/account/campaigns", to: redirect("/account")
+  get "/account/segments", to: redirect("/account")
+  get "/account/subscribers", to: redirect("/account")
+  get "/account/email_templates", to: redirect("/account")
+  get "/account/sender_addresses", to: redirect("/account")
+
   namespace :account do
     shallow do
       # The account root `/` path is routed to `Account::Dashboard#index` by default. You can set it

@@ -25,7 +25,10 @@ class Account::EmailSendingControllerTest < ActionDispatch::IntegrationTest
         region: "us-west-2"
       }
     }
-    assert_redirected_to account_team_email_sending_path(@team)
+    # Verified credentials redirect with `show_identities=1` so the show
+    # action surfaces the Verified Identities panel without a second
+    # network round-trip on cold loads.
+    assert_redirected_to account_team_email_sending_path(@team, show_identities: 1)
 
     config = @team.reload.ses_configuration
     assert_equal "AKIANEW", config.encrypted_access_key_id
@@ -45,7 +48,8 @@ class Account::EmailSendingControllerTest < ActionDispatch::IntegrationTest
     stub_verifier_result(status: "verified", sandbox: true, quota_max: 200, quota_sent: 0)
 
     post account_team_verify_email_sending_path(@team)
-    assert_redirected_to account_team_email_sending_path(@team)
+    # On verified status, redirect with show_identities=1 (see controller).
+    assert_redirected_to account_team_email_sending_path(@team, show_identities: 1)
 
     config = @team.reload.ses_configuration
     assert_equal "verified", config.status

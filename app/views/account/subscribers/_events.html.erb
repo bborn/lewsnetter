@@ -1,0 +1,55 @@
+<%# Renders the most recent 20 events for a subscriber. Each row shows
+    timestamp, name, and a peek at the JSON properties. %>
+<%= render 'account/shared/box', divider: true do |box| %>
+  <% box.title "Recent events" %>
+  <% box.description do %>
+    The 20 most recent behavioral events recorded for this subscriber.
+    Used by Segments to target campaign sends.
+  <% end %>
+
+  <% box.table do %>
+    <% if events.any? %>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Occurred</th>
+            <th>Name</th>
+            <th>Properties</th>
+            <th class="text-right"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% events.each do |event| %>
+            <tr>
+              <td class="whitespace-nowrap"><%= l(event.occurred_at, format: :short) if event.occurred_at %></td>
+              <td class="font-mono"><%= event.name %></td>
+              <td>
+                <% if event.properties.present? %>
+                  <code class="text-xs text-base-600 dark:text-base-300">
+                    <%= event.properties.to_json.truncate(120) %>
+                  </code>
+                <% else %>
+                  <span class="text-base-400">—</span>
+                <% end %>
+              </td>
+              <td class="text-right">
+                <%= link_to "View", [:account, event], class: "button-secondary button-smaller" if can?(:read, event) %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% else %>
+      <p class="text-sm text-base-500">No events recorded yet for this subscriber.</p>
+    <% end %>
+  <% end %>
+
+  <% box.actions do %>
+    <% if can?(:create, Event.new(subscriber: subscriber, team: subscriber.team)) %>
+      <%= link_to "Add event", new_account_subscriber_event_path(subscriber), class: first_button_primary %>
+    <% end %>
+    <% if events.any? && can?(:read, Event) %>
+      <%= link_to "View all", [:account, subscriber, :events], class: "button-secondary" %>
+    <% end %>
+  <% end %>
+<% end %>

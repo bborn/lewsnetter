@@ -23,6 +23,12 @@ class Account::EmailSendingController < Account::ApplicationController
   def show
     authorize! :read, @ses_configuration
     @verifier_result = nil
+    # If we just came back from a successful `verify` redirect, surface the
+    # identities panel by re-running the verifier. We avoid this on cold loads
+    # to keep the page snappy (list_email_identities is a network round-trip).
+    if @ses_configuration.verified? && params[:show_identities].present?
+      @verifier_result = Ses::Verifier.new(team: @team).call
+    end
   end
 
   # PATCH /account/teams/:team_id/email_sending
@@ -34,8 +40,12 @@ class Account::EmailSendingController < Account::ApplicationController
       if creds_changed?
         @verifier_result = Ses::Verifier.new(team: @team).call
         write_verifier_result(@verifier_result)
-        redirect_to [:account, @team, :email_sending],
-          notice: verification_notice(@verifier_result)
+        target = if @verifier_result.status == "verified"
+          url_for([:account, @team, :email_sending, show_identities: 1])
+        else
+          url_for([:account, @team, :email_sending])
+        end
+        redirect_to target, notice: verification_notice(@verifier_result)
       else
         redirect_to [:account, @team, :email_sending],
           notice: I18n.t("email_sending.notifications.updated")
@@ -52,8 +62,15 @@ class Account::EmailSendingController < Account::ApplicationController
     @verifier_result = Ses::Verifier.new(team: @team).call
     write_verifier_result(@verifier_result)
 
-    redirect_to [:account, @team, :email_sending],
-      notice: verification_notice(@verifier_result)
+    # On success: redirect with `show_identities=1` so the show action
+    # re-fetches the identities list and renders the panel. On failure we
+    # skip the identities re-fetch since SES wouldn't return any anyway.
+    target = if @verifier_result.status == "verified"
+      url_for([:account, @team, :email_sending, show_identities: 1])
+    else
+      url_for([:account, @team, :email_sending])
+    end
+    redirect_to target, notice: verification_notice(@verifier_result)
   end
 
   # POST /account/teams/:team_id/email_sending/import_identity
@@ -92,7 +109,7 @@ class Account::EmailSendingController < Account::ApplicationController
   end
 
   def ses_configuration_params
-    params.require(:team_ses_configuration).permit(
+    permitted = params.require(:team_ses_configuration).permit(
       :encrypted_access_key_id,
       :encrypted_secret_access_key,
       :region,
@@ -100,6 +117,12 @@ class Account::EmailSendingController < Account::ApplicationController
       :sns_complaint_topic_arn,
       :unsubscribe_host
     )
+    # Blank credential fields mean "keep the existing value" — the form hides
+    # the saved key behind a masked placeholder so an empty submit shouldn't
+    # null out the stored credentials.
+    permitted.delete(:encrypted_access_key_id) if permitted[:encrypted_access_key_id].blank?
+    permitted.delete(:encrypted_secret_access_key) if permitted[:encrypted_secret_access_key].blank?
+    permitted
   end
 
   def creds_changed?

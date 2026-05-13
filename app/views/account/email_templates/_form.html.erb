@@ -6,7 +6,8 @@
 
     <% with_field_settings form: form do %>
       <%= render 'shared/fields/text_field', method: :name, options: {autofocus: true} %>
-      <%= render 'shared/fields/text_area', method: :mjml_body %>
+      <%= render 'shared/fields/text_area', method: :mjml_body,
+                 options: {rows: 20, class: "font-mono text-xs", placeholder: "<mjml>\n  <mj-body>\n    <mj-section>\n      <mj-column>\n        <mj-text>Hello {{first_name}}!</mj-text>\n      </mj-column>\n    </mj-section>\n  </mj-body>\n</mjml>"} %>
       <%# 🚅 super scaffolding will insert new fields above this line. %>
     <% end %>
 

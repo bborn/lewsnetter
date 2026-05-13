@@ -2,6 +2,11 @@ en:
   teams:
     fields:
       _:
+        # Override BulletTrain's "Your Team Name" label + add a placeholder hint
+        # that disappears on focus.
+      name:
+        label: Team Name
+        placeholder: What's your company or project called?
       # 🚅 super scaffolding will insert new fields above this line.
   activerecord:
     attributes:

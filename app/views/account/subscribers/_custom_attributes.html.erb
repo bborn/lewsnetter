@@ -1,0 +1,25 @@
+<%# Renders the subscriber's `custom_attributes` jsonb as a definition list.
+    Skips entirely if the hash is empty (every key blank). %>
+<% return if custom_attrs.blank? %>
+
+<%= render 'account/shared/box', divider: true do |box| %>
+  <% box.title "Custom attributes" %>
+  <% box.description "Per-subscriber data carried over from your CSV import or API events. Available in MJML templates as {{key}}." %>
+
+  <% box.body do %>
+    <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+      <% custom_attrs.each do |key, value| %>
+        <div>
+          <dt class="text-base-500 font-medium"><%= key.to_s.humanize %></dt>
+          <dd class="text-base-900 dark:text-base-100 font-mono break-words">
+            <% if value.is_a?(Hash) || value.is_a?(Array) %>
+              <pre class="text-xs whitespace-pre-wrap"><%= JSON.pretty_generate(value) %></pre>
+            <% else %>
+              <%= value.to_s %>
+            <% end %>
+          </dd>
+        </div>
+      <% end %>
+    </dl>
+  <% end %>
+<% end %>

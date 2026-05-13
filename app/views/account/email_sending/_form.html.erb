@@ -10,9 +10,14 @@
       <%= render 'account/shared/forms/errors', form: form %>
 
       <% with_field_settings form: form do %>
+        <%# Once a key is saved we mask it: the input renders empty with a
+            masked placeholder so neither the encrypted ciphertext nor the
+            decrypted cleartext leaks into the DOM. Submitting blank keeps
+            the saved value (see controller's ses_configuration_params). %>
         <%= render 'shared/fields/text_field',
                    method: :encrypted_access_key_id,
                    options: {
+                     value: ses_configuration.configured? ? "" : ses_configuration.encrypted_access_key_id,
                      placeholder: ses_configuration.configured? ? "•••• #{ses_configuration.access_key_id_last_four} (leave blank to keep)" : "AKIA…",
                      autocomplete: "off"
                    } %>

@@ -8,7 +8,9 @@
       <%= render 'shared/fields/text_field', method: :external_id, options: {autofocus: true} %>
       <%= render 'shared/fields/email_field', method: :email %>
       <%= render 'shared/fields/text_field', method: :name %>
-      <%= render 'shared/fields/options', method: :subscribed %>
+      <%# Single checkbox instead of Yes/No radios — reads more naturally for a
+          boolean opt-in state, and matches the conventional newsletter UX. %>
+      <%= render 'shared/fields/checkbox', method: :subscribed %>
       <%# 🚅 super scaffolding will insert new fields above this line. %>
     <% end %>
 

@@ -1,10 +1,17 @@
+<%
+  page_title = @subscriber.email.presence || @subscriber.name.presence || @subscriber.external_id.presence || "Subscriber ##{@subscriber.id}"
+  page_subtitle = @subscriber.name.presence if @subscriber.email.present?
+  custom_attrs = (@subscriber.custom_attributes || {}).reject { |_, v| v.blank? }
+  recent_events = @subscriber.events.order(occurred_at: :desc).limit(20)
+%>
 <%= render 'account/shared/page' do |page| %>
-  <% page.title t('.section') %>
+  <% page.title page_title %>
   <% page.body do %>
     <%= cable_ready_updates_for @subscriber do %>
       <%= render 'account/shared/box', divider: true do |box| %>
         <% box.title t('.header') %>
         <% box.description do %>
+          <% if page_subtitle %><span class="text-base-500"><%= page_subtitle %></span><br><% end %>
           <%= t('.description') %>
           <%= t('.manage_description') if can? :manage, @subscriber %>
         <% end %>
@@ -31,6 +38,10 @@
         <% end %>
       <% end %>
     <% end %>
+
+    <%= render 'account/subscribers/custom_attributes', subscriber: @subscriber, custom_attrs: custom_attrs %>
+
+    <%= render 'account/subscribers/events', subscriber: @subscriber, events: recent_events %>
 
     <%# 🚅 super scaffolding will insert new children above this line. %>
   <% end %>

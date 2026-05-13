@@ -1,3 +1,9 @@
+<%
+  recipient_count = @campaign.recipient_count
+  audience_label = @campaign.segment.present? ? "matching segment \"#{@campaign.segment.name}\"" : "Everyone subscribed"
+  preview_html = @campaign.preview_html
+  preview_subscriber = @campaign.team.subscribers.subscribed.order(:id).first
+%>
 <%= render 'account/shared/page' do |page| %>
   <% page.title t('.section') %>
   <% page.body do %>
@@ -27,7 +33,8 @@
           <%= link_to t('.buttons.edit'), [:edit, :account, @campaign], class: first_button_primary if can? :edit, @campaign %>
           <% if @campaign.draft? && can?(:update, @campaign) %>
             <%= button_to "Send test to me", test_send_account_campaign_path(@campaign), method: :post, class: first_button_primary, form: { data: { turbo: false } }, data: { turbo_confirm: "Send a test of \"#{@campaign.subject}\" to #{current_user.email}?" } %>
-            <%= button_to "Send now", send_now_account_campaign_path(@campaign), method: :post, class: first_button_primary, data: { turbo_confirm: "Send this campaign to all subscribed team subscribers?" } %>
+            <% confirm_count = recipient_count || "all subscribed team" %>
+            <%= button_to "Send now", send_now_account_campaign_path(@campaign), method: :post, class: first_button_primary, data: { turbo_confirm: "About to send to #{confirm_count} recipients. Cannot be undone. Continue?" } %>
           <% end %>
           <%# 🚅 super scaffolding will insert new action model buttons above this line. %>
           <%= button_to t('.buttons.destroy'), [:account, @campaign], method: :delete, class: first_button_primary, data: { turbo_confirm: t('.buttons.confirmations.destroy', model_locales(@campaign)) } if can? :destroy, @campaign %>
@@ -36,6 +43,72 @@
 
         <% box.raw_footer do %>
           <%# 🚅 super scaffolding will insert new action model index views above this line. %>
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <%= render 'account/shared/box', divider: true do |box| %>
+      <% box.title "Recipients" %>
+      <% box.description do %>
+        Who this campaign will be sent to. Sender filter: only subscribed
+        subscribers (unsubscribed, bounced, and complained subscribers are
+        always skipped).
+      <% end %>
+
+      <% box.body do %>
+        <% if recipient_count.nil? %>
+          <p class="text-sm text-amber-700 dark:text-amber-300">
+            Could not compute recipient count — the segment's predicate is
+            invalid. Edit the segment to fix.
+          </p>
+        <% else %>
+          <p class="text-sm">
+            <strong class="text-lg"><%= recipient_count %></strong>
+            recipient<%= "s" unless recipient_count == 1 %> —
+            <span class="text-base-500"><%= audience_label %>.</span>
+          </p>
+          <% if @campaign.draft? %>
+            <p class="text-xs text-base-500 mt-2">
+              About to send to <strong><%= recipient_count %></strong>
+              recipient<%= "s" unless recipient_count == 1 %>. Cannot be undone.
+            </p>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <%= render 'account/shared/box', divider: true do |box| %>
+      <% box.title "Preview" %>
+      <% box.description do %>
+        <% if preview_subscriber %>
+          Rendered with variables substituted from
+          <strong><%= preview_subscriber.email %></strong>
+          — the first subscribed subscriber on the team.
+        <% else %>
+          Add at least one subscribed subscriber to enable the preview.
+        <% end %>
+      <% end %>
+
+      <% box.body do %>
+        <% if preview_html.present? %>
+          <div class="border rounded-md overflow-hidden bg-white dark:bg-base-900">
+            <iframe srcdoc="<%= ERB::Util.html_escape(preview_html) %>"
+                    class="w-full"
+                    style="height: 600px; border: 0;"
+                    sandbox="allow-same-origin"
+                    title="Campaign preview"></iframe>
+          </div>
+        <% elsif preview_subscriber.nil? %>
+          <p class="text-sm text-base-500">
+            No subscribed subscribers yet — preview will appear here once you
+            add an audience.
+          </p>
+        <% else %>
+          <p class="text-sm text-amber-700 dark:text-amber-300">
+            Preview could not be rendered — either the campaign has no body
+            and no email template, or the MJML failed to compile. Edit the
+            campaign to fix.
+          </p>
         <% end %>
       <% end %>
     <% end %>
