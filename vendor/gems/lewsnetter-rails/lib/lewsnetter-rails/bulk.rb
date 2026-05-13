@@ -6,7 +6,10 @@ module Lewsnetter
       totals = {"processed" => 0, "created" => 0, "updated" => 0, "errors" => []}
 
       each_batch(scope, batch_size) do |batch|
-        rows = batch.map { |record| {subscriber: record.lewsnetter_payload} }
+        # The bulk endpoint expects one flat subscriber hash per NDJSON line
+        # (no `subscriber:` envelope -- that wrapper is only used by the
+        # single-upsert endpoint which goes through `params.require(:subscriber)`).
+        rows = batch.map { |record| record.lewsnetter_payload }
         result = Lewsnetter.client.bulk_upsert_subscribers(rows)
         merge_bulk_result!(totals, result)
       end
