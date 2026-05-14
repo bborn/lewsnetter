@@ -67,6 +67,11 @@ class Segment < ApplicationRecord
       raise InvalidPredicate, "Segment #{id} has invalid predicate: #{validation_errors.join(", ")}"
     end
 
+    # Auto-join companies when the predicate references the companies table
+    # (or its JSON custom_attributes). We can't reach company-level columns
+    # without a JOIN, and asking the AI translator (or a hand author) to spell
+    # out joins is fragile, so the segment layer handles it.
+    scope = scope.joins(:company) if pred.match?(/\bcompanies\./i)
     scope.where(pred)
   end
 
@@ -83,6 +88,7 @@ class Segment < ApplicationRecord
 
     predicate.scan(/\b([a-zA-Z_][a-zA-Z0-9_]*)\.([a-zA-Z_][a-zA-Z0-9_]*)/) do |left, _right|
       next if left.casecmp("subscribers").zero?
+      next if left.casecmp("companies").zero?
       errors << "Predicate references disallowed table: #{left}"
     end
 

@@ -34,8 +34,15 @@ module AI
     # Columns on `subscribers` that we allow the LLM to reference directly.
     ALLOWED_COLUMNS = %w[
       id team_id external_id email name subscribed
-      unsubscribed_at complained_at bounced_at
+      unsubscribed_at complained_at bounced_at company_id
       custom_attributes created_at updated_at
+    ].freeze
+
+    # Columns on `companies` that we allow the LLM to reference. Predicates
+    # touching these auto-join via Segment#applies_to.
+    ALLOWED_COMPANY_COLUMNS = %w[
+      id team_id name external_id intercom_id custom_attributes
+      created_at updated_at
     ].freeze
 
     MAX_SAMPLE = 5
@@ -87,6 +94,20 @@ module AI
         Observed custom_attributes keys + types for this team:
         #{custom_attribute_schema(@team).map { |k, t| "  - #{k} (#{t})" }.join("\n").presence || "  (none yet)"}
 
+        Subscribers may also belong to a `companies` row via `company_id`. When
+        a description filters on company-level attributes (e.g. "agency
+        accounts", "brand companies with tabs enabled"), reference the
+        `companies` table with the dotted form `companies.<column>`. Available
+        columns on companies:
+
+        #{ALLOWED_COMPANY_COLUMNS.join(", ")}
+
+        `companies.custom_attributes` is also a JSON column — use
+        `json_extract(companies.custom_attributes, '$.tenant_type') = 'brand'`
+        for company-level custom attribute filtering. The segment layer will
+        auto-join the companies table when it sees `companies.` in the
+        predicate, so do NOT write JOIN clauses or subqueries yourself.
+
         Observed event names (for context — do NOT join the events table; if the
         user asks about events, decline politely and suggest filtering on
         custom_attributes instead):
@@ -94,9 +115,10 @@ module AI
 
         Constraints:
         - Output a single SQL fragment safe to drop into `Subscriber.where(...)`.
-        - Reference ONLY the `subscribers` columns listed above.
+        - Reference ONLY the `subscribers` columns or `companies.<col>` listed above.
         - No semicolons, no comments, no statements (only a WHERE predicate body).
         - No DROP / DELETE / INSERT / UPDATE / TRUNCATE / ALTER / GRANT.
+        - No JOIN clauses — reference `companies.<col>` and the system will join.
         - No subqueries against other tables.
 
         Respond as JSON only, with no surrounding prose:
@@ -126,6 +148,7 @@ module AI
       # is suspicious.
       predicate.scan(/\b([a-zA-Z_][a-zA-Z0-9_]*)\.([a-zA-Z_][a-zA-Z0-9_]*)/) do |left, _right|
         next if left.casecmp("subscribers").zero?
+        next if left.casecmp("companies").zero?
         errors << "Predicate references disallowed table: #{left}"
       end
 
@@ -133,7 +156,9 @@ module AI
     end
 
     def build_result(sql_predicate:, human_description:)
-      scope = @team.subscribers.where(sql_predicate)
+      scope = @team.subscribers
+      scope = scope.joins(:company) if sql_predicate.match?(/\bcompanies\./i)
+      scope = scope.where(sql_predicate)
       samples = scope.limit(MAX_SAMPLE).to_a
       count = scope.count
       Result.new(

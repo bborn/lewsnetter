@@ -7,6 +7,7 @@ class Team < ApplicationRecord
   # 🚅 add belongs_to associations above.
 
   has_many :subscribers, dependent: :destroy
+  has_many :companies, dependent: :destroy
   has_many :events, dependent: :destroy
   has_many :segments, dependent: :destroy
   has_many :email_templates, dependent: :destroy

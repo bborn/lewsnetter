@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_13_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_13_130100) do
   create_table "account_onboarding_invitation_lists", force: :cascade do |t|
     t.integer "team_id", null: false
     t.json "invitations"
@@ -103,6 +103,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_13_120000) do
     t.index ["team_id", "scheduled_for"], name: "index_campaigns_on_team_id_and_scheduled_for"
     t.index ["team_id", "status"], name: "index_campaigns_on_team_id_and_status"
     t.index ["team_id"], name: "index_campaigns_on_team_id"
+  end
+
+  create_table "companies", force: :cascade do |t|
+    t.integer "team_id", null: false
+    t.string "name", null: false
+    t.string "external_id"
+    t.string "intercom_id"
+    t.json "custom_attributes", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["team_id", "external_id"], name: "index_companies_on_team_id_and_external_id", unique: true, where: "external_id IS NOT NULL"
+    t.index ["team_id", "intercom_id"], name: "index_companies_on_team_id_and_intercom_id", unique: true, where: "intercom_id IS NOT NULL"
+    t.index ["team_id"], name: "index_companies_on_team_id"
   end
 
   create_table "email_templates", force: :cascade do |t|
@@ -319,6 +332,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_13_120000) do
     t.datetime "bounced_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "company_id"
+    t.index ["company_id"], name: "index_subscribers_on_company_id"
     t.index ["team_id", "email"], name: "index_subscribers_on_team_id_and_email"
     t.index ["team_id", "external_id"], name: "index_subscribers_on_team_id_and_external_id", unique: true, where: "external_id IS NOT NULL"
     t.index ["team_id", "subscribed"], name: "index_subscribers_on_team_id_and_subscribed"
@@ -493,6 +508,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_13_120000) do
   add_foreign_key "campaigns", "segments"
   add_foreign_key "campaigns", "sender_addresses"
   add_foreign_key "campaigns", "teams"
+  add_foreign_key "companies", "teams"
   add_foreign_key "email_templates", "teams"
   add_foreign_key "events", "subscribers"
   add_foreign_key "events", "teams"
@@ -515,6 +531,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_13_120000) do
   add_foreign_key "scaffolding_completely_concrete_tangible_things_assignments", "scaffolding_completely_concrete_tangible_things", column: "tangible_thing_id"
   add_foreign_key "segments", "teams"
   add_foreign_key "sender_addresses", "teams"
+  add_foreign_key "subscribers", "companies"
   add_foreign_key "subscribers", "teams"
   add_foreign_key "subscribers_imports", "teams"
   add_foreign_key "team_ses_configurations", "teams"
