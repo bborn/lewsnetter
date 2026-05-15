@@ -123,12 +123,18 @@ module Mcp
           @_passthrough_schema ||= Dry::Schema.JSON
         end
 
-        # The server calls tool_instance.call(**symbolized_args)
+        # The server calls tool_instance.call(**symbolized_args). FastMcp
+        # wraps whatever we return as `{type: "text", text: <result>.to_s}`,
+        # so we JSON-encode here — otherwise a Hash returned from our tool
+        # ends up serialized as Ruby `{:id=>1, ...}` notation, which is
+        # unparseable by external MCP clients. Strings pass through; other
+        # types get JSON.generate'd.
         define_method(:call) do |**args|
           ctx = Thread.current[:mcp_context]
           raise "missing per-request MCP context" if ctx.nil?
 
-          our_tool.new.invoke(arguments: args, context: ctx)
+          result = our_tool.new.invoke(arguments: args, context: ctx)
+          result.is_a?(String) ? result : JSON.generate(result)
         end
       end
     end

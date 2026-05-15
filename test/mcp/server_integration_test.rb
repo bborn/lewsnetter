@@ -63,13 +63,14 @@ module Mcp
       payload = JSON.parse(response.body)
       content = payload.dig("result", "content")
       refute_nil content, "Expected result.content in #{payload.inspect}"
-      # FastMcp wraps non-content tool results as [{type:"text", text: result.to_s}].
-      # The tool returns a Ruby Hash so the text is the hash's .to_s representation
-      # (symbol keys, e.g. "{id: 1, name: \"My Team\", slug: \"my-team\"}").
+      # FastMcp wraps non-content tool results as [{type:"text", text: <string>}].
+      # Our wrapper JSON-encodes Hash returns so external clients can parse them.
       assert_equal 1, content.length
       text = content.first["text"]
-      assert_includes text, "id: #{@team.id}"
-      assert_includes text, @team.name
+      parsed = JSON.parse(text)
+      assert_equal @team.id, parsed["id"]
+      assert_equal @team.name, parsed["name"]
+      assert_equal @team.slug, parsed["slug"]
     end
   end
 end
