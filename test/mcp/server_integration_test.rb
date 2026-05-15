@@ -72,5 +72,26 @@ module Mcp
       assert_equal @team.name, parsed["name"]
       assert_equal @team.slug, parsed["slug"]
     end
+
+    # Regression: arguments came in as **symbol-keyed kwargs from FastMcp, but
+    # tools look up arguments["id"] (string), so id was nil at the call site
+    # and find_by!(id: nil) blew up with "id IS NULL" SQL. The wrapper now
+    # transforms keys to strings before invoking. Don't let this slip again.
+    test "tools/call passes arguments through with string keys (id arg reaches the tool)" do
+      sub = @team.subscribers.create!(email: "alice@example.com", external_id: "ext-1", subscribed: true)
+      post_mcp(jsonrpc: "2.0", id: 4, method: "tools/call", params: {
+        name: "subscribers_get",
+        arguments: {id: sub.id}
+      })
+      assert_response :success
+      payload = JSON.parse(response.body)
+      content = payload.dig("result", "content")
+      refute_nil content, "Expected result.content in #{payload.inspect}"
+      text = content.first["text"]
+      parsed = JSON.parse(text)
+      assert_equal sub.id, parsed.dig("subscriber", "id"),
+        "Expected subscriber.id == #{sub.id}, got #{parsed.inspect}"
+      assert_equal "alice@example.com", parsed.dig("subscriber", "email")
+    end
   end
 end

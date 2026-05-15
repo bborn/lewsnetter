@@ -126,18 +126,22 @@ module Mcp
           @_passthrough_schema ||= Dry::Schema.JSON
         end
 
-        # The server calls tool_instance.call(**symbolized_args). FastMcp
-        # wraps whatever we return as `{type: "text", text: <result>.to_s}`,
-        # so we JSON-encode here — otherwise a Hash returned from our tool
-        # ends up serialized as Ruby `{:id=>1, ...}` notation, which is
-        # unparseable by external MCP clients. Strings pass through; other
-        # types get JSON.generate'd.
+        # The server calls tool_instance.call(**symbolized_args). Our tools
+        # look up arguments by STRING key (matches the JSON-RPC wire format),
+        # so we deep-stringify here. Without this, every tool that uses an
+        # argument value (anything beyond `arguments.key?(...)`) sees nil.
+        #
+        # FastMcp wraps whatever we return as `{type: "text", text: <result>.to_s}`,
+        # so we JSON-encode non-strings — otherwise a Hash returned from our
+        # tool ends up serialized as Ruby `{:id=>1, ...}` notation, which is
+        # unparseable by external MCP clients.
         define_method(:call) do |**args|
           ctx = Thread.current[:mcp_context]
           raise "missing per-request MCP context" if ctx.nil?
 
+          string_args = args.transform_keys(&:to_s)
           result = Mcp::Telemetry.around(tool_name: our_tool._tool_name, team_id: ctx.team.id) do
-            our_tool.new.invoke(arguments: args, context: ctx)
+            our_tool.new.invoke(arguments: string_args, context: ctx)
           end
           result.is_a?(String) ? result : JSON.generate(result)
         end
