@@ -1,77 +1,122 @@
+<%
+  short_id = @sender_address.respond_to?(:obfuscated_id) ? @sender_address.obfuscated_id : @sender_address.id
+  verified = @sender_address.verified?
+%>
 <%= render 'account/shared/page' do |page| %>
-  <% page.title t('.section') %>
+  <%# Editorial header below serves as the title; skip the default H1. %>
+  <% page.title nil %>
   <% page.body do %>
     <%= cable_ready_updates_for @sender_address do %>
-      <%= render 'account/shared/box', divider: true do |box| %>
-        <% box.title t('.header') %>
-        <% box.description do %>
-          <%= t('.description') %>
-          <%= t('.manage_description') if can? :manage, @sender_address %>
-        <% end %>
 
-        <% box.body do %>
-          <% with_attribute_settings object: @sender_address, strategy: :label do %>
-            <%= render 'shared/attributes/email', attribute: :email %>
-            <%= render 'shared/attributes/text', attribute: :name %>
-
-            <%# Single Status row replaces the previous redundant Verified
-                + SES Status pair (U12). Uses sender_address_status_pill
-                from app/helpers/status_pill_helper.rb. %>
-            <%= render 'shared/attributes/attribute', object: @sender_address, attribute: :ses_status, strategy: :label do %>
-              <%= sender_address_status_pill(@sender_address) %>
-            <% end %>
-            <%# 🚅 super scaffolding will insert new fields above this line. %>
-          <% end %>
-
-          <%# Verification helper UI (U11). Shows a primary "Send
-              verification email" button when the address isn't verified,
-              with copy explaining what will happen. When verified, this
-              block falls back to a quiet re-check link tucked under the
-              status pill. %>
-          <% if @sender_address.verified? %>
-            <p class="mt-3 text-sm text-gray-500">
-              <% if can? :update, @sender_address %>
-                <%= button_to t('.buttons.recheck'),
-                      recheck_account_sender_address_path(@sender_address),
-                      method: :post,
-                      class: "text-blue-600 hover:underline bg-transparent border-0 p-0 cursor-pointer text-sm" %>
-                — re-query SES if you think this is stale.
-              <% end %>
-            </p>
+      <%# ============================================================
+          Editorial header — eyebrow + email + status pill + actions.
+          ============================================================ %>
+      <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl mb-6 p-10">
+        <div class="font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-3 flex items-center gap-2">
+          <span>Sender · <%= short_id %></span>
+          <span class="text-zinc-300 dark:text-zinc-700">·</span>
+          <%= sender_address_status_pill(@sender_address) %>
+        </div>
+        <h1 class="text-zinc-900 dark:text-zinc-50 font-semibold text-[32px] leading-tight tracking-tight mb-1 break-all">
+          <%= @sender_address.email %>
+        </h1>
+        <p class="font-mono text-[13px] text-zinc-500 dark:text-zinc-400 mb-7">
+          <% if @sender_address.name.present? %>
+            <%= @sender_address.name %> · From-address for campaign sends
           <% else %>
-            <div class="mt-4 p-3 border rounded-md bg-yellow-50 border-yellow-200 dark:bg-yellow-950 dark:border-yellow-800">
-              <% if can? :update, @sender_address %>
-                <%= button_to "Send verification email",
-                      verify_with_ses_account_sender_address_path(@sender_address),
-                      method: :post,
-                      class: "button" %>
-                <p class="mt-2 text-sm text-gray-700 dark:text-gray-200">
-                  We'll ask Amazon SES to send you a confirmation link.
-                  Click the link in your inbox, then return here and click
-                  <strong>Re-check with SES</strong>.
-                </p>
-                <p class="mt-2 text-sm">
-                  <%= button_to t('.buttons.recheck'),
-                        recheck_account_sender_address_path(@sender_address),
-                        method: :post,
-                        class: "text-blue-600 hover:underline bg-transparent border-0 p-0 cursor-pointer text-sm" %>
-                </p>
-              <% end %>
+            From-address for campaign sends
+          <% end %>
+        </p>
+        <div class="flex items-center gap-2 flex-wrap">
+          <% if can? :edit, @sender_address %>
+            <%= link_to "Edit", [:edit, :account, @sender_address], class: "button-secondary" %>
+          <% end %>
+          <% if can? :destroy, @sender_address %>
+            <%= button_to "Delete", [:account, @sender_address], method: :delete,
+                  class: "button-secondary button-danger",
+                  data: { turbo_confirm: t('.buttons.confirmations.destroy', model_locales(@sender_address)) } %>
+          <% end %>
+          <%= link_to "Back to senders", [:account, @team, :sender_addresses], class: "button-light" %>
+        </div>
+      </div>
+
+      <%# ============================================================
+          Verification card — primary action when unverified, quiet
+          re-check link when already verified.
+          ============================================================ %>
+      <% if verified %>
+        <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-6 mb-6 flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <div class="font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-1">Verification</div>
+            <p class="text-zinc-700 dark:text-zinc-300 text-sm">
+              SES recognizes this address. Campaigns can send from it.
+            </p>
+          </div>
+          <% if can? :update, @sender_address %>
+            <%= button_to "Re-check with SES",
+                  recheck_account_sender_address_path(@sender_address),
+                  method: :post,
+                  class: "button-secondary" %>
+          <% end %>
+        </div>
+      <% else %>
+        <div class="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 rounded-lg p-6 mb-6">
+          <div class="font-mono text-[11px] uppercase tracking-widest text-amber-700 dark:text-amber-400 mb-2">Verification pending</div>
+          <h2 class="text-zinc-900 dark:text-zinc-50 font-semibold text-lg mb-2">Verify this address with Amazon SES</h2>
+          <p class="text-zinc-700 dark:text-zinc-300 text-sm mb-4 max-w-xl">
+            We'll ask SES to send a confirmation link to <span class="font-mono"><%= @sender_address.email %></span>.
+            Click it, then come back and re-check.
+          </p>
+          <% if can? :update, @sender_address %>
+            <div class="flex items-center gap-2 flex-wrap">
+              <%= button_to "Send verification email",
+                    verify_with_ses_account_sender_address_path(@sender_address),
+                    method: :post,
+                    class: "button" %>
+              <%= button_to "Re-check with SES",
+                    recheck_account_sender_address_path(@sender_address),
+                    method: :post,
+                    class: "button-secondary" %>
             </div>
           <% end %>
-        <% end %>
-
-        <% box.actions do %>
-          <%= link_to t('.buttons.edit'), [:edit, :account, @sender_address], class: first_button_primary if can? :edit, @sender_address %>
-          <%# 🚅 super scaffolding will insert new action model buttons above this line. %>
-          <%= button_to t('.buttons.destroy'), [:account, @sender_address], method: :delete, class: first_button_primary, data: { turbo_confirm: t('.buttons.confirmations.destroy', model_locales(@sender_address)) } if can? :destroy, @sender_address %>
-          <%= link_to t('global.buttons.back'), [:account, @team, :sender_addresses], class: first_button_primary %>
-        <% end %>
-
-        <% box.raw_footer do %>
-          <%# 🚅 super scaffolding will insert new action model index views above this line. %>
-        <% end %>
+        </div>
       <% end %>
+
+      <%# ============================================================
+          Details — clean key/value card with mono caps labels.
+          ============================================================ %>
+      <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden">
+        <div class="px-6 py-4 flex items-baseline justify-between border-b border-zinc-200 dark:border-zinc-800">
+          <h2 class="text-[18px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Details</h2>
+          <% if can? :edit, @sender_address %>
+            <%= link_to "Edit sender", [:edit, :account, @sender_address], class: "card-action" %>
+          <% end %>
+        </div>
+        <dl class="grid grid-cols-1 md:grid-cols-2">
+          <div class="px-6 py-4 border-b md:border-b border-zinc-200 dark:border-zinc-800 md:border-r">
+            <dt class="font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-1">Email</dt>
+            <dd class="font-sans text-zinc-900 dark:text-zinc-100 break-all"><%= @sender_address.email %></dd>
+          </div>
+          <div class="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800">
+            <dt class="font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-1">Display name</dt>
+            <dd class="font-sans <%= @sender_address.name.present? ? 'text-zinc-900 dark:text-zinc-100' : 'text-zinc-400 italic' %>">
+              <%= @sender_address.name.presence || "Not set" %>
+            </dd>
+          </div>
+          <div class="px-6 py-4 md:border-r border-zinc-200 dark:border-zinc-800">
+            <dt class="font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-1">SES status</dt>
+            <dd><%= sender_address_status_pill(@sender_address) %></dd>
+          </div>
+          <div class="px-6 py-4 border-t md:border-t-0 border-zinc-200 dark:border-zinc-800">
+            <dt class="font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-1">Added</dt>
+            <dd class="font-mono text-[13px] text-zinc-700 dark:text-zinc-300">
+              <%= @sender_address.created_at.strftime("%b %-d, %Y at %-l:%M %p") %>
+            </dd>
+          </div>
+        </dl>
+      </div>
+
+      <%# 🚅 super scaffolding will insert new action model index views above this line. %>
     <% end %>
 
     <%# 🚅 super scaffolding will insert new children above this line. %>

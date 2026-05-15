@@ -21,7 +21,10 @@
             <%= render 'shared/attributes/text', attribute: :external_id %>
             <%= render 'shared/attributes/email', attribute: :email %>
             <%= render 'shared/attributes/text', attribute: :name %>
-            <%= render 'shared/attributes/option', attribute: :subscribed %>
+            <div>
+              <label class="block text-2xs uppercase font-semibold py-2 dark:text-white"><%= @subscriber.class.human_attribute_name(:subscribed) %></label>
+              <div><%= subscribed_pill(@subscriber) %></div>
+            </div>
             <%# 🚅 super scaffolding will insert new fields above this line. %>
           <% end %>
         <% end %>

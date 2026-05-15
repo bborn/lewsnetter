@@ -1,61 +1,74 @@
+<%
+  short_id = @email_template.respond_to?(:obfuscated_id) ? @email_template.obfuscated_id : @email_template.id
+  campaigns_using = @email_template.respond_to?(:campaigns) ? @email_template.campaigns.count : 0
+  byte_size = @email_template.mjml_body.to_s.bytesize
+%>
 <%= render 'account/shared/page' do |page| %>
-  <% page.title t('.section') %>
+  <%# Editorial header below serves as the title; skip the default H1. %>
+  <% page.title nil %>
+
   <% page.body do %>
     <%= cable_ready_updates_for @email_template do %>
-      <%= render 'account/shared/box', divider: true do |box| %>
-        <% box.title t('.header') %>
-        <% box.description do %>
-          <%= t('.description') %>
-          <%= t('.manage_description') if can? :manage, @email_template %>
-        <% end %>
 
-        <% box.body do %>
-          <% with_attribute_settings object: @email_template, strategy: :label do %>
-            <%= render 'shared/attributes/text', attribute: :name %>
-            <%# 🚅 super scaffolding will insert new fields above this line. %>
+      <%# ============================================================
+          Editorial header — eyebrow + name + actions.
+          ============================================================ %>
+      <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl mb-6 p-10">
+        <div class="font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-3 flex items-center gap-2">
+          <span>Template · <%= short_id %></span>
+          <span class="text-zinc-300 dark:text-zinc-700">·</span>
+          <span><%= campaigns_using %> campaign<%= "s" unless campaigns_using == 1 %> using this</span>
+        </div>
+        <h1 class="text-zinc-900 dark:text-zinc-50 font-semibold text-[32px] leading-tight tracking-tight mb-1">
+          <%= @email_template.name.presence || "Untitled template" %>
+        </h1>
+        <p class="font-mono text-[13px] text-zinc-500 dark:text-zinc-400 mb-7">
+          Reusable layout. Real campaigns fill <span class="text-zinc-700 dark:text-zinc-300">{{body}}</span>.
+        </p>
+        <div class="flex items-center gap-2 flex-wrap">
+          <% if can? :edit, @email_template %>
+            <%= link_to "Edit template →", [:edit, :account, @email_template], class: "button" %>
           <% end %>
+          <% if can? :destroy, @email_template %>
+            <%= button_to "Delete", [:account, @email_template], method: :delete,
+                  class: "button-secondary button-danger",
+                  data: { turbo_confirm: t('.buttons.confirmations.destroy', model_locales(@email_template)) } %>
+          <% end %>
+          <%= link_to "Back to templates", [:account, @team, :email_templates], class: "button-light" %>
+        </div>
+      </div>
 
-          <%# Rendered preview. Compiles the template MJML through the same
-              CampaignRenderer used for real sends, with placeholder body
-              content + a fake subscriber. Authors see the template chrome
-              wrapping a representative body without committing to a campaign. %>
-          <div class="mt-6">
-            <label class="block text-sm font-medium mb-2">Preview</label>
-            <div class="border rounded-md overflow-hidden bg-white dark:bg-base-900">
-              <iframe src="<%= preview_frame_account_email_template_path(@email_template) %>"
-                      class="w-full"
-                      style="height: 640px; border: 0;"
-                      sandbox="allow-same-origin"
-                      title="Template preview"></iframe>
-            </div>
-            <p class="text-xs text-gray-500 mt-1">
-              Shows the template wrapping a placeholder body. Real campaigns
-              fill the <code class="font-mono">{{body}}</code> placeholder with
-              their own markdown content.
-            </p>
+      <%# ============================================================
+          Rendered preview — frame it like an artifact.
+          ============================================================ %>
+      <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden mb-6">
+        <div class="px-6 py-4 flex items-baseline justify-between border-b border-zinc-200 dark:border-zinc-800">
+          <div class="font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Rendered preview</div>
+          <div class="font-mono text-[11px] tabular-nums text-zinc-400 dark:text-zinc-500">
+            <%= number_with_delimiter(byte_size) %> bytes
           </div>
+        </div>
+        <iframe src="<%= preview_frame_account_email_template_path(@email_template) %>"
+                class="w-full bg-white"
+                style="height: 640px; border: 0;"
+                sandbox="allow-same-origin"
+                title="Template preview"></iframe>
+      </div>
 
-          <%# Raw MJML disclosure for the curious — collapsed by default so
-              the show page doesn't dump a wall of text. %>
-          <details class="mt-4 rounded-md border border-base-200 dark:border-base-700 bg-base-50 dark:bg-base-800/40 px-3 py-2">
-            <summary class="cursor-pointer select-none text-sm font-medium text-base-700 dark:text-base-300">
-              Show MJML source
-            </summary>
-            <pre class="mt-3 text-xs font-mono whitespace-pre-wrap text-base-700 dark:text-base-300 overflow-auto max-h-96"><%= @email_template.mjml_body %></pre>
-          </details>
-        <% end %>
+      <%# ============================================================
+          MJML source disclosure — collapsed; the chrome of the
+          page is the rendered preview, source is for engineers.
+          ============================================================ %>
+      <details class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg mb-6 group">
+        <summary class="px-6 py-4 cursor-pointer select-none flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
+          <span class="font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400">MJML source</span>
+          <span class="font-mono text-[11px] text-zinc-400 dark:text-zinc-500 group-open:hidden">Show ▾</span>
+          <span class="font-mono text-[11px] text-zinc-400 dark:text-zinc-500 hidden group-open:inline">Hide ▴</span>
+        </summary>
+        <pre class="text-[12px] font-mono whitespace-pre-wrap text-zinc-700 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-950 px-6 py-4 overflow-auto max-h-96 border-t border-zinc-200 dark:border-zinc-800"><%= @email_template.mjml_body %></pre>
+      </details>
 
-        <% box.actions do %>
-          <%= link_to t('.buttons.edit'), [:edit, :account, @email_template], class: first_button_primary if can? :edit, @email_template %>
-          <%# 🚅 super scaffolding will insert new action model buttons above this line. %>
-          <%= button_to t('.buttons.destroy'), [:account, @email_template], method: :delete, class: first_button_primary, data: { turbo_confirm: t('.buttons.confirmations.destroy', model_locales(@email_template)) } if can? :destroy, @email_template %>
-          <%= link_to t('global.buttons.back'), [:account, @team, :email_templates], class: first_button_primary %>
-        <% end %>
-
-        <% box.raw_footer do %>
-          <%# 🚅 super scaffolding will insert new action model index views above this line. %>
-        <% end %>
-      <% end %>
+      <%# 🚅 super scaffolding will insert new action model index views above this line. %>
     <% end %>
 
     <%# 🚅 super scaffolding will insert new children above this line. %>

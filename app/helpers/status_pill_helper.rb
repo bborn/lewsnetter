@@ -65,4 +65,20 @@ module StatusPillHelper
     label = SENDER_ADDRESS_STATUS_LABELS.fetch(raw, raw.humanize)
     status_pill(raw, label: label)
   end
+
+  # Render a subscription-state pill for a Subscriber. Three states:
+  #   subscribed (and never bounced)   → green   "Subscribed"
+  #   subscribed=false (opted out)     → neutral "Unsubscribed"
+  #   bounced_at set                   → rose    "Bounced"
+  # Used in the subscribers index row and the subscriber show "Subscribed"
+  # attribute, replacing the bare "Yes/No" rendering.
+  def subscribed_pill(subscriber)
+    if subscriber.bounced_at.present?
+      status_pill("failed", label: "Bounced")
+    elsif subscriber.subscribed
+      status_pill("success", label: "Subscribed")
+    else
+      status_pill("draft", label: "Unsubscribed")
+    end
+  end
 end

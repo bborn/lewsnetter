@@ -10,7 +10,7 @@
     <td><%= render 'shared/attributes/text', attribute: :external_id, url: [:account, subscriber] %></td>
     <td><%= render 'shared/attributes/email', attribute: :email %></td>
     <td><%= render 'shared/attributes/text', attribute: :name %></td>
-    <td class="text-center"><%= render 'shared/attributes/option', attribute: :subscribed %></td>
+    <td class="text-center"><%= subscribed_pill(subscriber) %></td>
     <%# 🚅 super scaffolding will insert new fields above this line. %>
     <td><%= render 'shared/attributes/date_and_time', attribute: :created_at %></td>
     <td class="buttons">

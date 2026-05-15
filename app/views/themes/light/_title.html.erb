@@ -1,14 +1,18 @@
-<%# Ejected. Lewsnetter page header: bigger title, no divider line. The
-    breadcrumb row already provides separation. See DESIGN.md → "Layout". %>
-<div class="flex flex-row items-end gap-4 mb-8">
-  <div class="flex-auto min-w-0">
-    <h1 class="font-semibold text-[28px] tracking-tight text-zinc-900 dark:text-zinc-100 leading-tight">
-      <%= partial.title %>
-    </h1>
-  </div>
-  <% if partial.actions.present? %>
-    <div class="flex-none text-right">
-      <%= partial.actions %>
+<%# Ejected. Lewsnetter page header: bigger title, no divider line. Skipped
+    entirely when title is blank, so pages with their own editorial H1 inside
+    a hero block (campaign show, template show) can pass `p.title nil` and
+    avoid a redundant header. %>
+<% if partial.title.present? %>
+  <div class="flex flex-row items-end gap-4 mb-8">
+    <div class="flex-auto min-w-0">
+      <h1 class="font-semibold text-[28px] tracking-tight text-zinc-900 dark:text-zinc-100 leading-tight">
+        <%= partial.title %>
+      </h1>
     </div>
-  <% end %>
-</div>
+    <% if partial.actions.present? %>
+      <div class="flex-none text-right">
+        <%= partial.actions %>
+      </div>
+    <% end %>
+  </div>
+<% end %>
