@@ -165,3 +165,106 @@ All three are idempotent on external_id / intercom_id.
 - Build per-template logo upload as a first-class field (we have generic `has_many_attached :assets` instead — author pastes URLs)
 - Extract `lewsnetter-rails` to its own gem repo (revisit when there are 2+ consumers)
 - Replace MJML with a WYSIWYG block editor (overhead doesn't justify; markdown body + MJML template chrome is the split)
+
+---
+
+## 2026-05-14 evening — full app design overhaul
+
+Bruno: "literally every page needs to be reviewed and improved according to a coherent, modern, excellent design imperative." Did that. 20 commits beyond the original ask. Branch is ~21 commits ahead of `origin/master`, **nothing pushed yet** — Bruno will verify visually first.
+
+### What shipped (in order)
+
+**Foundation (4 commits)** — DESIGN.md + theme tokens + partial-ejection chrome.
+- `d7dea01` apply Lewsnetter design system via BulletTrain theme (Tailwind primary palette → orange; `theme.rb` color → `:orange`; Geist Sans + Geist Mono loaded; `--lw-accent` tokens; badge restyle).
+- `2f913f9` rebuild app chrome via BulletTrain partial ejections — `layouts/_account.html.erb` (kills the gradient body + bg-primary navbar), `_box.html.erb` (hairline border, no shadow, Geist title), `_title.html.erb` (Geist 28/600, no divider line), `menu/_logo` + `menu/_top` + `menu/_item` + `menu/_heading` + `menu/_subsection` + `menu/_account` + `menu/_user` (Lewsnetter wordmark + accent dot, text-first nav, white-card dropdowns, zinc-on-white). Also restructured `account/shared/_menu.html.erb` to flatten Dashboard + Campaigns and group Audience (Subscribers, Segments) + Sending (Templates, Senders) into dropdowns; Team Settings + Members moved into the avatar dropdown via `_user_items.html.erb`.
+
+**Editorial moments (4 commits)** — campaign show / edit / template show / sender show.
+- `6ef6c0c` campaign show editorial moment (designed by `compound-engineering:design:design-iterator`, 8 iterations). Hero eyebrow + 38px subject + tiered action row (`Send to N subscribers →` `.btn-xl` + `Send test` secondary + Preview-as input + ghost preview), orange confidence callout / amber warning callout, hairline-bordered Details card with mono-caps keys, framed Rendered preview iframe with byte size, state-aware sent collapse.
+- `a02921d` campaign edit form rebuild (design-iterator, 10 iterations). Editorial header + sticky-action footer + four sectioned cards (AI Drafter / Content / Audience / Settings) + Assets section + locked banner for sent campaigns. Mono-caps form labels with quiet optional/required markers. AI Drafter has an orange-tinted card so it reads as a smart suggestion.
+- `d3cb218` editorial template show + editorial sender show (mono caps `TEMPLATE · ID · N CAMPAIGNS USING THIS` eyebrow + 32px Geist name + Rendered preview card with byte count + MJML source disclosure; sender show has verification-card pattern that's primary when unverified / quiet recheck when verified + clean 2-col Details grid).
+
+**Cross-cutting button + link system (1 commit)**
+- `471f931` discoverable buttons + tone down default link color. `.button-secondary` was rendering as orange text with underline-on-hover (BulletTrain default); promoted globally to a hairline-bordered button (zinc text, white bg, hover-bg). Cascades to every Edit / Delete / Back / Cancel / Import on every page. `.button-light` for tertiary. `.button-smaller` for compact inline. `.button-danger` for destructive. Plus `<a>` default tone toned down: zinc-on-default, orange + underline on hover (was orange-everywhere). `.card-action` Mono caps class for card-header inline links like the dashboard "VIEW ALL" and campaign show "EDIT CAMPAIGN."
+
+**Pills + attribute rendering (2 commits)**
+- `4033f67` empty-state polish + eject `attributes/_base.html.erb` for mono-caps labels everywhere with `with_attribute_settings strategy: :label` — sender addresses, subscribers, segments, email templates.
+- `d3cb218` (same as above) `subscribed_pill` helper: green Subscribed / neutral Unsubscribed / rose Bounced. Replaces "Yes/No" everywhere a subscriber's state is shown.
+
+**Devise auth screens (1 commit)**
+- `f5657af` rebuild devise auth screens per DESIGN.md (design-iterator, 8 iterations). Killed `bg-gradient-to-br from-secondary-200 to-primary-400`. Sign in / Sign up / Password reset / Accept invitation all share the same chrome now: Lewsnetter wordmark + accent dot above, hairline-bordered card with Geist 28/600 sentence-case title + Geist Mono 13 tagline, orange-600 full-width primary CTA, quiet zinc body links, "LEWSNETTER · AI-NATIVE EMAIL MARKETING" mono-caps footer.
+
+**Empty states + index/show polish (4 commits)**
+- `9966469` empty states + postmortem chrome — index pages (campaigns, subscribers, segments, senders), subscriber events, segment predicate, postmortem panel all share a `mono caps eyebrow + Geist heading + sentence + single CTA` pattern.
+- `bafd3ce` emerald success flash alerts + mono caps custom_attributes — `_alert.html.erb` ejected, default tone emerald with mono caps "Done"/"Heads up"/"Error" eyebrow; subscriber `_custom_attributes` partial uses mono-caps key + Geist value + framed code block for hash/array.
+- `6abb5cf` imports KPI strip + status pill mappings — `subscribers/imports/show.html.erb` rebuilt as a 5-cell KPI strip (Status pill + Processed/Created/Updated/Errors) with mono caps captions, plus a clearly rose-tinted error log table. `processing → warn`, `completed → success` added to `status_pill_helper`.
+- `d482dd7` shared asset uploader chrome — zinc card, mono caps "Assets / Hosted images" eyebrow, hint about drag-and-drop, smaller danger Delete buttons. Replaces the stale dark-sky-blue chrome.
+
+**Drag-and-drop image upload (1 commit)**
+- `8ce784a` `POST /account/campaigns/:id/assets` upload endpoint + EasyMDE `imageUploadFunction` binding. Drop a file in the markdown body, paste from clipboard, or click the toolbar image button → uploads to Active Storage / R2 → inserts `![name](url)` at cursor. Disabled on `/campaigns/new` (no campaign yet).
+
+**Public-facing screens (2 commits)**
+- `62ecf64` brand public error pages + unsubscribe to design system — 404 / 422 / 500 with Lewsnetter wordmark, mono-caps eyebrow, Geist Sans heading, orange-600 CTA. Unsubscribe public layout: zinc instead of slate, orange accent dot, mono-caps footer "POWERED BY LEWSNETTER," zinc → orange-on-hover re-subscribe link.
+- `74997a1` 422 error page to match (separate commit because the first write got skipped).
+
+**Polish (3 commits)**
+- `9c53f98` campaign list row mono+tabular treatment.
+- `37bb3d5` AI translator panel — orange-tinted intentional feel (matches the campaign-show confidence callout).
+- `bad6597` email template form variables disclosure — zinc card with mono-caps `AVAILABLE VARIABLES` eyebrow, Show/Hide affordance, mono variable names in zinc-900 so they pop, MJML docs link toned to zinc-on-default.
+- `6ba084a` gitignore root-level QA pngs + `.gstack`.
+
+### Cross-cutting helpers / partials worth knowing about
+
+| | What it does | Where |
+|---|---|---|
+| `.button` | Primary CTA, orange-600 | application.css |
+| `.button-secondary` | Hairline-bordered secondary, zinc text | application.css |
+| `.button-light` | Ghost: transparent, no border | application.css |
+| `.button-danger` | Stacks on -secondary, red text + border | application.css |
+| `.button-smaller` | Compact size modifier (4/10 padding, 12px font) | application.css |
+| `.button.button-back` | Same as -secondary, with a ← arrow | application.css |
+| `.card-action` | Mono-caps card-header link (like dashboard "VIEW ALL") | application.css |
+| `.badge` | Status pill — Mono caps, 11px, hairline state-color border | application.css |
+| `.callout-confidence` / `.campaign-show-callout--accent` | Orange-tinted "About to send" callout | application.css |
+| `.campaign-show-hero` / `.campaign-show-meta` | Campaign show editorial primitives | application.css |
+| `.campaign-edit-section` / `.campaign-edit-hero` / `.btn-editorial--*` | Campaign edit primitives | application.css |
+| `.auth-card` | Devise screen card chrome | application.css |
+| `status_pill(status)` | Maps status string → badge | `status_pill_helper.rb` |
+| `subscribed_pill(subscriber)` | Subscribed/Unsubscribed/Bounced pill | `status_pill_helper.rb` |
+| `sender_address_status_pill(sender)` | Maps SES status → humane label + pill | `status_pill_helper.rb` |
+
+### Ejected partials under `app/views/themes/light/`
+
+- `layouts/_account.html.erb`
+- `layouts/_devise.html.erb`
+- `_box.html.erb`
+- `_title.html.erb`
+- `_alert.html.erb`
+- `attributes/_base.html.erb`
+- `menu/_account.html.erb`
+- `menu/_heading.html.erb`
+- `menu/_item.html.erb`
+- `menu/_logo.html.erb`
+- `menu/_subsection.html.erb`
+- `menu/_user.html.erb`
+- `workflow/_box.html.erb`
+- `fields/_field.html.erb` (existed before today; required/optional markers)
+
+Stay close to vanilla BulletTrain elsewhere — these are the only ejections.
+
+### Verification status
+
+- Manually verified in Playwright (logged in as `qa@local.test`): dashboard, campaigns index, campaign show, subscribers index (subscribed pills visible), segments index/show, email templates index/show, sender addresses index, team settings, email sending settings.
+- Devise screens verified at the URL but couldn't sign in via Playwright reliably during this session — Bruno will verify manually. The pages render perfectly when navigated to.
+- Campaign edit page screenshots captured by the design-iterator and look correct. Bruno: please verify the drag-and-drop image upload works end-to-end (drop a PNG into the markdown body field on `/account/campaigns/:id/edit`).
+- Public error pages: rendered statically; not yet tested by triggering a real 500. Visual layout matches design system.
+
+### Known imperfections
+
+- The signed-in flash callout uses the new emerald `_alert` chrome. Looks great. The `tighter` local doesn't currently route through to the new design — there if a future caller wants it.
+- A handful of older shared partials (`shared/limits/form`, `shared/forms/errors`) still use BT-default chrome. Visible in form error states. Functional but slightly off the design system.
+- `subscribers/imports/new.html.erb` file input uses its own bespoke styling (not the shared assets uploader). On-spec but slightly different visual weight.
+- The mini-profiler badge in the top-left corner shows during dev; it's BT/dev-tooling and doesn't appear in production builds.
+
+### Push status
+
+21+ commits ahead of `origin/master`. **Nothing pushed.** When Bruno is ready: `git push origin master` triggers GH Actions → Kamal deploy. CSS auto-rebuilds; no migration needed (only views/CSS/JS/config changed).
