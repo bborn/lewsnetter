@@ -32,9 +32,7 @@ module AI
     def stub_mode?
       return true if self.class.force_stub
       return true if Base.force_stub
-      api_key = ENV["ANTHROPIC_API_KEY"].presence
-      api_key ||= RubyLLM.config.anthropic_api_key.presence if defined?(RubyLLM)
-      api_key.blank?
+      !Llm::Configuration.current.usable?
     end
 
     # Build a chat client. Subclasses can override `#model_id`.
