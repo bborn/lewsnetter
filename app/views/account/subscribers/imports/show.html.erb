@@ -8,37 +8,87 @@
       <% end %>
 
       <% box.body do %>
-        <% with_attribute_settings object: @import, strategy: :label do %>
-          <%= render 'shared/attributes/text', attribute: :status %>
-          <%= render 'shared/attributes/text', attribute: :total_rows %>
-          <%= render 'shared/attributes/text', attribute: :processed %>
-          <%= render 'shared/attributes/text', attribute: :created_count %>
-          <%= render 'shared/attributes/text', attribute: :updated_count %>
-          <%= render 'shared/attributes/text', attribute: :error_count %>
-          <%= render 'shared/attributes/date_and_time', attribute: :started_at %>
-          <%= render 'shared/attributes/date_and_time', attribute: :finished_at %>
-          <% if @import.notes.present? %>
-            <%= render 'shared/attributes/text', attribute: :notes %>
-          <% end %>
+        <%# Status + counts header — KPI strip pattern for tabular numbers. %>
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-x-6 gap-y-5 mb-6">
+          <div>
+            <div class="font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-1">Status</div>
+            <div><%= status_pill(@import.status.to_s) %></div>
+          </div>
+          <div>
+            <div class="font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-1">Processed</div>
+            <div class="font-sans text-[20px] font-semibold tabular-nums text-zinc-900 dark:text-zinc-100 leading-none">
+              <%= number_with_delimiter(@import.processed.to_i) %>
+            </div>
+          </div>
+          <div>
+            <div class="font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-1">Created</div>
+            <div class="font-sans text-[20px] font-semibold tabular-nums text-emerald-700 dark:text-emerald-400 leading-none">
+              <%= number_with_delimiter(@import.created_count.to_i) %>
+            </div>
+          </div>
+          <div>
+            <div class="font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-1">Updated</div>
+            <div class="font-sans text-[20px] font-semibold tabular-nums text-zinc-700 dark:text-zinc-300 leading-none">
+              <%= number_with_delimiter(@import.updated_count.to_i) %>
+            </div>
+          </div>
+          <div>
+            <div class="font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-1">Errors</div>
+            <div class="font-sans text-[20px] font-semibold tabular-nums <%= @import.error_count.to_i > 0 ? 'text-rose-700 dark:text-rose-400' : 'text-zinc-400' %> leading-none">
+              <%= number_with_delimiter(@import.error_count.to_i) %>
+            </div>
+          </div>
+        </div>
+
+        <%# Timing + notes — secondary grid. %>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-5 mb-2">
+          <div>
+            <div class="font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-1">Total rows</div>
+            <div class="font-mono text-[13px] tabular-nums text-zinc-700 dark:text-zinc-300">
+              <%= @import.total_rows.to_i.nonzero? ? number_with_delimiter(@import.total_rows.to_i) : "—" %>
+            </div>
+          </div>
+          <div>
+            <div class="font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-1">Started</div>
+            <div class="font-mono text-[13px] text-zinc-700 dark:text-zinc-300">
+              <%= @import.started_at ? l(@import.started_at, format: :short) : "—" %>
+            </div>
+          </div>
+          <div>
+            <div class="font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-1">Finished</div>
+            <div class="font-mono text-[13px] text-zinc-700 dark:text-zinc-300">
+              <%= @import.finished_at ? l(@import.finished_at, format: :short) : "—" %>
+            </div>
+          </div>
+        </div>
+
+        <% if @import.notes.present? %>
+          <div class="mt-5">
+            <div class="font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-1">Notes</div>
+            <p class="text-zinc-700 dark:text-zinc-300 text-sm"><%= @import.notes %></p>
+          </div>
         <% end %>
 
         <% if @import.errors_log.present? %>
-          <div class="mt-4">
-            <h3 class="font-bold"><%= t('.fields.errors_log.heading') %></h3>
-            <table class="table mt-2">
+          <div class="mt-8 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/60 rounded-lg overflow-hidden">
+            <div class="px-5 py-3 border-b border-rose-200 dark:border-rose-900/60 flex items-baseline justify-between">
+              <div class="font-mono text-[11px] uppercase tracking-widest text-rose-700 dark:text-rose-400"><%= t('.fields.errors_log.heading') %></div>
+              <div class="font-mono text-[11px] tabular-nums text-rose-700 dark:text-rose-400">Showing <%= [@import.errors_log.length, 50].min %> of <%= @import.errors_log.length %></div>
+            </div>
+            <table class="w-full text-sm">
               <thead>
-                <tr>
-                  <th>Row</th>
-                  <th>Email</th>
-                  <th>Errors</th>
+                <tr class="font-mono text-[11px] uppercase tracking-widest text-rose-700/70 dark:text-rose-400/70">
+                  <th class="text-left font-medium px-5 py-2">Row</th>
+                  <th class="text-left font-medium px-5 py-2">Email</th>
+                  <th class="text-left font-medium px-5 py-2">Errors</th>
                 </tr>
               </thead>
               <tbody>
                 <% @import.errors_log.first(50).each do |entry| %>
-                  <tr>
-                    <td><%= entry["row"] %></td>
-                    <td><%= entry["email"] %></td>
-                    <td><%= Array(entry["errors"]).join("; ") %></td>
+                  <tr class="border-t border-rose-200/60 dark:border-rose-900/40">
+                    <td class="px-5 py-2 font-mono tabular-nums text-rose-700 dark:text-rose-300"><%= entry["row"] %></td>
+                    <td class="px-5 py-2 font-mono text-[13px] text-rose-700 dark:text-rose-300"><%= entry["email"] %></td>
+                    <td class="px-5 py-2 text-rose-700 dark:text-rose-300"><%= Array(entry["errors"]).join("; ") %></td>
                   </tr>
                 <% end %>
               </tbody>

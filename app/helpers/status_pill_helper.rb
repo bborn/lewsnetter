@@ -17,6 +17,9 @@ module StatusPillHelper
     "sending" => "warn",
     "sent" => "success",
     "failed" => "error",
+    # Subscribers::Import statuses
+    "processing" => "warn",
+    "completed" => "success",
     # Sender address SES statuses (reused via this helper by the
     # sender_addresses implementer).
     "verified" => "success",

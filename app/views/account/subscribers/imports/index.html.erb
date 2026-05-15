@@ -24,13 +24,13 @@
           <tbody>
             <% @imports.order(created_at: :desc).each do |import| %>
               <tr data-id="<%= import.id %>" class="group">
-                <td><%= link_to "##{import.id}", account_subscribers_import_path(import) %></td>
-                <td><%= import.status %></td>
-                <td class="text-right"><%= import.processed %></td>
-                <td class="text-right"><%= import.created_count %></td>
-                <td class="text-right"><%= import.updated_count %></td>
-                <td class="text-right"><%= import.error_count %></td>
-                <td><%= l(import.created_at, format: :short) if import.created_at %></td>
+                <td class="font-mono"><%= link_to "##{import.id}", account_subscribers_import_path(import) %></td>
+                <td><%= status_pill(import.status.to_s) %></td>
+                <td class="text-right font-mono tabular-nums"><%= number_with_delimiter(import.processed.to_i) %></td>
+                <td class="text-right font-mono tabular-nums"><%= number_with_delimiter(import.created_count.to_i) %></td>
+                <td class="text-right font-mono tabular-nums"><%= number_with_delimiter(import.updated_count.to_i) %></td>
+                <td class="text-right font-mono tabular-nums <%= "text-rose-700 dark:text-rose-300" if import.error_count.to_i > 0 %>"><%= number_with_delimiter(import.error_count.to_i) %></td>
+                <td class="font-mono text-[13px] text-zinc-500"><%= l(import.created_at, format: :short) if import.created_at %></td>
                 <td class="buttons">
                   <%= link_to t('.buttons.shorthand.view'), account_subscribers_import_path(import), class: 'button-secondary button-smaller' %>
                 </td>
@@ -38,6 +38,16 @@
             <% end %>
           </tbody>
         </table>
+      <% elsif can?(:create, Subscribers::Import.new(team: @team)) %>
+        <div class="text-center py-12 px-6">
+          <div class="font-mono text-[11px] uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-2">No imports yet</div>
+          <h3 class="text-[18px] font-semibold text-zinc-900 dark:text-zinc-100 mb-2">Bulk-load your audience</h3>
+          <p class="text-zinc-500 dark:text-zinc-400 max-w-md mx-auto mb-6">
+            Upload a CSV with one row per subscriber. We'll process in
+            the background and track creates / updates / errors here.
+          </p>
+          <%= link_to "Upload a CSV →", new_account_team_subscribers_import_path(@team), class: "button" %>
+        </div>
       <% end %>
     <% end %>
 
