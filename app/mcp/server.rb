@@ -95,6 +95,9 @@ module Mcp
       Mcp::Tool::Loader.load_all.each do |tool_class|
         server.register_tool(wrap(tool_class))
       end
+      Mcp::Skill::Loader.load_all.each do |skill|
+        server.register_resource(wrap_skill(skill))
+      end
       server
     end
 
@@ -137,6 +140,26 @@ module Mcp
             our_tool.new.invoke(arguments: args, context: ctx)
           end
           result.is_a?(String) ? result : JSON.generate(result)
+        end
+      end
+    end
+
+    # Dynamically creates a FastMcp::Resource subclass for a Mcp::Skill::Base
+    # instance. The resource URI is "skill://<name>". Content is rendered
+    # per-request via Mcp::Skill::Renderer using the current thread's context.
+    def wrap_skill(skill)
+      skill_obj = skill
+
+      Class.new(FastMcp::Resource) do
+        uri skill_obj.uri
+        resource_name skill_obj.name
+        description skill_obj.description
+        mime_type "text/markdown"
+
+        define_method(:content) do
+          ctx = Thread.current[:mcp_context]
+          raise "missing per-request MCP context" if ctx.nil?
+          Mcp::Skill::Renderer.new(skill: skill_obj, context: ctx).call
         end
       end
     end
