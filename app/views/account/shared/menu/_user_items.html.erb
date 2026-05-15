@@ -1,35 +1,31 @@
-<%= render 'account/shared/menu/item', url: main_app.edit_account_user_path(current_user), label: t('menus.main.labels.edit_account_details') do |p| %>
-  <% p.content_for :icon do %>
-    <i class="fal fa-user-cog ti ti-user"></i>
-  <% end %>
-<% end %>
+<%# Account dropdown items. Text-first (no icons) per DESIGN.md.
+    Team Settings + Members live here too — they're admin concerns, not
+    primary nav. %>
+<%= render 'account/shared/menu/item', url: main_app.edit_account_user_path(current_user), label: t('menus.main.labels.edit_account_details') %>
 
 <% if current_user.multiple_teams? %>
-  <%= render 'account/shared/menu/item', url: main_app.account_teams_path, label: t('menus.main.labels.switch_teams') do |p| %>
-    <% p.content_for :icon do %>
-      <i class="ti ti-control-shuffle"></i>
-    <% end %>
-  <% end %>
+  <%= render 'account/shared/menu/item', url: main_app.account_teams_path, label: t('menus.main.labels.switch_teams') %>
 <% elsif show_sign_up_options? %>
-  <%= render 'account/shared/menu/item', url: main_app.new_account_team_path, label: t('menus.main.labels.add_new_team') do |p| %>
-    <% p.content_for :icon do %>
-      <i class="ti ti-plus"></i>
-    <% end %>
-  <% end %>
+  <%= render 'account/shared/menu/item', url: main_app.new_account_team_path, label: t('menus.main.labels.add_new_team') %>
+<% end %>
+
+<%# ---- team admin ---- %>
+<div class="my-1.5 border-t border-zinc-200 dark:border-zinc-800"></div>
+
+<% if can? :edit, current_team %>
+  <%= render 'account/shared/menu/item', url: main_app.edit_account_team_path(current_team), label: t('menus.main.labels.team_settings') %>
+<% end %>
+<%= render 'account/memberships/menu_item' %>
+<% if billing_enabled? %>
+  <%= render 'account/billing/subscriptions/menu_item' %>
 <% end %>
 
 <% if current_user.developer? %>
-  <%= render 'account/shared/menu/item', url: main_app.avo_path, label: "Admin" do |p| %>
-    <% p.content_for :icon do %>
-      <i class="ti ti-key"></i>
-    <% end %>
-  <% end %>
+  <div class="my-1.5 border-t border-zinc-200 dark:border-zinc-800"></div>
+  <%= render 'account/shared/menu/item', url: main_app.avo_path, label: "Admin" %>
 <% end %>
 
+<div class="my-1.5 border-t border-zinc-200 dark:border-zinc-800"></div>
 <div data-turbo="false">
-  <%= render 'account/shared/menu/item', url: main_app.destroy_user_session_path, method: :delete, label: t('menus.main.labels.logout') do |p| %>
-    <% p.content_for :icon do %>
-      <i class="fal fa-sign-out ti ti-close"></i>
-    <% end %>
-  <% end %>
+  <%= render 'account/shared/menu/item', url: main_app.destroy_user_session_path, method: :delete, label: t('menus.main.labels.logout') %>
 </div>

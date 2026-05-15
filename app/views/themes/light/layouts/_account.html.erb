@@ -1,0 +1,56 @@
+<%# Ejected from bullet_train-themes-light to apply Lewsnetter design system.
+    See DESIGN.md → "Layout" + "Applying the system through BulletTrain → Step 5".
+    Removes the gradient body background, the rounded-lg shadow container, and the
+    bg-primary navbar gradient. Replaces with a quiet white-on-zinc surface with
+    a hairline-bordered top nav. %>
+<!DOCTYPE html>
+<html class="theme-<%= BulletTrain::Themes::Light.color %> <%= "theme-secondary-#{BulletTrain::Themes::Light.secondary_color}" if BulletTrain::Themes::Light.secondary_color %> <%= BulletTrain::Themes::Light.force_color_scheme_to.to_s.presence %>" lang="<%= I18n.locale %>">
+  <head>
+    <%= render 'shared/layouts/head' %>
+  </head>
+  <body class="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 text-sm font-normal antialiased">
+    <div class="p-4 bg-zinc-900 electron-draggable electron-title-bar hidden electron-mobile-only"></div>
+    <div
+      class="min-h-screen flex"
+      data-controller="mobile-menu"
+      data-mobile-menu-hidden-class="hidden"
+    >
+      <%= render "account/shared/menu/mobile" %>
+
+      <% if BulletTrain::Themes::Light.navigation == :left %>
+        <div class="hidden lg:flex lg:shrink-0 bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800">
+          <div class="w-60">
+            <%= render "account/shared/menu/sidebar" %>
+          </div>
+        </div>
+      <% end %>
+
+      <div class="flex flex-col w-0 flex-1">
+
+        <% if BulletTrain::Themes::Light.navigation == :top %>
+          <div class="hidden lg:flex bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
+            <div class="mx-auto w-full max-w-[1120px] px-8">
+              <%= render "account/shared/menu/top" %>
+            </div>
+          </div>
+        <% end %>
+
+        <main class="flex-1 relative z-0 focus:outline-none" tabindex="0">
+          <div class="flex flex-row items-center border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 electron-draggable">
+            <%= render "account/shared/menu/open" %>
+
+            <nav class="flex overflow-auto mx-auto w-full max-w-[1120px] px-8 py-3 select-none" aria-label="Breadcrumb">
+              <ol class="breadcrumb whitespace-nowrap flex items-center space-x-2 font-mono text-[11px] uppercase tracking-wider text-zinc-500">
+                <%= render('breadcrumbs').strip.html_safe %>
+              </ol>
+            </nav>
+          </div>
+
+          <div class="mx-auto w-full max-w-[1120px] px-8 py-10">
+            <%= yield %>
+          </div>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>

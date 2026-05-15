@@ -1,0 +1,71 @@
+<%# Ejected. Lewsnetter card chrome: hairline border + 8px radius, no shadow,
+    tighter padding, Geist Sans 600 title. See DESIGN.md → "Cards". %>
+<% divider ||= nil %>
+<% no_background ||= false %>
+<% title_size ||= nil %>
+<% title_padding ||= nil %>
+<% border_top ||= false %>
+<% body = partial.body.presence || partial.raw_body.presence %>
+<% pagy ||= nil %>
+<% overflow_hidden ||= local_assigns.fetch(:overflow_hidden, true) %>
+
+<div class="<%= "bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg" unless no_background %> <%= "overflow-hidden" if overflow_hidden %> <%= border_top ? "border-t dark:border-zinc-700" : "" %>">
+  <% if partial.title? || partial.description? %>
+    <div class="px-6 py-5 <%= title_padding %> space-y-1.5 <%= 'border-b border-zinc-200 dark:border-zinc-800' if divider %>">
+      <% if partial.title? %>
+        <h2 class="text-[18px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 <%= title_size %>">
+          <%= partial.title %>
+        </h2>
+      <% end %>
+
+      <% if partial.description? %>
+        <p class="text-zinc-500 dark:text-zinc-400 text-[13px] leading-relaxed">
+          <%= partial.description %>
+        </p>
+      <% end %>
+    </div>
+  <% end %>
+
+  <div class="space-y-4">
+    <% if partial.table? %>
+      <div class="box-table <%= divider ? 'mt-4' : '-mt-1' %> pb-0.5 overflow-y-auto">
+        <%= partial.table %>
+      </div>
+    <% end %>
+
+    <% if body %>
+      <div class="<%= "pt-5 px-6 space-y-6 #{partial.actions? ? 'pb-3' : 'pb-6'}" unless partial.raw_body? %>">
+        <div class="space-y-4 <%= '-mt-4' unless divider %>">
+          <%= body %>
+        </div>
+      </div>
+    <% end %>
+
+    <% if partial.actions? || (pagy && pagy.pages > 1) %>
+      <div class="pt-2 pb-6 px-6 space-y-6">
+        <div class="sm:flex">
+          <div class="flex-1 space-x">
+            <%= partial.actions %>
+          </div>
+          <% if pagy && pagy.pages > 1 %>
+            <div class="flex-0 mt-3 sm:mt-0">
+              <%== pagy_nav(pagy) %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+
+  <% if partial.footer? %>
+    <div class="py-3.5 px-6 bg-zinc-50 dark:bg-zinc-950/40 border-t border-zinc-200 dark:border-zinc-800">
+      <%= partial.footer %>
+    </div>
+  <% end %>
+
+  <% if partial.raw_footer? %>
+    <div class="bg-zinc-50 dark:bg-zinc-950/40">
+      <%= partial.raw_footer %>
+    </div>
+  <% end %>
+</div>

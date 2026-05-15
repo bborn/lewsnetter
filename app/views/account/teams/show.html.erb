@@ -1,15 +1,121 @@
+<%
+  # Real dashboard per DESIGN.md → "Dashboard". KPI strip + recent campaigns.
+  # Resources live in the top nav now; we don't dump every index inline.
+  team = @team
+  subscribers_count = team.subscribers.subscribed.where(bounced_at: nil).count
+  campaigns_count = team.campaigns.count
+  last_sent = team.campaigns.where.not(sent_at: nil).order(sent_at: :desc).first
+  next_scheduled = team.campaigns.where(status: "scheduled").order(:scheduled_for).first
+  recent_campaigns = team.campaigns.order(created_at: :desc).limit(5)
+%>
 <%= render 'account/shared/page' do |p| %>
   <% p.content_for :title, t('.header', teams_possessive: possessive_string(@team.name)) %>
 
   <% p.content_for :body do %>
-    <%= render "account/subscribers/index", subscribers: @team.subscribers, hide_back: true %>
-    <%= render "account/segments/index", segments: @team.segments, hide_back: true %>
-    <%= render "account/email_templates/index", email_templates: @team.email_templates, hide_back: true %>
-    <%= render "account/campaigns/index", campaigns: @team.campaigns, hide_back: true %>
-    <%= render "account/sender_addresses/index", sender_addresses: @team.sender_addresses, hide_back: true %>
-    <%= render "account/email_sending/dashboard_card", team: @team %>
+    <%# ============================================================
+        KPI strip. 4 cells, hairline dividers, mono caps labels,
+        tabular nums values. See DESIGN.md → "Dashboard". %>
+    <div class="grid grid-cols-2 md:grid-cols-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden mb-6">
+      <div class="px-6 py-5 border-r border-zinc-200 dark:border-zinc-800 md:border-r">
+        <div class="font-mono text-[11px] uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-2">Audience</div>
+        <div class="font-sans text-[28px] font-semibold tabular-nums tracking-tight text-zinc-900 dark:text-zinc-100 leading-none">
+          <%= number_with_delimiter(subscribers_count) %>
+        </div>
+        <div class="font-mono text-[11px] text-zinc-400 dark:text-zinc-500 mt-2">subscribed · not bounced</div>
+      </div>
+      <div class="px-6 py-5 md:border-r border-zinc-200 dark:border-zinc-800 border-t md:border-t-0">
+        <div class="font-mono text-[11px] uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-2">Campaigns</div>
+        <div class="font-sans text-[28px] font-semibold tabular-nums tracking-tight text-zinc-900 dark:text-zinc-100 leading-none">
+          <%= number_with_delimiter(campaigns_count) %>
+        </div>
+        <div class="font-mono text-[11px] text-zinc-400 dark:text-zinc-500 mt-2">drafts, sends, all-time</div>
+      </div>
+      <div class="px-6 py-5 md:border-r border-zinc-200 dark:border-zinc-800 border-t md:border-t-0">
+        <div class="font-mono text-[11px] uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-2">Last sent</div>
+        <div class="font-sans text-[18px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 leading-tight truncate">
+          <% if last_sent %>
+            <%= last_sent.sent_at.strftime("%b %-d, %-l:%M %p") %>
+          <% else %>
+            <span class="text-zinc-400 dark:text-zinc-500">No sends yet</span>
+          <% end %>
+        </div>
+        <div class="font-mono text-[11px] text-zinc-400 dark:text-zinc-500 mt-2 truncate">
+          <% if last_sent %>
+            <%= truncate(last_sent.subject || "—", length: 40) %>
+          <% else %>
+            send your first campaign
+          <% end %>
+        </div>
+      </div>
+      <div class="px-6 py-5 border-t md:border-t-0 border-zinc-200 dark:border-zinc-800">
+        <div class="font-mono text-[11px] uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-2">Next scheduled</div>
+        <div class="font-sans text-[18px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 leading-tight truncate">
+          <% if next_scheduled %>
+            <%= next_scheduled.scheduled_for.strftime("%b %-d, %-l:%M %p") %>
+          <% else %>
+            <span class="text-zinc-400 dark:text-zinc-500">Nothing scheduled</span>
+          <% end %>
+        </div>
+        <div class="font-mono text-[11px] text-zinc-400 dark:text-zinc-500 mt-2 truncate">
+          <% if next_scheduled %>
+            <%= truncate(next_scheduled.subject || "—", length: 40) %>
+          <% else %>
+            queue a campaign to see it here
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <%# Recent campaigns table %>
+    <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden">
+      <div class="px-6 py-5 flex items-baseline justify-between border-b border-zinc-200 dark:border-zinc-800">
+        <h2 class="text-[18px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Recent campaigns</h2>
+        <%= link_to "View all", [:account, team, :campaigns], class: "font-mono text-[11px] uppercase tracking-widest text-zinc-500 hover:text-primary-600 dark:text-zinc-400 dark:hover:text-primary-400" %>
+      </div>
+      <% if recent_campaigns.any? %>
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="font-mono text-[11px] uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+              <th class="text-left font-medium px-6 py-3">Subject</th>
+              <th class="text-left font-medium px-6 py-3">Status</th>
+              <th class="text-left font-medium px-6 py-3 tabular-nums">Recipients</th>
+              <th class="text-left font-medium px-6 py-3">Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% recent_campaigns.each do |c| %>
+              <tr class="border-t border-zinc-200 dark:border-zinc-800">
+                <td class="px-6 py-4">
+                  <%= link_to (c.subject.presence || "(untitled)"), [:account, c], class: "text-zinc-900 dark:text-zinc-100 hover:text-primary-600 dark:hover:text-primary-400 font-medium" %>
+                </td>
+                <td class="px-6 py-4"><%= status_pill(c.status) %></td>
+                <td class="px-6 py-4 font-mono tabular-nums text-zinc-700 dark:text-zinc-300">
+                  <%= c.recipient_count ? number_with_delimiter(c.recipient_count) : "—" %>
+                </td>
+                <td class="px-6 py-4 font-mono text-[13px] text-zinc-500 dark:text-zinc-400">
+                  <% if c.sent_at %>
+                    Sent <%= c.sent_at.strftime("%b %-d") %>
+                  <% elsif c.scheduled_for %>
+                    Scheduled <%= c.scheduled_for.strftime("%b %-d") %>
+                  <% else %>
+                    Created <%= c.created_at.strftime("%b %-d") %>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      <% else %>
+        <div class="text-center py-12 px-6">
+          <h3 class="text-[18px] font-semibold text-zinc-900 dark:text-zinc-100 mb-2">No campaigns yet</h3>
+          <p class="text-zinc-500 dark:text-zinc-400 mb-6 max-w-md mx-auto">
+            Compose a newsletter, pick a segment, and ship.
+          </p>
+          <%= link_to "Draft your first campaign", [:new, :account, team, :campaign], class: "button" %>
+        </div>
+      <% end %>
+    </div>
+
     <%# 🚅 super scaffolding will insert new children above this line. %>
-    
-    <%= render 'account/scaffolding/absolutely_abstract/creative_concepts/index', creative_concepts: @team.scaffolding_absolutely_abstract_creative_concepts, hide_back: true unless scaffolding_things_disabled? %>
   <% end %>
 <% end %>

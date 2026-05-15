@@ -1,0 +1,25 @@
+<%# Ejected. Replaces the white-text-on-blue-navbar styling with zinc-on-white
+    chrome matching the redesigned top nav. Team label in Geist Mono caps
+    (not orange — accent is rare). %>
+<div class="shrink-0 flex pl-4 <%= @menu_orientation == :top ? "py-3" : "py-4" %>">
+  <div class="shrink-0 w-full group block no-underline">
+    <div class="flex items-center">
+      <div class="inline-block rounded-full">
+        <%= image_tag membership_profile_photo_url(current_membership),
+              class: "#{@menu_orientation == :top ? "h-8 w-8" : "h-9 w-9"} rounded-full ring-1 ring-zinc-200 dark:ring-zinc-800",
+              alt: current_user.name %>
+      </div>
+      <div class="ml-2.5 hidden md:block">
+        <div class="text-zinc-900 dark:text-zinc-100 text-sm font-medium leading-tight truncate max-w-[10rem]">
+          <%= current_user.name %>
+        </div>
+        <div class="font-mono text-[10px] tracking-widest uppercase text-zinc-500 dark:text-zinc-400 leading-tight mt-0.5 truncate max-w-[10rem]">
+          <%= current_team.name %>
+        </div>
+      </div>
+      <% unless BulletTrain::Themes::Light.show_logo_in_account %>
+        <%= render "account/shared/menu/close" %>
+      <% end %>
+    </div>
+  </div>
+</div>

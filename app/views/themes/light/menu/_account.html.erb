@@ -1,0 +1,28 @@
+<%# Ejected. Account chip — drops the shadow + bg-primary-700 hover dropdown
+    chrome. Quiet zinc surface with hairline border on the dropdown. %>
+<% expand ||= false %>
+<% hide_shadow ||= false %>
+
+<div class="relative <%= 'group' unless expand %>"
+     id="user" data-controller="desktop-menu"
+     data-action="keydown->desktop-menu#hideSubmenu focus->desktop-menu#showSubmenu"
+     data-desktop-menu-target="menuItemHeader"
+     tabIndex="0">
+  <%= render "account/shared/menu/user" %>
+  <div class="invisible group-hover:visible" data-desktop-menu-target="menuItemGroup">
+    <div class="absolute top-0 left-0 right-0 z-50">
+      <%= render "account/shared/menu/user" %>
+    </div>
+    <div class="absolute transition duration-150 scale-95 group-hover:scale-100 translate-y-1 group-hover:translate-y-0 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 -top-0 left-0 right-0 -m-2 p-2 rounded-md z-40 shadow-sm">
+      <div class="invisible">
+        <%= render "account/shared/menu/user", expand: expand %>
+      </div>
+      <div class="p-3 <% @menu_orientation == :top ? "" : "pt-0" %>">
+        <% @last_menu_orientation = @menu_orientation %>
+        <% @menu_orientation = :side %>
+        <%= render "account/shared/menu/user_items" %>
+        <% @menu_orientation = @last_menu_orientation%>
+      </div>
+    </div>
+  </div>
+</div>

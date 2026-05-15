@@ -1,10 +1,24 @@
 <% expand ||= false %>
 
 <% unless hide_team_resource_menus? %>
+  <%# Top-level: Dashboard + Campaigns (primary action) flat. Audience and
+      Sending grouped in dropdowns. Team admin lives in the existing Team
+      subsection at the bottom. %>
   <%= render 'account/shared/menu/section' do %>
     <%= render 'account/teams/menu_item' %>
+    <%= render 'account/campaigns/menu_item' %>
     <%= render 'account/scaffolding/absolutely_abstract/creative_concepts/menu_item' unless scaffolding_things_disabled? %>
     <% # added by super scaffolding. %>
+  <% end %>
+
+  <%= render 'account/shared/menu/subsection', title: t('menus.main.labels.audience', default: 'Audience'), expand: expand do %>
+    <%= render 'account/subscribers/menu_item' %>
+    <%= render 'account/segments/menu_item' %>
+  <% end %>
+
+  <%= render 'account/shared/menu/subsection', title: t('menus.main.labels.sending', default: 'Sending'), expand: expand do %>
+    <%= render 'account/email_templates/menu_item' %>
+    <%= render 'account/sender_addresses/menu_item' %>
   <% end %>
 
   <% @last_menu_orientation = @menu_orientation %>
@@ -31,15 +45,9 @@
     <% end %>
   <% end %>
 
-  <%= render 'account/shared/menu/subsection', title: t('menus.main.labels.team'), expand: expand do %>
-    <%= render 'account/shared/menu/item', url: main_app.edit_account_team_path(current_team), label: t('menus.main.labels.team_settings') do |p| %>
-      <% p.content_for :icon do %>
-        <i class="fal fa-cog ti ti-settings"></i>
-      <% end %>
-    <% end if can? :edit, current_team %>
-    <%= render 'account/memberships/menu_item' %>
-    <%= render 'account/billing/subscriptions/menu_item' if billing_enabled? %>
-  <% end %>
+  <%# Team Settings + Members live in the avatar dropdown — see
+      account/shared/menu/_user_items.html.erb. Keeps the top nav focused
+      on the primary work (Dashboard / Campaigns / Audience / Sending). %>
 <% end %>
 
 <% if expand %>

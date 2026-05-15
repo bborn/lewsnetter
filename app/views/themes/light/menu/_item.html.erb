@@ -1,0 +1,39 @@
+<%# Ejected. Text-first menu items (no icons per DESIGN.md "anti-patterns").
+    Two layouts: :top renders inline-flex with an active orange underline,
+    :side renders flex w-full so dropdown items stack vertically. %>
+<% method ||= nil %>
+<% active ||= request.path == url %>
+
+<%
+  if @menu_orientation == :top
+    layout_classes = "inline-flex items-center"
+    spacing_classes = "px-3 py-5 -mb-px"
+    state_classes = if active
+      "text-zinc-900 dark:text-zinc-100 border-b-2 border-primary-600"
+    else
+      "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 border-b-2 border-transparent"
+    end
+  else
+    layout_classes = "flex w-full items-center"
+    spacing_classes = "px-3 py-2 rounded"
+    state_classes = if active
+      "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+    else
+      "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100"
+    end
+  end
+%>
+
+<%= send (method ? :button_to : :link_to), url,
+    class: "#{layout_classes} text-sm font-medium hover:no-underline transition-colors #{spacing_classes} #{state_classes}",
+    data: {"desktop-menu-target": "menuItemLink"},
+    tabIndex: 0,
+    method: method do %>
+  <% if partial.label? %>
+    <%= partial.label %>
+  <% else %>
+    <%= label %>
+  <% end %>
+<% end %>
+
+<% @not_first = true %>

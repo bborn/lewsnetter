@@ -1,0 +1,9 @@
+<%# Ejected. Replaces the bg-primary-900 logo block with a quiet wordmark:
+    "Lewsnetter" in Geist Sans 600 + accent dot. See DESIGN.md → "Layout". %>
+<% if BulletTrain::Themes::Light.show_logo_in_account %>
+  <%= link_to root_path, class: "flex items-center shrink-0 py-5 pr-8 group" do %>
+    <span class="font-sans font-semibold tracking-tight text-[15px] text-zinc-900 dark:text-zinc-100">Lewsnetter</span>
+    <span class="ml-1.5 w-1.5 h-1.5 rounded-full bg-primary-600 group-hover:bg-primary-500 transition-colors"></span>
+    <%= render "account/shared/menu/close" %>
+  <% end %>
+<% end %>
