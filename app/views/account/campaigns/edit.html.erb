@@ -1,7 +1,6 @@
 <%= render 'account/shared/page' do |page| %>
-  <% page.title t('.section') %>
-  <% page.body.render 'account/shared/box', divider: true do |box| %>
-    <% box.t :description, title: '.header' %>
-    <% box.body.render 'form', campaign: @campaign %>
-  <% end %>
+  <%# The editorial header inside _form.html.erb is the visual title for this
+      surface; keep the page-title H1 only for screen readers + outline. %>
+  <% page.title content_tag(:span, "Editing campaign: #{@campaign.subject.presence || 'untitled draft'}", class: "sr-only") %>
+  <% page.body.render 'form', campaign: @campaign %>
 <% end %>

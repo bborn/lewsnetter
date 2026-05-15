@@ -588,6 +588,29 @@ html.dark a:hover,
   .campaign-edit-section__body {
     padding: 24px;
   }
+  .campaign-edit-section__body--tight {
+    padding: 18px 24px 20px;
+  }
+
+  /* AI drafter card variant — subtle tinted background to set it apart as
+     a suggestion mechanism rather than a regular form section. */
+  .campaign-edit-section--drafter {
+    background: linear-gradient(180deg, #FFF7ED 0%, #FFFFFF 100%);
+  }
+  .dark .campaign-edit-section--drafter,
+  [data-theme="dark"] .campaign-edit-section--drafter {
+    background: linear-gradient(180deg, #2D1B0E 0%, #18181B 100%);
+  }
+  .campaign-edit-section--drafter .campaign-edit-section__header {
+    border-bottom-color: rgba(234 88 12 / 0.15);
+  }
+  .campaign-edit-section--drafter .campaign-edit-section__eyebrow {
+    color: #C2410C;
+  }
+  .dark .campaign-edit-section--drafter .campaign-edit-section__eyebrow,
+  [data-theme="dark"] .campaign-edit-section--drafter .campaign-edit-section__eyebrow {
+    color: #FB923C;
+  }
 
   /* Editorial header — small mono eyebrow + campaign subject as the visual
      H1 for this surface. */
@@ -724,6 +747,69 @@ html.dark a:hover,
   .campaign-edit-body-field__header {
     @apply flex items-start justify-between gap-3;
     margin-bottom: 8px;
+  }
+
+  /* Re-style the ejected _field.html.erb labels when they appear inside our
+     section cards. We can't modify the partial freely, but we CAN re-skin
+     its label markup with a scoped descendant rule. The partial wraps the
+     label in `<div class="required">` (required fields) or `<div class="">`
+     (optional). Target both by reaching for any <label> two levels deep. */
+  .campaign-edit-section__body > div > div > label,
+  .campaign-edit-section__body > div > label.block {
+    font-family: 'Geist Mono', ui-monospace, monospace !important;
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.06em !important;
+    text-transform: uppercase !important;
+    color: rgb(39 39 42) !important; /* zinc-800 */
+    margin-bottom: 6px !important;
+    display: block;
+  }
+  .dark .campaign-edit-section__body > div > div > label,
+  [data-theme="dark"] .campaign-edit-section__body > div > div > label {
+    color: rgb(228 228 231) !important; /* zinc-200 */
+  }
+  /* Add spacing between stacked fields from the ejected partial. */
+  .campaign-edit-section__body > div:has(> div > label):not(.campaign-edit-grid) {
+    margin-bottom: 18px;
+  }
+  /* Quiet the "(optional)" marker — keep mono lowercase, smaller, lighter. */
+  .campaign-edit-section__body label > span.text-xs.font-normal {
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+    font-size: 10px !important;
+    color: rgb(161 161 170) !important; /* zinc-400 */
+    font-family: 'Geist Mono', ui-monospace, monospace !important;
+    font-weight: 400 !important;
+  }
+  /* Quiet the required asterisk — was bright red, smaller + zinc-500 reads as
+     a hint, not a warning. */
+  .campaign-edit-section__body label > span[aria-hidden="true"] {
+    color: rgb(161 161 170) !important; /* zinc-400 */
+    font-weight: 400 !important;
+  }
+  /* Help-text under the field — tighter sizing + zinc-500 to match our hint
+     pattern. The ejected partial wraps it in <p class="mt-1.5 text-xs ..."> */
+  .campaign-edit-section__body > div > p.text-xs:last-child {
+    font-size: 12px !important;
+    color: rgb(113 113 122) !important; /* zinc-500 */
+    margin-top: 6px !important;
+  }
+
+  /* Soften the ejected text input chrome inside our section cards. Removes
+     the heavy shadow + makes the border zinc-300, focus ring smaller. */
+  .campaign-edit-section__body input[type="text"],
+  .campaign-edit-section__body input[type="email"],
+  .campaign-edit-section__body input[type="datetime-local"],
+  .campaign-edit-section__body input[type="number"],
+  .campaign-edit-section__body input[type="url"],
+  .campaign-edit-section__body textarea {
+    box-shadow: none !important;
+    border-radius: 6px !important;
+    font-family: 'Geist', ui-sans-serif, system-ui, sans-serif !important;
+    font-weight: 400 !important;
+    font-size: 14px !important;
+    padding: 8px 12px !important;
   }
 
   /* Reusable field chrome — labels, hints, native inputs/selects. */
@@ -872,6 +958,22 @@ html.dark a:hover,
     @apply border-b border-zinc-200 dark:border-zinc-800;
     padding: 20px 24px 16px;
     margin-bottom: 0;
+    position: relative;
+  }
+  .campaign-edit-assets-wrap > section > header::before {
+    content: "Section 4 · Assets";
+    display: block;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgb(113 113 122); /* zinc-500 */
+    margin-bottom: 6px;
+  }
+  .dark .campaign-edit-assets-wrap > section > header::before,
+  [data-theme="dark"] .campaign-edit-assets-wrap > section > header::before {
+    color: rgb(161 161 170); /* zinc-400 */
   }
   .campaign-edit-assets-wrap > section > header h2 {
     @apply text-zinc-900 dark:text-zinc-50 font-semibold;
@@ -898,6 +1000,36 @@ html.dark a:hover,
   .campaign-edit-assets-wrap > section > p:last-child,
   .campaign-edit-assets-wrap > section > div:last-of-type {
     padding-bottom: 24px;
+  }
+  /* "Add images" label inside Assets — promote to mono caps. */
+  .campaign-edit-assets-wrap > section > div > label.block.text-sm.font-medium {
+    font-family: 'Geist Mono', ui-monospace, monospace !important;
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.06em !important;
+    text-transform: uppercase !important;
+    color: rgb(39 39 42); /* zinc-800 */
+  }
+  .dark .campaign-edit-assets-wrap > section > div > label.block.text-sm.font-medium,
+  [data-theme="dark"] .campaign-edit-assets-wrap > section > div > label.block.text-sm.font-medium {
+    color: rgb(228 228 231); /* zinc-200 */
+  }
+  /* Quiet the orange "Choose Files" button — it's a tertiary action here,
+     not the page CTA. Targets the file input's ::file-selector-button. */
+  .campaign-edit-assets-wrap input[type="file"]::file-selector-button {
+    background-color: rgb(244 244 245) !important; /* zinc-100 */
+    color: rgb(39 39 42) !important; /* zinc-800 */
+    border: 1px solid rgb(228 228 231) !important; /* zinc-200 */
+    font-weight: 500;
+  }
+  .campaign-edit-assets-wrap input[type="file"]:hover::file-selector-button {
+    background-color: rgb(228 228 231) !important; /* zinc-200 */
+  }
+  .dark .campaign-edit-assets-wrap input[type="file"]::file-selector-button,
+  [data-theme="dark"] .campaign-edit-assets-wrap input[type="file"]::file-selector-button {
+    background-color: rgb(39 39 42) !important; /* zinc-800 */
+    color: rgb(228 228 231) !important;
+    border-color: rgb(63 63 70) !important; /* zinc-700 */
   }
 
   /* Sticky action bar — pinned to bottom of viewport so the primary CTA
@@ -947,6 +1079,96 @@ html.dark a:hover,
   .campaign-edit-actions ~ .buttons,
   form.form > .buttons:last-child {
     display: none;
+  }
+
+  /* ============================================================
+     Devise / auth screens — sign in, sign up, password reset,
+     accept invitation. See DESIGN.md → "Cards" + "Layout".
+     Layout shell + box live in:
+       app/views/themes/light/layouts/_devise.html.erb
+       app/views/themes/light/workflow/_box.html.erb
+     ============================================================ */
+
+  .auth-card__title {
+    font-family: 'Geist', ui-sans-serif, system-ui, sans-serif;
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1.2;
+    margin: 0 0 4px;
+  }
+  .auth-card__tagline {
+    @apply text-zinc-500 dark:text-zinc-400;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  /* Quieter form-field chrome for devise screens — overrides the BT defaults
+     that the field-partial paints onto every <input>. We can't touch the
+     ejected _field partial without coordinating across surfaces, so we scope
+     these overrides via .auth-card. */
+  .auth-card form input[type="email"],
+  .auth-card form input[type="password"],
+  .auth-card form input[type="text"] {
+    @apply bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100;
+    @apply border border-zinc-300 dark:border-zinc-700;
+    @apply focus:outline-none focus:ring-2 focus:ring-orange-200 dark:focus:ring-orange-900 focus:border-orange-500;
+    font-family: 'Geist', ui-sans-serif, system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.4;
+    padding: 9px 12px;
+    border-radius: 6px;
+    box-shadow: none;
+    transition: border-color 100ms ease-out, box-shadow 100ms ease-out;
+  }
+  .auth-card form label {
+    @apply text-zinc-700 dark:text-zinc-300;
+    font-family: 'Geist', ui-sans-serif, system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+  }
+  /* "Remember me" inline label — even smaller, muted. */
+  .auth-card form .form-check label,
+  .auth-card form label.inline-flex {
+    font-weight: 400;
+    @apply text-zinc-600 dark:text-zinc-400;
+  }
+  /* Primary submit button — full-width orange, slightly taller than the
+     default .button. */
+  .auth-card form input[type="submit"].button.full,
+  .auth-card form input[type="submit"].button {
+    width: 100%;
+    padding: 11px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 6px;
+  }
+  /* Inline help links beneath each field — "Don't have an account?",
+     "Forgot password?" — render as quiet zinc text with hover orange. */
+  .auth-card form p.mt-1\.5,
+  .auth-card form .field-help,
+  .auth-card form .text-base-500 {
+    font-family: 'Geist', ui-sans-serif, system-ui, sans-serif;
+    font-size: 12.5px;
+  }
+  .auth-card form a {
+    @apply text-zinc-600 dark:text-zinc-400;
+    text-decoration: none;
+    font-weight: 500;
+  }
+  .auth-card form a:hover {
+    @apply text-orange-700 dark:text-orange-400;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  /* "Remember me" inline checkbox row. */
+  .auth-card form .form-check,
+  .auth-card form .checkbox {
+    @apply text-zinc-600 dark:text-zinc-400;
+    font-size: 13px;
   }
 
   /* Footer */

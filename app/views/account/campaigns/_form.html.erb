@@ -12,64 +12,95 @@ select_classes = "block w-full rounded-md shadow-sm font-light text-base md:text
 %>
 
 <%# ============================================================
-    Section 1 — Content (header + AI draft panel live outside the
-    main campaign form so we don't nest two forms in the DOM. The
-    rest of the Content fields render inside the form below.)
+    Editorial header — small mono eyebrow + the campaign subject as
+    the visual H1 for this surface. The page-title H1 is sr-only on
+    edit (see edit.html.erb). State pill keeps the user oriented when
+    the campaign isn't a draft.
     ============================================================ %>
-<section class="mb-8 p-4 border rounded-md bg-white dark:bg-sky-950 dark:border-sky-800">
-  <header class="mb-4">
-    <h2 class="text-lg font-semibold">Content</h2>
-    <p class="text-sm text-gray-500">What goes in the email. Draft a starting point with AI, then refine subject + body.</p>
-  </header>
+<header class="campaign-edit-header">
+  <div class="campaign-edit-header__eyebrow">
+    <span>Editing</span>
+    <% if campaign.persisted? %>
+      <span class="campaign-edit-header__id">· <%= campaign.to_param %></span>
+      <%= status_pill(campaign.status) %>
+    <% else %>
+      <span class="campaign-edit-header__id">· New campaign</span>
+    <% end %>
+  </div>
+  <h2 class="campaign-edit-header__title">
+    <%= campaign.subject.presence || (campaign.persisted? ? "(no subject yet)" : "New campaign") %>
+  </h2>
+</header>
 
-  <%# AI draft panel — shown on both new and edit. Backing endpoint requires
-      a persisted campaign; on new we show a disabled placeholder so the
-      authoring affordance is still discoverable. %>
-  <div class="mb-4">
+<%# State-aware lock banner — if the campaign is sent, editing should be
+    locked. We still render the form below for completeness but show a
+    persistent banner explaining the state. %>
+<% if campaign.persisted? && campaign.sent? %>
+  <aside class="campaign-edit-locked-banner">
+    <strong>This campaign was sent<%= " on #{campaign.sent_at.strftime('%b %-d, %-l:%M %p')}" if campaign.sent_at %>.</strong>
+    Edits won't affect already-delivered email. <%= link_to "View campaign", [:account, campaign], class: "campaign-edit-locked-banner__link" %>.
+  </aside>
+<% end %>
+
+<%# ============================================================
+    AI Drafter — its own card. Lives outside the main campaign form
+    so we don't nest two forms in the DOM. The endpoint applies the
+    LLM draft to the campaign and the page reloads to surface it.
+    ============================================================ %>
+<section class="campaign-edit-section campaign-edit-section--drafter">
+  <header class="campaign-edit-section__header">
+    <div class="campaign-edit-section__eyebrow">AI drafter</div>
+    <h3 class="campaign-edit-section__title">Draft this campaign with AI</h3>
+    <p class="campaign-edit-section__description">
+      Give Claude five bullets and it returns a markdown body in your team's voice. You can still refine it below.
+    </p>
+  </header>
+  <div class="campaign-edit-section__body campaign-edit-section__body--tight">
     <% if campaign.persisted? %>
       <div data-controller="ai-drafter"
            data-ai-drafter-url-value="<%= draft_account_campaign_path(campaign) %>"
-           data-ai-drafter-csrf-value="<%= form_authenticity_token %>"
-           class="p-3 border rounded-md bg-gray-50 dark:bg-sky-950 dark:border-sky-800">
+           data-ai-drafter-csrf-value="<%= form_authenticity_token %>">
         <form data-action="submit->ai-drafter#submit" novalidate>
-          <label class="block text-sm font-medium mb-1" for="ai_drafter_brief">
-            Brief (5 bullets — what's this campaign about?)
-          </label>
+          <label class="campaign-edit-field-label" for="ai_drafter_brief">Brief</label>
           <textarea id="ai_drafter_brief"
                     data-ai-drafter-target="brief"
-                    class="w-full p-2 border rounded-md mb-2 font-mono text-sm"
+                    class="campaign-edit-drafter__textarea"
                     rows="5"
                     placeholder="- The headline change&#10;- Why it matters&#10;- One feature highlight&#10;- A user quote or stat&#10;- The call to action"></textarea>
-          <div class="flex items-center gap-3">
-            <button type="submit"
-                    class="button"
-                    data-ai-drafter-target="submitButton">Draft with AI</button>
-            <span hidden
-                  data-ai-drafter-target="spinner"
-                  data-busy-label="Asking Claude…"
-                  class="text-sm text-gray-500">Asking Claude…</span>
+          <div class="campaign-edit-drafter__footer">
+            <p class="campaign-edit-drafter__hint">
+              Uses team voice samples + segment context. Returns markdown body that overwrites the body below.
+            </p>
+            <div class="campaign-edit-drafter__actions">
+              <span hidden
+                    data-ai-drafter-target="spinner"
+                    data-busy-label="Asking Claude…"
+                    class="campaign-edit-drafter__spinner">Asking Claude…</span>
+              <button type="submit"
+                      class="button"
+                      data-ai-drafter-target="submitButton">Draft with AI →</button>
+            </div>
           </div>
           <p hidden
              data-ai-drafter-target="errorMessage"
-             class="text-sm text-red-600 mt-2 mb-0"></p>
-          <p class="text-xs text-gray-500 mt-2 mb-0">
-            Uses team voice samples + segment context. Returns markdown body. Stub mode if no API key.
-          </p>
+             class="campaign-edit-drafter__error"></p>
         </form>
       </div>
     <% else %>
-      <div class="p-3 border rounded-md bg-gray-50 dark:bg-sky-950 dark:border-sky-800">
-        <label class="block text-sm font-medium mb-1">
-          Brief (5 bullets — what's this campaign about?)
-        </label>
-        <textarea class="w-full p-2 border rounded-md mb-2"
+      <div>
+        <label class="campaign-edit-field-label">Brief</label>
+        <textarea class="campaign-edit-drafter__textarea"
                   rows="5"
                   disabled
                   placeholder="- The headline change&#10;- Why it matters&#10;- One feature highlight&#10;- A user quote or stat&#10;- The call to action"></textarea>
-        <button type="button" class="button" disabled>Draft with AI</button>
-        <span class="text-xs text-gray-500 ml-2">
-          Save the campaign once to unlock AI drafting.
-        </span>
+        <div class="campaign-edit-drafter__footer">
+          <p class="campaign-edit-drafter__hint">
+            Save the campaign once to unlock AI drafting.
+          </p>
+          <div class="campaign-edit-drafter__actions">
+            <button type="button" class="button" disabled>Draft with AI →</button>
+          </div>
+        </div>
       </div>
     <% end %>
   </div>
@@ -86,202 +117,242 @@ select_classes = "block w-full rounded-md shadow-sm font-light text-base md:text
       <%# Continuation of Section 1 (Content): subject, preheader, body,
           raw MJML disclosure, preview iframe. Visually a separate card so
           the section header stays with the AI draft above. %>
-      <section class="mb-8 p-4 border rounded-md bg-white dark:bg-sky-950 dark:border-sky-800">
-        <%= render 'shared/fields/text_field', method: :subject, options: {autofocus: true} %>
-        <%= render 'shared/fields/text_field', method: :preheader %>
+      <section class="campaign-edit-section">
+        <header class="campaign-edit-section__header">
+          <div class="campaign-edit-section__eyebrow">Section 1 · Content</div>
+          <h3 class="campaign-edit-section__title">Content</h3>
+          <p class="campaign-edit-section__description">Subject line, preheader, and the markdown body the template will wrap.</p>
+        </header>
+        <div class="campaign-edit-section__body">
+          <%= render 'shared/fields/text_field', method: :subject, options: {autofocus: true} %>
+          <%= render 'shared/fields/text_field', method: :preheader %>
 
-        <%# Primary authoring path: markdown body. EasyMDE wraps the textarea
-            with a toolbar + side-by-side preview. The Stimulus controller
-            handles teardown on Turbo navigation (otherwise CodeMirror nodes
-            leak). Underlying textarea name still campaign[body_markdown]
-            so form submit picks up the latest value via EasyMDE's forceSync. %>
-        <div class="mb-6">
-          <div class="flex items-start justify-between gap-3 mb-1.5">
-            <div>
-              <label class="block text-sm font-medium" for="campaign_body_markdown">Body</label>
-              <p class="text-xs text-gray-500">
-                Write in markdown. The template (selected below) wraps your content with header + footer chrome.
-              </p>
-            </div>
-
-            <%# Variable picker — fetches the team's available {{vars}} on
-                first open and splices the selected token into the markdown
-                editor at the current cursor via the editor's public
-                insertAtCursor() method. %>
-            <div class="relative shrink-0"
-                 data-controller="variable-picker"
-                 data-variable-picker-url-value="<%= account_team_variables_path(@team) %>"
-                 data-variable-picker-editor-selector-value="#campaign_body_markdown">
-              <button type="button"
-                      class="button-secondary text-xs"
-                      data-variable-picker-target="button"
-                      data-action="click->variable-picker#toggle">
-                Insert variable
-              </button>
-              <div data-variable-picker-target="panel"
-                   class="absolute right-0 z-20 mt-1 w-72 bg-white dark:bg-base-800 rounded-md shadow-lg border border-base-200 dark:border-base-700 hidden">
-                <div class="p-2 border-b border-base-200 dark:border-base-700">
-                  <input type="text"
-                         placeholder="Filter variables…"
-                         data-variable-picker-target="search"
-                         data-action="input->variable-picker#filter"
-                         class="block w-full rounded-md shadow-sm font-light dark:bg-base-900 dark:text-base-300 text-sm border-base-300 dark:border-base-900 focus:ring-primary-500 focus:border-primary-500" />
-                </div>
-                <ul data-variable-picker-target="list"
-                    class="max-h-72 overflow-auto py-1"></ul>
+          <%# Primary authoring path: markdown body. EasyMDE wraps the textarea
+              with a toolbar + side-by-side preview. The Stimulus controller
+              handles teardown on Turbo navigation (otherwise CodeMirror nodes
+              leak). Underlying textarea name still campaign[body_markdown]
+              so form submit picks up the latest value via EasyMDE's forceSync. %>
+          <div class="campaign-edit-body-field">
+            <div class="campaign-edit-body-field__header">
+              <div>
+                <label class="campaign-edit-field-label" for="campaign_body_markdown">Body</label>
+                <p class="campaign-edit-field-hint">
+                  Write in markdown. The template (selected below) wraps your content with header + footer chrome.
+                </p>
               </div>
-            </div>
-          </div>
-          <%= form.text_area :body_markdown,
-                id: "campaign_body_markdown",
-                class: "block w-full",
-                rows: 18,
-                data: {
-                  controller: "markdown-editor",
-                  "markdown-editor-target": "textarea"
-                } %>
-        </div>
 
-        <%# Legacy raw MJML body — hidden behind a disclosure for the small
-            number of authors who want full MJML control. The warning lives
-            inside the <summary> element so users see it BEFORE expanding the
-            panel and pasting in MJML that would silently override their
-            markdown body. %>
-        <details class="mb-6 p-3 border rounded-md bg-gray-50 dark:bg-sky-950 dark:border-sky-800">
-          <summary class="cursor-pointer text-sm font-medium">
-            Show raw MJML (advanced — overrides markdown body)
-          </summary>
-          <%= render 'shared/fields/text_area', method: :body_mjml,
-                     options: {rows: 16, class: "font-mono text-xs mt-3", placeholder: "<mjml>\n  <mj-body>\n    <mj-section>\n      <mj-column>\n        <mj-text>Hello {{first_name}}!</mj-text>\n      </mj-column>\n    </mj-section>\n  </mj-body>\n</mjml>"} %>
-        </details>
-
-        <%# Preview iframe — live-updating via campaign-preview controller.
-            POSTs current in-memory form values to the preview_frame endpoint
-            on every (debounced) edit, then swaps the returned HTML in via
-            srcdoc. No save required. The manual "Refresh" button is kept
-            for the rare case authors want to force a sync. %>
-        <% if campaign.persisted? %>
-          <div data-controller="campaign-preview"
-               data-campaign-preview-url-value="<%= preview_frame_account_campaign_path(campaign) %>"
-               data-campaign-preview-csrf-value="<%= form_authenticity_token %>"
-               data-action="markdown-editor:change@window->campaign-preview#schedule
-                            ai-drafter:applied@window->campaign-preview#schedule
-                            input->campaign-preview#scheduleFromInput
-                            change->campaign-preview#scheduleFromInput">
-            <div class="flex items-center justify-between mb-2">
-              <label class="block text-sm font-medium">Preview</label>
-              <div class="flex items-center gap-3">
-                <span data-campaign-preview-target="status" class="text-xs text-gray-500"></span>
+              <%# Variable picker — fetches the team's available {{vars}} on
+                  first open and splices the selected token into the markdown
+                  editor at the current cursor via the editor's public
+                  insertAtCursor() method. %>
+              <div class="relative shrink-0"
+                   data-controller="variable-picker"
+                   data-variable-picker-url-value="<%= account_team_variables_path(@team) %>"
+                   data-variable-picker-editor-selector-value="#campaign_body_markdown">
                 <button type="button"
-                        class="button-secondary text-xs"
-                        data-action="click->campaign-preview#refresh">
-                  Refresh preview
+                        class="button-secondary button-smaller"
+                        data-variable-picker-target="button"
+                        data-action="click->variable-picker#toggle">
+                  Insert variable
                 </button>
+                <div data-variable-picker-target="panel"
+                     class="absolute right-0 z-20 mt-1 w-72 bg-white dark:bg-zinc-900 rounded-md shadow-lg border border-zinc-200 dark:border-zinc-700 hidden">
+                  <div class="p-2 border-b border-zinc-200 dark:border-zinc-700">
+                    <input type="text"
+                           placeholder="Filter variables…"
+                           data-variable-picker-target="search"
+                           data-action="input->variable-picker#filter"
+                           class="block w-full rounded-md shadow-sm font-light dark:bg-zinc-900 dark:text-zinc-300 text-sm border-zinc-300 dark:border-zinc-700 focus:ring-primary-500 focus:border-primary-500" />
+                  </div>
+                  <ul data-variable-picker-target="list"
+                      class="max-h-72 overflow-auto py-1"></ul>
+                </div>
               </div>
             </div>
-            <div class="border rounded-md overflow-hidden bg-white dark:bg-base-900">
-              <iframe id="campaign_preview_frame"
-                      data-campaign-preview-target="iframe"
-                      src="<%= preview_frame_account_campaign_path(campaign) %>"
-                      class="w-full"
-                      style="height: 640px; border: 0;"
-                      sandbox="allow-same-origin"
-                      title="Campaign preview"></iframe>
-            </div>
+            <%= form.text_area :body_markdown,
+                  id: "campaign_body_markdown",
+                  class: "block w-full",
+                  rows: 18,
+                  data: {
+                    controller: "markdown-editor",
+                    "markdown-editor-target": "textarea"
+                  } %>
           </div>
-        <% end %>
+
+          <%# Legacy raw MJML body — hidden behind a disclosure for the small
+              number of authors who want full MJML control. The warning lives
+              inside the <summary> element so users see it BEFORE expanding the
+              panel and pasting in MJML that would silently override their
+              markdown body. %>
+          <details class="campaign-edit-disclosure">
+            <summary class="campaign-edit-disclosure__summary">
+              <span class="campaign-edit-disclosure__eyebrow">Advanced</span>
+              Show raw MJML <span class="campaign-edit-disclosure__caution">— overrides markdown body</span>
+            </summary>
+            <div class="campaign-edit-disclosure__body">
+              <%= render 'shared/fields/text_area', method: :body_mjml,
+                         options: {rows: 16, class: "font-mono text-xs", placeholder: "<mjml>\n  <mj-body>\n    <mj-section>\n      <mj-column>\n        <mj-text>Hello {{first_name}}!</mj-text>\n      </mj-column>\n    </mj-section>\n  </mj-body>\n</mjml>"} %>
+            </div>
+          </details>
+        </div>
       </section>
+
+      <%# ============================================================
+          Live preview — framed as an artifact, separate card from
+          the editor so authors can scroll the body without losing the
+          preview's position.
+          ============================================================ %>
+      <% if campaign.persisted? %>
+        <section class="campaign-edit-section campaign-edit-preview"
+                 data-controller="campaign-preview"
+                 data-campaign-preview-url-value="<%= preview_frame_account_campaign_path(campaign) %>"
+                 data-campaign-preview-csrf-value="<%= form_authenticity_token %>"
+                 data-action="markdown-editor:change@window->campaign-preview#schedule
+                              ai-drafter:applied@window->campaign-preview#schedule
+                              input->campaign-preview#scheduleFromInput
+                              change->campaign-preview#scheduleFromInput">
+          <header class="campaign-edit-section__header campaign-edit-preview__header">
+            <div>
+              <div class="campaign-edit-section__eyebrow">Live preview</div>
+              <h3 class="campaign-edit-section__title">Rendered preview</h3>
+              <p class="campaign-edit-section__description">Refreshes as you type. Use the template + sender + segment selected below.</p>
+            </div>
+            <div class="campaign-edit-preview__actions">
+              <span data-campaign-preview-target="status" class="campaign-edit-preview__status"></span>
+              <button type="button"
+                      class="button-secondary button-smaller"
+                      data-action="click->campaign-preview#refresh">
+                Refresh
+              </button>
+            </div>
+          </header>
+          <div class="campaign-edit-preview__frame">
+            <iframe id="campaign_preview_frame"
+                    data-campaign-preview-target="iframe"
+                    src="<%= preview_frame_account_campaign_path(campaign) %>"
+                    class="campaign-edit-preview__iframe"
+                    sandbox="allow-same-origin"
+                    title="Campaign preview"></iframe>
+          </div>
+        </section>
+      <% end %>
 
       <%# ============================================================
           Section 2 — Audience
           ============================================================ %>
-      <section class="mb-8 p-4 border rounded-md bg-white dark:bg-sky-950 dark:border-sky-800">
-        <header class="mb-4">
-          <h2 class="text-lg font-semibold">Audience</h2>
-          <p class="text-sm text-gray-500">Who receives this campaign and which sender address sends it.</p>
+      <section class="campaign-edit-section">
+        <header class="campaign-edit-section__header">
+          <div class="campaign-edit-section__eyebrow">Section 2 · Audience</div>
+          <h3 class="campaign-edit-section__title">Audience</h3>
+          <p class="campaign-edit-section__description">Who receives this campaign and which sender address sends it.</p>
         </header>
+        <div class="campaign-edit-section__body campaign-edit-grid">
 
-        <%# Plain <select> dropdowns. We deliberately bypass shared/fields/super_select
-            here — that partial's content_for(:field) handoff into the ejected
-            _field.html.erb doesn't surface a visible widget on this page
-            (Bruno's 2026-05-12 annotation) AND it produces a duplicated
-            "(optional)" suffix because the label branch in the ejected field
-            partial runs even when super_select sets its own. A native select
-            with Tailwind chrome is reliable, accessible, and matches the
-            rest of the form visually. %>
+          <%# Plain <select> dropdowns. We deliberately bypass shared/fields/super_select
+              here — that partial's content_for(:field) handoff into the ejected
+              _field.html.erb doesn't surface a visible widget on this page
+              (Bruno's 2026-05-12 annotation) AND it produces a duplicated
+              "(optional)" suffix because the label branch in the ejected field
+              partial runs even when super_select sets its own. A native select
+              with Tailwind chrome is reliable, accessible, and matches the
+              rest of the form visually. %>
 
-        <div class="mb-5">
-          <%= form.label :segment_id, "Segment", class: "block text-sm font-medium" %>
-          <%= form.select :segment_id,
-                @campaign.valid_segments.map { |segment| [segment.label_string, segment.id] },
-                {include_blank: t('campaigns.fields.segment_id.placeholder', default: '— Send to everyone subscribed —')},
-                class: "mt-1.5 #{select_classes}" %>
-          <p class="text-xs text-gray-500 mt-1.5">
-            Choose a saved segment or leave blank to send to all subscribed.
-          </p>
-        </div>
+          <div class="campaign-edit-field">
+            <%= form.label :segment_id, "Segment", class: "campaign-edit-field-label" %>
+            <%= form.select :segment_id,
+                  @campaign.valid_segments.map { |segment| [segment.label_string, segment.id] },
+                  {include_blank: t('campaigns.fields.segment_id.placeholder', default: '— Send to everyone subscribed —')},
+                  class: "campaign-edit-select" %>
+            <p class="campaign-edit-field-hint">
+              Choose a saved segment or leave blank to send to all subscribed.
+            </p>
+          </div>
 
-        <div class="mb-5">
-          <%= form.label :sender_address_id, "Sender address", class: "block text-sm font-medium" %>
-          <%= form.select :sender_address_id,
-                @campaign.valid_sender_addresses.map { |sender| [sender.label_string, sender.id] },
-                {include_blank: "— Choose a verified sender —"},
-                class: "mt-1.5 #{select_classes}" %>
-          <p class="text-xs text-gray-500 mt-1.5">
-            Only verified sender addresses appear here. Add or verify in <em>Sender addresses</em>.
-          </p>
+          <div class="campaign-edit-field">
+            <%= form.label :sender_address_id, "Sender address", class: "campaign-edit-field-label" %>
+            <%= form.select :sender_address_id,
+                  @campaign.valid_sender_addresses.map { |sender| [sender.label_string, sender.id] },
+                  {include_blank: "— Choose a verified sender —"},
+                  class: "campaign-edit-select" %>
+            <p class="campaign-edit-field-hint">
+              Only verified sender addresses appear here. Add or verify in <em>Sender addresses</em>.
+            </p>
+          </div>
         </div>
       </section>
 
       <%# ============================================================
           Section 3 — Settings
           ============================================================ %>
-      <section class="mb-8 p-4 border rounded-md bg-white dark:bg-sky-950 dark:border-sky-800">
-        <header class="mb-4">
-          <h2 class="text-lg font-semibold">Settings</h2>
-          <p class="text-sm text-gray-500">Optional schedule + which email template provides the layout chrome.</p>
+      <section class="campaign-edit-section">
+        <header class="campaign-edit-section__header">
+          <div class="campaign-edit-section__eyebrow">Section 3 · Settings</div>
+          <h3 class="campaign-edit-section__title">Settings</h3>
+          <p class="campaign-edit-section__description">Optional schedule + which email template provides the layout chrome.</p>
         </header>
+        <div class="campaign-edit-section__body campaign-edit-grid">
 
-        <div class="mb-5">
-          <%= form.label :email_template_id, "Template", class: "block text-sm font-medium" %>
-          <%= form.select :email_template_id,
-                @campaign.valid_email_templates.map { |template| [template.label_string, template.id] },
-                {include_blank: t('campaigns.fields.email_template_id.placeholder', default: 'None')},
-                class: "mt-1.5 #{select_classes}" %>
-          <p class="text-xs text-gray-500 mt-1.5">
-            The template wraps your body with header + footer chrome (logo, footer, unsubscribe).
-          </p>
-        </div>
+          <div class="campaign-edit-field">
+            <%= form.label :email_template_id, "Template", class: "campaign-edit-field-label" %>
+            <%= form.select :email_template_id,
+                  @campaign.valid_email_templates.map { |template| [template.label_string, template.id] },
+                  {include_blank: t('campaigns.fields.email_template_id.placeholder', default: 'None')},
+                  class: "campaign-edit-select" %>
+            <p class="campaign-edit-field-hint">
+              The template wraps your body with header + footer chrome (logo, footer, unsubscribe).
+            </p>
+          </div>
 
-        <%# B6: the gem's `shared/fields/date_and_time_field` partial relied on a
-            flatpickr-wrapped Stimulus widget that wasn't rendering through the
-            ejected `_field.html.erb` — the label appeared with no input below
-            it. Use a plain native `<input type="datetime-local">` so users can
-            actually pick a schedule. We pass the local-time iso8601 (no zone
-            suffix) because that's what `datetime-local` accepts; the column
-            type-casts it via Rails' default time zone. %>
-        <div class="mb-5">
-          <%= form.label :scheduled_for, "Scheduled For", class: "block text-sm font-medium" %>
-          <% scheduled_value = form.object.scheduled_for&.in_time_zone(Time.zone)&.strftime("%Y-%m-%dT%H:%M") %>
-          <div class="mt-1.5">
+          <%# B6: the gem's `shared/fields/date_and_time_field` partial relied on a
+              flatpickr-wrapped Stimulus widget that wasn't rendering through the
+              ejected `_field.html.erb` — the label appeared with no input below
+              it. Use a plain native `<input type="datetime-local">` so users can
+              actually pick a schedule. We pass the local-time iso8601 (no zone
+              suffix) because that's what `datetime-local` accepts; the column
+              type-casts it via Rails' default time zone. %>
+          <div class="campaign-edit-field">
+            <%= form.label :scheduled_for, "Scheduled for", class: "campaign-edit-field-label" %>
+            <% scheduled_value = form.object.scheduled_for&.in_time_zone(Time.zone)&.strftime("%Y-%m-%dT%H:%M") %>
             <%= form.datetime_field :scheduled_for,
                   value: scheduled_value,
-                  class: "block w-full rounded-md border border-base-300 dark:border-base-900 bg-white dark:bg-base-800 dark:text-base-300 px-3 py-2 text-sm" %>
+                  class: "campaign-edit-input" %>
+            <p class="campaign-edit-field-hint">
+              Leave blank to send immediately when you hit Send. Times are in
+              <span class="campaign-edit-field-hint__mono"><%= Time.zone.name %></span>.
+            </p>
           </div>
-          <p class="mt-1.5 text-xs text-base-500 dark:text-base-400">
-            Leave blank to send immediately when you hit "Send". Times are in
-            <%= Time.zone.name %>.
-          </p>
+          <%# 🚅 super scaffolding will insert new fields above this line. %>
         </div>
-        <%# 🚅 super scaffolding will insert new fields above this line. %>
       </section>
 
-      <%= render "account/shared/assets/section", form: form, resource: campaign %>
+      <%# ============================================================
+          Section 4 — Assets (uploads). The shared partial defines its
+          own card chrome (mb-8 p-4 border rounded-md) — we don't touch
+          it (it's shared with EmailTemplate edit). Wrap it in a class
+          that re-skins it inline to match the .campaign-edit-section
+          look without modifying the partial.
+          ============================================================ %>
+      <div class="campaign-edit-assets-wrap">
+        <%= render "account/shared/assets/section", form: form, resource: campaign %>
+      </div>
     <% end %>
 
-    <div class="buttons">
-      <%= form.submit (form.object.persisted? ? t('.buttons.update') : t('.buttons.create')), class: "button" %>
-      <%= link_to t('global.buttons.cancel'), cancel_path, class: "button-secondary" %>
+    <%# Sticky action bar — primary CTA + cancel pinned to bottom of viewport so
+        the user doesn't have to scroll back up after editing a long body. %>
+    <div class="campaign-edit-actions">
+      <div class="campaign-edit-actions__inner">
+        <div class="campaign-edit-actions__hint">
+          <% if campaign.persisted? %>
+            Changes save on update. To send the campaign, go to <%= link_to "campaign overview", [:account, campaign], class: "campaign-edit-actions__link" %>.
+          <% else %>
+            Save first, then add audience + sender on the next screen.
+          <% end %>
+        </div>
+        <div class="campaign-edit-actions__buttons">
+          <%= link_to t('global.buttons.cancel'), cancel_path, class: "button-secondary" %>
+          <%= form.submit (form.object.persisted? ? t('.buttons.update') : t('.buttons.create')), class: "button" %>
+        </div>
+      </div>
     </div>
   <% end %>
 <% end %>
