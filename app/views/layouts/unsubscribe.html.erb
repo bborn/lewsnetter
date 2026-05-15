@@ -1,7 +1,8 @@
 <%#
   Recipient-facing unsubscribe layout. Intentionally lightweight: no
-  authenticated nav, no JS app dependencies. Looks like an email landing
-  page rather than the admin shell.
+  authenticated nav, no JS app dependencies. Looks like a quiet
+  email-landing page rather than the admin shell — but matches the
+  app's design system (Geist + Zinc + orange accent, sharp corners).
 %>
 <!DOCTYPE html>
 <html lang="<%= I18n.locale %>">
@@ -9,23 +10,24 @@
     <%= render 'shared/layouts/head' %>
   </head>
 
-  <body class="min-h-screen bg-slate-50 text-slate-700 antialiased font-sans">
+  <body class="min-h-screen bg-zinc-50 text-zinc-700 antialiased font-sans">
     <div class="min-h-screen flex flex-col">
-      <header class="border-b border-slate-200 bg-white">
+      <header class="border-b border-zinc-200 bg-white">
         <div class="max-w-3xl mx-auto px-6 py-5 flex items-center">
-          <span class="text-lg font-semibold tracking-tight text-slate-900">
+          <span class="text-[15px] font-semibold tracking-tight text-zinc-900">
             <%= @unsubscribe_team_name.presence || t('application.name') %>
           </span>
+          <span class="ml-1.5 w-1.5 h-1.5 rounded-full bg-primary-600"></span>
         </div>
       </header>
 
       <main class="flex-1 flex items-start sm:items-center justify-center px-6 py-12 sm:py-20">
-        <div class="w-full max-w-xl bg-white rounded-2xl shadow-sm border border-slate-200 px-6 sm:px-10 py-10 sm:py-14">
+        <div class="w-full max-w-xl bg-white rounded-lg border border-zinc-200 px-6 sm:px-10 py-10 sm:py-14">
           <%= yield %>
         </div>
       </main>
 
-      <footer class="py-6 text-center text-xs text-slate-400">
+      <footer class="py-6 text-center font-mono text-[11px] uppercase tracking-widest text-zinc-400">
         Powered by <%= t('application.name') %>
       </footer>
     </div>

@@ -1,44 +1,36 @@
 <% if @status == :ok %>
   <div class="text-center">
-    <div class="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-      </svg>
-    </div>
+    <div class="font-mono text-[11px] uppercase tracking-widest text-emerald-600 mb-3">Unsubscribed</div>
 
-    <h1 class="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900 mb-3">
+    <h1 class="text-[28px] sm:text-[32px] font-semibold tracking-tight text-zinc-900 mb-4 leading-tight">
       You've been unsubscribed.
     </h1>
 
-    <p class="text-slate-600 leading-relaxed mb-8">
+    <p class="text-zinc-600 leading-relaxed mb-8 max-w-md mx-auto">
       We've removed
-      <span class="font-medium text-slate-800"><%= @subscriber.email %></span>
+      <span class="font-medium text-zinc-900"><%= @subscriber.email %></span>
       from <%= @team&.name.presence || t('application.name') %>'s mailing list.
       You won't receive any more campaigns.
     </p>
 
-    <p class="text-sm text-slate-500">
+    <p class="text-sm text-zinc-500">
       Changed your mind?
       <%# TODO: replace mailto with /resubscribe/:token route once resubscribe flow is built. %>
       <a href="mailto:bruno@influencekit.com?subject=Re-subscribe%20me&body=Please%20re-subscribe%20<%= CGI.escape(@subscriber.email) %>%20to%20<%= CGI.escape(@team&.name || 'the') %>%20newsletter."
-         class="font-medium text-blue-600 hover:text-blue-700 underline-offset-2 hover:underline">
-        Re-subscribe &rarr;
+         class="font-medium text-zinc-900 hover:text-primary-600 underline-offset-2 underline">
+        Re-subscribe →
       </a>
     </p>
   </div>
 <% else %>
   <div class="text-center">
-    <div class="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-600">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    </div>
+    <div class="font-mono text-[11px] uppercase tracking-widest text-amber-600 mb-3">Link expired</div>
 
-    <h1 class="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900 mb-3">
+    <h1 class="text-[28px] sm:text-[32px] font-semibold tracking-tight text-zinc-900 mb-4 leading-tight">
       That link's expired.
     </h1>
 
-    <p class="text-slate-600 leading-relaxed">
+    <p class="text-zinc-600 leading-relaxed max-w-md mx-auto">
       Reply to your most recent email and we'll remove you manually.
     </p>
   </div>
