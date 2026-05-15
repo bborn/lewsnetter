@@ -1,0 +1,5 @@
+<h1>Conversations</h1>
+<% @agent_conversations.each do |c| %>
+  <div><%= link_to c.derived_title, [:account, c] %></div>
+<% end %>
+<%= button_to "New conversation", [:account, :agent_conversations], method: :post %>

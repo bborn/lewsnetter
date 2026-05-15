@@ -1,0 +1,8 @@
+<h1><%= @agent_conversation.derived_title %></h1>
+<% @messages.each do |m| %>
+  <div data-role="<%= m.role %>"><strong><%= m.role %>:</strong> <%= m.content %></div>
+<% end %>
+<%= form_with url: [:account, @agent_conversation, :agent_messages], method: :post do |f| %>
+  <%= f.text_area :content %>
+  <%= f.submit "Send" %>
+<% end %>
