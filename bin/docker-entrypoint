@@ -36,6 +36,12 @@ restore_if_missing /rails/storage/lewsnetter_production_cable.sqlite3
 # wait for the web role to handle migrations.
 if [ "${1}" = "./bin/rails" ] && [ "${2}" = "server" ]; then
   ./bin/rails db:prepare
+  # Seed the ruby_llm Model registry on first boot. Idempotent — load_models
+  # finds-or-creates each entry, so re-running is cheap. Gating on the count
+  # keeps boot fast on subsequent restarts.
+  if [ "$(./bin/rails runner 'print Model.count' 2>/dev/null)" = "0" ]; then
+    ./bin/rails ruby_llm:load_models
+  fi
 fi
 
 # Web role: wrap the server in litestream replicate so the replicator
