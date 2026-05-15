@@ -31,10 +31,10 @@
     <%= render "shared/tables/checkbox", object: campaign %>
     <td><%= render 'shared/attributes/text', attribute: :subject, url: [:account, campaign] %></td>
     <td><%= status_pill(campaign.status) %></td>
-    <td class="text-sm"><%= count_display %></td>
-    <td class="text-sm text-gray-500">
-      <span class="block text-xs uppercase tracking-wide text-gray-400"><%= date_label %></span>
-      <%= l(date_value.to_datetime, format: :short) if date_value %>
+    <td class="font-mono tabular-nums text-sm text-zinc-700 dark:text-zinc-300"><%= count_display %></td>
+    <td>
+      <span class="block font-mono text-[10px] uppercase tracking-widest text-zinc-400 dark:text-zinc-500"><%= date_label %></span>
+      <span class="font-mono text-[13px] text-zinc-500 dark:text-zinc-400"><%= l(date_value.to_datetime, format: :short) if date_value %></span>
     </td>
     <%# 🚅 super scaffolding will insert new fields above this line. %>
     <td class="buttons">
