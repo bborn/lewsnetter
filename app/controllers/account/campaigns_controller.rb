@@ -282,13 +282,18 @@ class Account::CampaignsController < Account::ApplicationController
       @campaign.preheader = overrides[:preheader] if overrides.key?(:preheader)
       if overrides.key?(:email_template_id)
         @campaign.email_template_id = overrides[:email_template_id].presence
-        @campaign.email_template = nil # bust the belongs_to cache
+        # Bust the belongs_to cache without touching the FK — setting
+        # `email_template = nil` would null the id we just set.
+        @campaign.association(:email_template).reset
       end
 
       @campaign.preview_html
     ensure
       original.each { |k, v| @campaign.send("#{k}=", v) }
-      @campaign.email_template = nil # force fresh load on next access
+      # Clear the cached belongs_to association so the FK we just restored is
+      # re-loaded on next access. Setting `email_template = nil` here would
+      # ALSO null the restored FK; use the association handle instead.
+      @campaign.association(:email_template).reset
     end
   end
 
