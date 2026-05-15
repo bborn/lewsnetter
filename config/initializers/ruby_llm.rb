@@ -1,15 +1,33 @@
 # frozen_string_literal: true
 
-# Configures the ruby_llm gem. When ANTHROPIC_API_KEY is absent the AI services
-# in app/services/ai/* fall back to stub mode, so this configuration is purely
-# additive — nothing breaks if the key is missing.
-RubyLLM.configure do |config|
-  api_key =
-    ENV["ANTHROPIC_API_KEY"].presence ||
-    (Rails.application.credentials.dig(:anthropic, :api_key) rescue nil) ||
-    (Rails.application.credentials.respond_to?(:anthropic_api_key) ? Rails.application.credentials.anthropic_api_key : nil)
+# Configures the ruby_llm gem from Llm::Configuration.current. When the
+# config is unusable (no API key, e.g. local dev without secrets), the
+# initializer is a no-op and AI::* services run in stub mode.
+#
+# To route through an LLM gateway (e.g. Cloudflare AI Gateway), set
+# credentials.llm.base_url or ENV["LLM_BASE_URL"] to the gateway's
+# Anthropic-compatible URL. ruby_llm respects the override.
+#
+# The configuration is deferred to after_initialize so that Zeitwerk has
+# finished loading app/services/llm/configuration.rb before we call it.
+Rails.application.config.after_initialize do
+  config = Llm::Configuration.current
 
-  config.anthropic_api_key = api_key if api_key.present?
-  config.default_model = ENV.fetch("RUBY_LLM_DEFAULT_MODEL", "claude-sonnet-4-6")
-  config.request_timeout = 60
+  RubyLLM.configure do |c|
+    c.anthropic_api_key = config.api_key if config.api_key.present?
+    c.default_model = config.default_model
+    c.request_timeout = 60
+
+    # Gateway override. ruby_llm 1.15 exposes anthropic_api_base= for the
+    # per-provider base URL. The respond_to? guard ensures this is a no-op
+    # on versions that don't support it rather than raising.
+    if config.base_url.present?
+      case config.provider
+      when :anthropic, :cloudflare
+        c.anthropic_api_base = config.base_url if c.respond_to?(:anthropic_api_base=)
+      when :openai_compatible
+        c.openai_api_base = config.base_url if c.respond_to?(:openai_api_base=)
+      end
+    end
+  end
 end
