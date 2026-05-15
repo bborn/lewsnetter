@@ -37,7 +37,7 @@
 
         <p class="campaign-show-hero__subhead">
           <% if @campaign.sent? && sent_at_label %>
-            Sent <%= sent_at_label %> · <%= count_for_label %> recipient<%= "s" unless count_for_label == 1 %>
+            Sent to <%= count_for_label %> recipient<%= "s" unless count_for_label == 1 %> on <%= sent_at_label %>
           <% elsif @campaign.scheduled? && scheduled_label %>
             Scheduled for <%= scheduled_label %> · <%= count_for_label %> recipient<%= "s" unless count_for_label == 1 %> · from <%= sender_label %>
           <% else %>
