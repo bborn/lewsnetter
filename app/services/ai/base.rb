@@ -78,15 +78,10 @@ module AI
 
     # Sample the observed custom_attributes keys + value types for a team's
     # subscribers. Limited to a handful so prompts stay short.
+    # Delegates to Team::CustomAttributeSchema so the MCP tool can reuse the
+    # same logic without calling a private method.
     def custom_attribute_schema(team, limit: 50)
-      return {} unless team
-      sample = team.subscribers.where.not(custom_attributes: {}).limit(limit).pluck(:custom_attributes)
-      keys = Hash.new { |h, k| h[k] = Set.new }
-      sample.each do |row|
-        next unless row.is_a?(Hash)
-        row.each { |k, v| keys[k] << infer_type(v) }
-      end
-      keys.transform_values { |types| types.to_a.join("|") }
+      Team::CustomAttributeSchema.new(team: team, limit: limit).call[:sample]
     end
 
     def observed_event_names(team, limit: 25)
