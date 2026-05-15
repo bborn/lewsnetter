@@ -10,7 +10,7 @@ module Mcp
         assert tools.is_a?(Array)
         assert tools.all? { |klass| klass < Mcp::Tool::Base }
         names = tools.map(&:tool_name)
-        assert_includes names, "team.get_current"
+        assert_includes names, "team_get_current"
       end
 
       test "tool names are unique" do

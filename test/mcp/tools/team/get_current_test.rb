@@ -21,7 +21,7 @@ module Mcp
         end
 
         test "metadata is wired" do
-          assert_equal "team.get_current", GetCurrent.tool_name
+          assert_equal "team_get_current", GetCurrent.tool_name
           assert_match(/team/i, GetCurrent.description)
         end
       end
