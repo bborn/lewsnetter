@@ -35,6 +35,12 @@
         Powered by Claude · stub mode if no API key
       </span>
     </div>
+    <div class="mt-3 pt-3 border-t border-orange-100">
+      <%= open_in_agent_link(
+        "Help me build a segment for #{current_team.name}. Show me the team's custom_attribute schema, then ask what audience I want to target.",
+        label: "→ OPEN IN AGENT INSTEAD"
+      ) %>
+    </div>
   </form>
 
   <%# Inline result panel — populated by segment_translator_controller.js.

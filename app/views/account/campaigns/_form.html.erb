@@ -85,6 +85,12 @@ select_classes = "block w-full rounded-md shadow-sm font-light text-base md:text
              data-ai-drafter-target="errorMessage"
              class="campaign-edit-drafter__error"></p>
         </form>
+        <div class="mt-3 pt-3 border-t border-orange-100">
+          <%= open_in_agent_link(
+            "Draft a campaign for the team. The campaign in progress is id #{campaign.id} with subject \"#{campaign.subject}\". Help me refine the body, pick a segment if none is set, and prepare to send.",
+            label: "→ OPEN IN AGENT INSTEAD"
+          ) %>
+        </div>
       </div>
     <% else %>
       <div>

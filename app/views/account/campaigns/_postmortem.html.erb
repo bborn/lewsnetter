@@ -3,6 +3,12 @@
 <%= turbo_frame_tag "postmortem" do %>
   <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-6 my-6">
     <div class="font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-2">AI post-send analysis</div>
+    <div class="mb-4">
+      <%= open_in_agent_link(
+        "Analyze the recent send: campaign id #{campaign.id}, subject \"#{campaign.subject}\". Pull stats with campaigns_postmortem, then suggest 3 actions.",
+        label: "→ OPEN IN AGENT FOR DEEPER ANALYSIS"
+      ) %>
+    </div>
     <div class="prose dark:prose-invert max-w-none text-[15px] leading-relaxed">
       <%# Render the markdown verbatim if a renderer isn't available;
           BulletTrain doesn't ship a default markdown helper. Convert the
