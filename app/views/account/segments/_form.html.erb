@@ -9,25 +9,32 @@
      data-segment-translator-url-value="<%= translate_account_team_segments_path(@team) %>">
 
   <form data-action="submit->segment-translator#translate"
-        class="mb-4 p-3 border rounded-md bg-gray-50 dark:bg-sky-950 dark:border-sky-800">
-    <label class="block text-sm font-medium mb-1" for="segment_translator_input">
+        class="mb-6 p-5 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900/60">
+    <div class="font-mono text-[11px] uppercase tracking-widest text-orange-700 dark:text-orange-400 mb-2 flex items-center gap-2 flex-wrap">
+      <span>AI translator</span>
+      <span class="text-orange-300 dark:text-orange-800">·</span>
+      <span class="text-orange-600/80 dark:text-orange-400/70">English → SQL predicate</span>
+    </div>
+    <label class="block text-zinc-900 dark:text-zinc-100 text-[15px] font-medium mb-2" for="segment_translator_input">
       Describe your audience in plain English
     </label>
     <textarea id="segment_translator_input"
               data-segment-translator-target="input"
               data-ai-translate-source="true"
               rows="2"
-              class="w-full p-2 border rounded-md mb-2"
+              class="w-full px-3 py-2.5 rounded-md border border-orange-200 dark:border-orange-900/60 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 dark:focus:ring-orange-900/40 mb-3"
               placeholder="e.g. Subscribers on the Pro plan who joined in the last 30 days"
     ><%= segment.natural_language_source %></textarea>
-    <button type="submit"
-            class="button"
-            data-segment-translator-target="submit">
-      Translate to predicate
-    </button>
-    <span class="text-xs text-gray-500 ml-2">
-      Powered by Claude. Stub mode if no API key is configured.
-    </span>
+    <div class="flex items-center gap-3 flex-wrap">
+      <button type="submit"
+              class="button"
+              data-segment-translator-target="submit">
+        Translate to predicate →
+      </button>
+      <span class="font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
+        Powered by Claude · stub mode if no API key
+      </span>
+    </div>
   </form>
 
   <%# Inline result panel — populated by segment_translator_controller.js.
