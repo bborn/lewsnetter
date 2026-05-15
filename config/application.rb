@@ -33,5 +33,13 @@ module Lewsnetter
     config.i18n.fallbacks = [:en]
 
     BulletTrain::Api.set_configuration(self)
+
+    # MCP server tools live under app/mcp. Using push_dir with a namespace
+    # makes Zeitwerk map app/mcp/tool/base.rb → Mcp::Tool::Base.
+    # The ::Mcp module must be defined before the autoloader configures.
+    module ::Mcp; end
+    config.autoload_paths += %W[#{config.root}/app/mcp]
+    config.eager_load_paths += %W[#{config.root}/app/mcp]
+    Rails.autoloaders.main.push_dir("#{config.root}/app/mcp", namespace: Mcp)
   end
 end
