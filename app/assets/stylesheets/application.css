@@ -96,4 +96,337 @@
   .button-danger:hover {
     @apply text-red-700 border-red-600;
   }
+
+  /* ============================================================
+     Campaign show — editorial moment
+     See DESIGN.md → "Specific surfaces → Campaign show". Scoped
+     classes (campaign-show-*, btn-editorial--*) so they don't leak.
+     ============================================================ */
+
+  /* When the page-title only carries a sr-only H1 (the hero is the real title
+     on this surface), collapse the empty title-row's mb-8 so the hero sits
+     closer to the breadcrumb. :has() lets us scope this to the campaign-show
+     surface without touching the ejected title partial. */
+  body:has(.campaign-show-hero) .flex.flex-row.items-end.gap-4.mb-8 {
+    margin-bottom: 0;
+    margin-top: -16px;
+  }
+
+  /* Hero — the send moment */
+  .campaign-show-hero {
+    @apply bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800;
+    border-radius: 12px;
+    padding: 48px 40px;
+    margin-bottom: 24px;
+  }
+  .campaign-show-hero__eyebrow {
+    @apply flex items-center gap-2 text-zinc-500 dark:text-zinc-400;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .campaign-show-hero__id {
+    @apply text-zinc-600 dark:text-zinc-300;
+  }
+  .campaign-show-hero__title {
+    @apply text-zinc-900 dark:text-zinc-50 font-semibold;
+    font-size: 38px;
+    line-height: 1.15;
+    letter-spacing: -0.025em;
+    margin: 0 0 8px;
+  }
+  .campaign-show-hero__subhead {
+    @apply text-zinc-500 dark:text-zinc-400;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    margin: 0 0 28px;
+  }
+  .campaign-show-hero__actions {
+    @apply flex items-center flex-wrap;
+    gap: 10px;
+  }
+  .campaign-show-hero--sent .campaign-show-hero__title {
+    font-size: 28px;
+  }
+  .campaign-show-hero--sent {
+    padding: 32px 32px 28px;
+  }
+  @media (max-width: 768px) {
+    .campaign-show-hero {
+      padding: 32px 24px;
+    }
+    .campaign-show-hero__title {
+      font-size: 28px;
+    }
+  }
+
+  /* Editorial action buttons — scoped overrides so we don't fight the theme's
+     .button / .button-secondary inline-link styling. */
+  .btn-editorial {
+    @apply inline-flex items-center justify-center whitespace-nowrap font-medium border;
+    font-family: 'Geist', ui-sans-serif, system-ui, sans-serif;
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 14px;
+    line-height: 1.2;
+    transition: background-color 100ms ease-out, border-color 100ms ease-out, color 100ms ease-out;
+    cursor: pointer;
+  }
+  .btn-editorial:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+  .btn-editorial--primary {
+    @apply bg-orange-600 text-white border-transparent hover:bg-orange-700 hover:no-underline hover:text-white;
+    padding: 16px 28px;
+    font-size: 17px;
+    font-weight: 600;
+    border-radius: 6px;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+  }
+  .btn-editorial--primary:focus {
+    @apply outline-none ring-2 ring-orange-500 ring-offset-2 dark:ring-offset-zinc-900;
+  }
+  .btn-editorial--secondary {
+    @apply bg-white text-zinc-900 border-zinc-300 hover:bg-zinc-50 hover:no-underline hover:text-zinc-900;
+    @apply dark:bg-zinc-900 dark:text-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800;
+  }
+  .btn-editorial--ghost {
+    @apply bg-transparent text-zinc-500 border-transparent hover:text-zinc-900 hover:bg-zinc-100 hover:no-underline;
+    @apply dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-zinc-800;
+  }
+
+  /* Preview-as inline form */
+  .campaign-show-hero__preview-as {
+    @apply relative inline-flex items-stretch;
+    gap: 8px;
+  }
+  .campaign-show-hero__preview-as-form {
+    @apply inline-flex items-stretch;
+    gap: 8px;
+  }
+  .campaign-show-hero__preview-as-input-wrap {
+    @apply relative;
+  }
+  .campaign-show-hero__preview-as-input {
+    @apply bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700;
+    font-family: 'Geist', ui-sans-serif, system-ui, sans-serif;
+    font-size: 14px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    min-width: 240px;
+    line-height: 1.2;
+  }
+  .campaign-show-hero__preview-as-input::placeholder {
+    @apply text-zinc-400 dark:text-zinc-500;
+  }
+  .campaign-show-hero__preview-as-input:focus {
+    @apply outline-none border-orange-500 ring-2 ring-orange-100 dark:ring-orange-900/40;
+  }
+  .campaign-show-hero__preview-as-results {
+    @apply absolute z-10 mt-1 w-full bg-white dark:bg-zinc-800 rounded-md shadow-lg border border-zinc-200 dark:border-zinc-700 hidden max-h-80 overflow-auto;
+  }
+
+  /* Callouts */
+  .campaign-show-callout {
+    @apply text-[13px] leading-relaxed;
+    border: 1px solid;
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+  }
+  .campaign-show-callout strong {
+    @apply font-semibold;
+  }
+  .campaign-show-callout--accent {
+    background: var(--lw-accent-tint);
+    border-color: #FED7AA;
+    color: #9A3412;
+  }
+  .dark .campaign-show-callout--accent,
+  [data-theme="dark"] .campaign-show-callout--accent {
+    background: #2D1B0E;
+    border-color: #9A3412;
+    color: #FDBA74;
+  }
+  .campaign-show-callout--warn {
+    @apply bg-amber-50 border-amber-300 text-amber-800;
+    @apply dark:bg-amber-950/40 dark:border-amber-800/60 dark:text-amber-200;
+  }
+  .campaign-show-callout--neutral {
+    @apply bg-zinc-50 border-zinc-200 text-zinc-600;
+    @apply dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-400;
+  }
+
+  /* Meta card — key/value details, mono-caps labels */
+  .campaign-show-meta {
+    @apply bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800;
+    border-radius: 8px;
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+  .campaign-show-meta__header {
+    @apply flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800;
+    padding: 16px 24px;
+  }
+  .campaign-show-meta__title {
+    @apply text-zinc-900 dark:text-zinc-100 font-semibold;
+    font-size: 18px;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  .campaign-show-meta__edit {
+    @apply text-zinc-600 dark:text-zinc-400 hover:text-orange-700 dark:hover:text-orange-400 hover:no-underline;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .campaign-show-meta__grid {
+    @apply grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+  }
+  .campaign-show-meta__row {
+    @apply flex flex-col;
+    gap: 4px;
+    padding: 14px 24px;
+    border-top: 1px solid;
+    border-color: rgb(228 228 231 / 1); /* zinc-200 */
+  }
+  .dark .campaign-show-meta__row,
+  [data-theme="dark"] .campaign-show-meta__row {
+    border-color: rgb(39 39 42 / 1); /* zinc-800 */
+  }
+  /* First row in each column has no top-border (header divider does the job) */
+  .campaign-show-meta__row:nth-child(1),
+  .campaign-show-meta__row:nth-child(2) {
+    border-top: 0;
+  }
+  /* Vertical hairline between the two columns */
+  .campaign-show-meta__row:nth-child(odd) {
+    border-right: 1px solid rgb(228 228 231 / 1);
+  }
+  .dark .campaign-show-meta__row:nth-child(odd),
+  [data-theme="dark"] .campaign-show-meta__row:nth-child(odd) {
+    border-right-color: rgb(39 39 42 / 1);
+  }
+  .campaign-show-meta__row dt {
+    @apply text-zinc-500 dark:text-zinc-400;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .campaign-show-meta__row dd {
+    @apply text-zinc-900 dark:text-zinc-100;
+    font-size: 14px;
+    line-height: 1.45;
+    margin: 0;
+  }
+  .campaign-show-meta__hint {
+    @apply text-zinc-500 dark:text-zinc-400;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+  .campaign-show-meta__mono {
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 13px;
+    @apply text-zinc-800 dark:text-zinc-200;
+  }
+  .campaign-show-meta__empty {
+    @apply text-zinc-400 dark:text-zinc-500;
+  }
+  @media (max-width: 768px) {
+    .campaign-show-meta__grid {
+      grid-template-columns: 1fr;
+    }
+    .campaign-show-meta__row:nth-child(odd) {
+      border-right: 0;
+    }
+    .campaign-show-meta__row:nth-child(2) {
+      border-top: 1px solid rgb(228 228 231 / 1);
+    }
+    .dark .campaign-show-meta__row:nth-child(2),
+    [data-theme="dark"] .campaign-show-meta__row:nth-child(2) {
+      border-top-color: rgb(39 39 42 / 1);
+    }
+  }
+
+  /* Preview pane — framed as an artifact */
+  .campaign-show-preview {
+    @apply bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800;
+    border-radius: 8px;
+    margin-bottom: 32px;
+    overflow: hidden;
+  }
+  .campaign-show-preview__header {
+    @apply flex items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800;
+    padding: 14px 20px 14px 24px;
+  }
+  .campaign-show-preview__heading {
+    @apply flex flex-col;
+    gap: 2px;
+  }
+  .campaign-show-preview__eyebrow {
+    @apply text-zinc-500 dark:text-zinc-400;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .campaign-show-preview__caption {
+    @apply text-zinc-700 dark:text-zinc-300;
+    font-size: 14px;
+    margin: 0;
+    line-height: 1.4;
+  }
+  .campaign-show-preview__chip {
+    @apply inline-block bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 12px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    vertical-align: 1px;
+  }
+  .campaign-show-preview__frame {
+    background: #FAFAFA;
+    padding: 20px;
+  }
+  .dark .campaign-show-preview__frame,
+  [data-theme="dark"] .campaign-show-preview__frame {
+    background: #09090B;
+  }
+  .campaign-show-preview__iframe {
+    @apply w-full border border-zinc-200 dark:border-zinc-800;
+    background: #FFFFFF; /* always white — rendered email HTML expects light bg */
+    border-radius: 6px;
+    height: 520px;
+  }
+  .campaign-show-preview__empty {
+    @apply text-amber-700 dark:text-amber-300;
+    font-size: 14px;
+    margin: 0;
+    padding: 16px;
+  }
+
+  /* Footer */
+  .campaign-show-footer {
+    @apply flex items-center justify-between mt-10 pt-6 border-t border-zinc-200 dark:border-zinc-800;
+  }
+  .campaign-show-footer__link {
+    @apply text-zinc-600 dark:text-zinc-400 hover:text-orange-700 dark:hover:text-orange-400 hover:no-underline;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .campaign-show-footer__danger {
+    @apply text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 hover:no-underline bg-transparent border-0;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+  }
 }

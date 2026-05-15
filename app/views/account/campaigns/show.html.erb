@@ -1,241 +1,248 @@
 <%
   recipient_count = @campaign.recipient_count
-  audience_label = @campaign.segment.present? ? "matching segment \"#{@campaign.segment.name}\"" : "Everyone subscribed"
+  segment_name = @campaign.segment&.name
+  audience_label = segment_name.present? ? "matching segment \"#{segment_name}\"" : "Everyone subscribed"
   preview_html = @campaign.preview_html
   preview_subscriber = @campaign.team.subscribers.subscribed.order(:id).first
   sent_at_label = @campaign.sent_at&.strftime("%b %-d, %-l:%M %p")
+  scheduled_label = @campaign.scheduled_for&.strftime("%b %-d, %-l:%M %p")
   zero_recipients = !recipient_count.nil? && recipient_count.zero?
   send_disabled = !@campaign.sendable? || zero_recipients
+  sender_label = @campaign.sender_address&.email.presence || "Default sender"
+  template_label = @campaign.email_template&.name.presence || "No template"
+  count_for_label = recipient_count || 0
+  send_label = recipient_count.nil? ? "Send" : "Send to #{recipient_count} subscriber#{"s" unless recipient_count == 1}"
 %>
 <%= render 'account/shared/page' do |page| %>
-  <% page.title t('.section') %>
+  <%# Visually-hidden page title: the hero block IS the visual title for this
+      surface. We keep the H1 for screen readers + document outline so the
+      breadcrumb-anchored title partial still has a proper landmark. %>
+  <% page.title content_tag(:span, "Campaign overview: #{@campaign.subject.presence || 'untitled draft'}", class: "sr-only") %>
   <% page.body do %>
     <%= cable_ready_updates_for @campaign do %>
 
       <%# ============================================================
-          Header + primary action bar
+          Editorial hero — the send moment
           ============================================================ %>
-      <div class="flex items-start justify-between gap-4 mb-6">
-        <div>
-          <h1 class="text-2xl font-semibold mb-1"><%= @campaign.subject %></h1>
-          <div class="text-sm text-gray-500 flex items-center gap-2">
-            <%= status_pill(@campaign.status) %>
-            <% if @campaign.sent? && sent_at_label %>
-              <span>Sent <%= sent_at_label %></span>
-            <% elsif @campaign.scheduled? && @campaign.scheduled_for %>
-              <span>Scheduled for <%= @campaign.scheduled_for.strftime("%b %-d, %-l:%M %p") %></span>
-            <% end %>
-          </div>
+      <section class="campaign-show-hero <%= 'campaign-show-hero--sent' if @campaign.sent? %>" aria-labelledby="campaign-subject">
+        <div class="campaign-show-hero__eyebrow">
+          <span>Campaign</span>
+          <span class="campaign-show-hero__id">· <%= @campaign.to_param %></span>
+          <%= status_pill(@campaign.status) %>
         </div>
 
-        <%# Action cluster: state-aware. The primary slot is either a "Sent on
-            DATE" non-action label OR a blue Send button. Send-test + Preview
-            live next to it as quieter ghost buttons. %>
-        <div class="flex items-center gap-2 flex-wrap justify-end">
-          <% if @campaign.sent? %>
-            <div class="text-sm text-green-700 dark:text-green-300 font-medium px-3 py-2 rounded bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800">
-              Sent to <%= recipient_count || @campaign.stats["sent"] || 0 %>
-              subscriber<%= "s" unless (recipient_count || @campaign.stats["sent"] || 0) == 1 %>
-              on <%= sent_at_label || "an unknown time" %>
-            </div>
+        <h2 id="campaign-subject" class="campaign-show-hero__title">
+          <%= @campaign.subject.presence || "(no subject yet)" %>
+        </h2>
+
+        <p class="campaign-show-hero__subhead">
+          <% if @campaign.sent? && sent_at_label %>
+            Sent <%= sent_at_label %> · <%= count_for_label %> recipient<%= "s" unless count_for_label == 1 %>
+          <% elsif @campaign.scheduled? && scheduled_label %>
+            Scheduled for <%= scheduled_label %> · <%= count_for_label %> recipient<%= "s" unless count_for_label == 1 %> · from <%= sender_label %>
           <% else %>
+            <%= count_for_label %> recipient<%= "s" unless count_for_label == 1 %> · from <%= sender_label %> · using <%= template_label %>
+          <% end %>
+        </p>
+
+        <% unless @campaign.sent? %>
+          <div class="campaign-show-hero__actions">
+            <% if @campaign.sendable? && can?(:update, @campaign) %>
+              <% if send_disabled %>
+                <button type="button"
+                        class="btn-editorial btn-editorial--primary"
+                        disabled
+                        title="<%= zero_recipients ? 'Pick a segment with subscribers in it (or remove the segment) to enable sending.' : 'This campaign is not in a sendable state.' %>">
+                  <%= send_label %>
+                </button>
+              <% else %>
+                <% confirm_count = recipient_count || "all subscribed team" %>
+                <%= button_to "#{send_label} →".html_safe,
+                      send_now_account_campaign_path(@campaign),
+                      method: :post,
+                      class: "btn-editorial btn-editorial--primary",
+                      form: { class: "inline" },
+                      data: { turbo_confirm: "About to send to #{confirm_count} subscriber#{"s" unless recipient_count == 1}. Cannot be undone. Continue?" } %>
+              <% end %>
+            <% end %>
+
             <% if can?(:update, @campaign) %>
               <%= button_to "Send test to me",
                     test_send_account_campaign_path(@campaign),
                     method: :post,
-                    class: "button-secondary",
-                    form: { data: { turbo: false } },
+                    class: "btn-editorial btn-editorial--secondary",
+                    form: { class: "inline", data: { turbo: false } },
                     data: { turbo_confirm: "Send a test of \"#{@campaign.subject}\" to #{current_user.email}?" } %>
 
-              <%# Preview-as: render with another subscriber's data (interpolation,
-                  custom_attributes), deliver to current_user. Inline form so we
-                  don't need a modal for what's essentially a single text input.
-                  The text input is enhanced into a typeahead by the
-                  `subscriber-search` Stimulus controller. %>
-              <div class="relative inline-block"
+              <div class="campaign-show-hero__preview-as"
                    data-controller="subscriber-search"
                    data-subscriber-search-team-id-value="<%= @campaign.team_id %>">
                 <%= form_with url: preview_as_account_campaign_path(@campaign),
                               method: :post,
-                              html: { class: "inline-flex items-center gap-2", data: { turbo: false } } do |f| %>
-                  <div class="relative">
+                              html: { class: "campaign-show-hero__preview-as-form", data: { turbo: false } } do |f| %>
+                  <div class="campaign-show-hero__preview-as-input-wrap">
                     <%= f.text_field :preview_as,
                           placeholder: "Preview as… (email or external_id)",
-                          class: "block rounded-md shadow-sm font-light dark:bg-base-800 dark:text-base-300 text-sm border-base-300 dark:border-base-900 focus:ring-primary-500 focus:border-primary-500",
-                          style: "min-width: 260px;",
+                          class: "campaign-show-hero__preview-as-input",
                           data: { subscriber_search_target: "input" },
                           aria: { label: "Subscriber email or external ID to render as" } %>
                     <ul data-subscriber-search-target="results"
-                        class="absolute z-10 mt-1 w-full bg-white dark:bg-base-800 rounded-md shadow-lg border border-base-200 dark:border-base-700 hidden max-h-80 overflow-auto"></ul>
+                        class="campaign-show-hero__preview-as-results"></ul>
                   </div>
-                  <%= f.submit "Send preview",
-                        class: "button-secondary",
+                  <%= f.submit "Send as",
+                        class: "btn-editorial btn-editorial--ghost",
                         data: { turbo_confirm: "Render this campaign with that subscriber's data and send to #{current_user.email}?" } %>
                 <% end %>
               </div>
             <% end %>
 
-            <%= link_to "Preview", "#campaign-preview", class: "button-secondary" %>
+          </div>
+        <% else %>
+          <div class="campaign-show-hero__actions">
+            <%= link_to "View postmortem", "#postmortem", class: "btn-editorial btn-editorial--secondary" %>
+            <%= link_to "View rendered email", "#campaign-preview", class: "btn-editorial btn-editorial--ghost" %>
+          </div>
+        <% end %>
+      </section>
 
-            <% if @campaign.sendable? && can?(:update, @campaign) %>
-              <% send_label = recipient_count.nil? ? "Send" : "Send to #{recipient_count} subscriber#{"s" unless recipient_count == 1}" %>
-              <% if send_disabled %>
-                <button type="button"
-                        class="button opacity-50 cursor-not-allowed"
-                        disabled
-                        title="<%= zero_recipients ? "Pick a segment with subscribers in it (or remove the segment) to enable sending." : "This campaign is not in a sendable state." %>">
-                  <%= send_label %>
-                </button>
+      <%# ============================================================
+          Confidence cue / warning callout
+          ============================================================ %>
+      <% if @campaign.draft? %>
+        <% if zero_recipients %>
+          <aside class="campaign-show-callout campaign-show-callout--warn">
+            <strong>No recipients yet.</strong> This campaign's segment matches 0 subscribers. Pick a different segment, or remove the segment to send to everyone subscribed.
+          </aside>
+        <% elsif recipient_count.nil? %>
+          <aside class="campaign-show-callout campaign-show-callout--warn">
+            <strong>Recipient count unavailable.</strong> The segment's predicate is invalid. Edit the segment to fix.
+          </aside>
+        <% elsif recipient_count > 0 %>
+          <aside class="campaign-show-callout campaign-show-callout--accent">
+            <strong>About to send to <%= recipient_count %> subscriber<%= "s" unless recipient_count == 1 %>.</strong>
+            <%= audience_label %>. This cannot be undone — bounces and complaints flow through SES + SNS automatically.
+          </aside>
+        <% end %>
+      <% end %>
+
+      <%# ============================================================
+          Details — metadata, not a form dump
+          ============================================================ %>
+      <section class="campaign-show-meta">
+        <header class="campaign-show-meta__header">
+          <h3 class="campaign-show-meta__title">Details</h3>
+          <% if can? :edit, @campaign %>
+            <%= link_to "Edit campaign", [:edit, :account, @campaign], class: "campaign-show-meta__edit" %>
+          <% end %>
+        </header>
+        <dl class="campaign-show-meta__grid">
+          <div class="campaign-show-meta__row">
+            <dt>Subject</dt>
+            <dd><%= @campaign.subject.presence || content_tag(:span, "—", class: "campaign-show-meta__empty") %></dd>
+          </div>
+          <div class="campaign-show-meta__row">
+            <dt>Preheader</dt>
+            <dd><%= @campaign.preheader.presence || content_tag(:span, "—", class: "campaign-show-meta__empty") %></dd>
+          </div>
+          <div class="campaign-show-meta__row">
+            <dt>Audience</dt>
+            <dd>
+              <% if segment_name.present? %>
+                <%= segment_name %>
               <% else %>
-                <% confirm_count = recipient_count || "all subscribed team" %>
-                <%= button_to send_label,
-                      send_now_account_campaign_path(@campaign),
-                      method: :post,
-                      class: "button",
-                      data: { turbo_confirm: "About to send to #{confirm_count} subscriber#{"s" unless recipient_count == 1}. Cannot be undone. Continue?" } %>
+                Everyone subscribed
               <% end %>
-            <% end %>
-          <% end %>
-        </div>
-      </div>
+              <span class="campaign-show-meta__hint">· <%= count_for_label %> recipient<%= "s" unless count_for_label == 1 %></span>
+            </dd>
+          </div>
+          <div class="campaign-show-meta__row">
+            <dt>Sender</dt>
+            <dd><span class="campaign-show-meta__mono"><%= sender_label %></span></dd>
+          </div>
+          <div class="campaign-show-meta__row">
+            <dt>Template</dt>
+            <dd>
+              <% if @campaign.email_template %>
+                <%= template_label %>
+              <% else %>
+                <span class="campaign-show-meta__empty">No template</span>
+              <% end %>
+            </dd>
+          </div>
+          <div class="campaign-show-meta__row">
+            <dt>Scheduled for</dt>
+            <dd>
+              <% if scheduled_label %>
+                <span class="campaign-show-meta__mono"><%= scheduled_label %></span>
+              <% else %>
+                <span class="campaign-show-meta__empty">—</span>
+              <% end %>
+            </dd>
+          </div>
+        </dl>
+      </section>
 
       <%# ============================================================
-          State-aware callout: zero recipients on a draft
+          Preview — the rendered email, as an artifact
           ============================================================ %>
-      <% if @campaign.draft? && zero_recipients %>
-        <div class="mb-6 p-3 border rounded-md bg-amber-50 border-amber-300 dark:bg-amber-900/20 dark:border-amber-800 text-sm text-amber-800 dark:text-amber-200">
-          This campaign's segment matches 0 subscribers. Pick a different segment, or remove the segment to send to everyone subscribed.
-        </div>
-      <% end %>
-
-      <%# ============================================================
-          Details box
-          ============================================================ %>
-      <%= render 'account/shared/box', divider: true do |box| %>
-        <% box.title t('.header') %>
-        <% box.description do %>
-          <%= t('.description') %>
-        <% end %>
-
-        <% box.body do %>
-          <% with_attribute_settings object: @campaign, strategy: :label do %>
-            <%= render 'shared/attributes/text', attribute: :subject %>
-            <%= render 'shared/attributes/text', attribute: :preheader %>
-            <% if @campaign.body_markdown.present? %>
-              <%= render 'shared/attributes/text', attribute: :body_markdown %>
-            <% else %>
-              <%= render 'shared/attributes/text', attribute: :body_mjml %>
-            <% end %>
-            <%= render 'shared/attributes/date_and_time', attribute: :scheduled_for %>
-            <%= render 'shared/attributes/belongs_to', attribute: :email_template %>
-            <%= render 'shared/attributes/belongs_to', attribute: :segment %>
-            <%= render 'shared/attributes/belongs_to', attribute: :sender_address %>
-            <%# 🚅 super scaffolding will insert new fields above this line. %>
-          <% end %>
-        <% end %>
-
-        <% box.raw_footer do %>
-          <%# 🚅 super scaffolding will insert new action model index views above this line. %>
-        <% end %>
-      <% end %>
-
-      <%# ============================================================
-          Recipients box
-          ============================================================ %>
-      <%= render 'account/shared/box', divider: true do |box| %>
-        <% box.title "Recipients" %>
-        <% box.description do %>
-          Who this campaign will be sent to. Sender filter: only subscribed
-          subscribers (unsubscribed, bounced, and complained subscribers are
-          always skipped).
-        <% end %>
-
-        <% box.body do %>
-          <% if recipient_count.nil? %>
-            <p class="text-sm text-amber-700 dark:text-amber-300">
-              Could not compute recipient count — the segment's predicate is
-              invalid. Edit the segment to fix.
+      <section id="campaign-preview" class="campaign-show-preview">
+        <header class="campaign-show-preview__header">
+          <div class="campaign-show-preview__heading">
+            <div class="campaign-show-preview__eyebrow">Rendered preview</div>
+            <p class="campaign-show-preview__caption">
+              <% if preview_subscriber %>
+                As seen by <span class="campaign-show-preview__chip"><%= preview_subscriber.email %></span>
+              <% else %>
+                Placeholder render — no subscribers yet (<span class="campaign-show-preview__chip">preview@example.com</span>)
+              <% end %>
             </p>
+          </div>
+          <% if !@campaign.sent? && can?(:update, @campaign) %>
+            <%= button_to "Send test to me",
+                  test_send_account_campaign_path(@campaign),
+                  method: :post,
+                  class: "btn-editorial btn-editorial--ghost",
+                  form: { class: "inline", data: { turbo: false } },
+                  data: { turbo_confirm: "Send a test of \"#{@campaign.subject}\" to #{current_user.email}?" } %>
+          <% end %>
+        </header>
+        <div class="campaign-show-preview__frame">
+          <% if preview_html.present? %>
+            <iframe srcdoc="<%= ERB::Util.html_escape(preview_html) %>"
+                    class="campaign-show-preview__iframe"
+                    sandbox="allow-same-origin"
+                    title="Campaign preview"></iframe>
           <% else %>
-            <p class="text-sm">
-              <strong class="text-lg"><%= recipient_count %></strong>
-              recipient<%= "s" unless recipient_count == 1 %> —
-              <span class="text-base-500"><%= audience_label %>.</span>
+            <p class="campaign-show-preview__empty">
+              Preview could not be rendered — either the campaign has no body and no email template, or the MJML failed to compile. Edit the campaign to fix.
             </p>
-            <% if @campaign.draft? && recipient_count > 0 %>
-              <p class="text-xs text-base-500 mt-2">
-                About to send to <strong><%= recipient_count %></strong>
-                subscriber<%= "s" unless recipient_count == 1 %>. This cannot be undone.
-              </p>
-            <% end %>
           <% end %>
-        <% end %>
-      <% end %>
-
-      <%# ============================================================
-          Preview box
-          ============================================================ %>
-      <div id="campaign-preview">
-        <%= render 'account/shared/box', divider: true do |box| %>
-          <% box.title "Preview" %>
-          <% box.description do %>
-            <% if preview_subscriber %>
-              Rendered with variables substituted from
-              <strong><%= preview_subscriber.email %></strong>
-              — the first subscribed subscriber on the team.
-            <% else %>
-              Rendered with a placeholder subscriber
-              (<strong>preview@example.com</strong>) — add real subscribers to
-              preview with your audience's data.
-            <% end %>
-          <% end %>
-
-          <% box.body do %>
-            <% if preview_html.present? %>
-              <div class="border rounded-md overflow-hidden bg-white dark:bg-base-900">
-                <iframe srcdoc="<%= ERB::Util.html_escape(preview_html) %>"
-                        class="w-full"
-                        style="height: 600px; border: 0;"
-                        sandbox="allow-same-origin"
-                        title="Campaign preview"></iframe>
-              </div>
-            <% else %>
-              <p class="text-sm text-amber-700 dark:text-amber-300">
-                Preview could not be rendered — either the campaign has no body
-                and no email template, or the MJML failed to compile. Edit the
-                campaign to fix.
-              </p>
-            <% end %>
-          <% end %>
-        <% end %>
-      </div>
+        </div>
+      </section>
 
       <% if @campaign.sent? %>
         <%# Lazy-load the post-send analysis — can take 5-10s with a real LLM. %>
         <%= turbo_frame_tag "postmortem", src: postmortem_account_campaign_path(@campaign), loading: "lazy" do %>
-          <div class="p-4 my-4 border rounded-md bg-gray-50 dark:bg-sky-950 dark:border-sky-800 text-sm text-gray-500">
+          <aside class="campaign-show-callout campaign-show-callout--neutral">
             Generating AI post-send analysis…
-          </div>
+          </aside>
         <% end %>
       <% end %>
 
       <%# ============================================================
-          Footer link cluster — quieter Edit + destructive Delete
+          Footer — quiet back / delete row
           ============================================================ %>
-      <div class="flex items-center gap-4 mt-8 text-sm">
-        <%= link_to t('global.buttons.back'), [:account, @team, :campaigns], class: "text-blue-600 hover:underline" %>
-        <% if can? :edit, @campaign %>
-          <%= link_to t('.buttons.edit'), [:edit, :account, @campaign], class: "text-blue-600 hover:underline" %>
-        <% end %>
+      <footer class="campaign-show-footer">
+        <%= link_to t('global.buttons.back'), [:account, @team, :campaigns], class: "campaign-show-footer__link" %>
         <% if can? :destroy, @campaign %>
           <%= button_to t('.buttons.destroy'),
                 [:account, @campaign],
                 method: :delete,
-                class: "button-secondary button-danger",
+                class: "campaign-show-footer__danger",
+                form: { class: "inline" },
                 data: { turbo_confirm: t('.buttons.confirmations.destroy', model_locales(@campaign)) } %>
         <% end %>
-        <%# 🚅 super scaffolding will insert new action model buttons above this line. %>
-      </div>
+      </footer>
 
       <%# 🚅 super scaffolding will insert new children above this line. %>
     <% end %>
