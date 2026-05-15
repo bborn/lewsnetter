@@ -2,7 +2,7 @@ class Account::CampaignsController < Account::ApplicationController
   account_load_and_authorize_resource :campaign,
     through: :team,
     through_association: :campaigns,
-    member_actions: [:send_now, :test_send, :preview_as, :preview_frame, :destroy_asset]
+    member_actions: [:send_now, :test_send, :preview_as, :preview_frame, :destroy_asset, :upload_asset]
 
   # GET /account/teams/:team_id/campaigns
   # GET /account/teams/:team_id/campaigns.json
@@ -60,6 +60,33 @@ class Account::CampaignsController < Account::ApplicationController
       format.html { redirect_to [:account, @team, :campaigns], notice: I18n.t("campaigns.notifications.destroyed") }
       format.json { head :no_content }
     end
+  end
+
+  # POST /account/campaigns/:id/upload_asset
+  #
+  # Drag-and-drop / paste image upload from the markdown editor. Accepts a
+  # single multipart `file`, attaches it to the campaign's assets collection,
+  # and returns JSON { url, name } so the JS controller can splice
+  # `![name](url)` into the markdown body at the cursor.
+  def upload_asset
+    file = params[:file]
+    if file.blank?
+      render json: { error: "No file provided" }, status: :unprocessable_entity
+      return
+    end
+
+    @campaign.assets.attach(file)
+    attachment = @campaign.assets.attachments.last
+    blob = attachment.blob
+
+    render json: {
+      url: rails_storage_proxy_url(blob),
+      name: blob.filename.to_s,
+      asset_id: attachment.id
+    }
+  rescue => e
+    Rails.logger.error("upload_asset failed: #{e.class}: #{e.message}")
+    render json: { error: "Upload failed" }, status: :unprocessable_entity
   end
 
   # DELETE /account/campaigns/:id/assets/:asset_id

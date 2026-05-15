@@ -162,6 +162,11 @@ Rails.application.routes.draw do
             # form values so the editor can live-render without persisting.
             get :preview_frame
             post :preview_frame
+            # Drag-and-drop image upload from the markdown editor. Attaches a
+            # file to the campaign's assets collection and returns JSON
+            # { url, name } so the editor can splice `![name](url)` at the
+            # cursor.
+            post "assets", to: "campaigns#upload_asset", as: :upload_asset
             # See email_templates above — same purge_later pattern.
             delete "assets/:asset_id", to: "campaigns#destroy_asset", as: :asset
           end

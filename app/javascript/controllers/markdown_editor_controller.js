@@ -26,6 +26,12 @@ export default class extends Controller {
 
     const textarea = this.hasTextareaTarget ? this.textareaTarget : this.element
 
+    // Upload URL for drag/paste/file-picker image inserts. Inferred from the
+    // current path on /account/campaigns/:id/edit — POSTs to that campaign's
+    // assets collection. On /campaigns/new there's no campaign yet, so we
+    // leave it null and turn the image button off entirely.
+    this.uploadUrl = this._computeUploadUrl()
+
     this.editor = new EasyMDE({
       element: textarea,
       spellChecker: true,
@@ -33,14 +39,31 @@ export default class extends Controller {
       forceSync: true,
       status: false,
       minHeight: "360px",
-      // We don't have hosted image upload yet — hide the image button to avoid
-      // dead UI. Authors who need an image can paste raw markdown ![alt](url).
-      hideIcons: ["image", "side-by-side"],
-      showIcons: ["code", "table", "horizontal-rule"],
+      uploadImage: !!this.uploadUrl,
+      imageMaxSize: 10 * 1024 * 1024, // 10MB
+      imageAccept: 'image/png, image/jpeg, image/gif, image/webp, image/svg+xml',
+      imagePathAbsolute: true,
+      imageTexts: {
+        sbInit: 'Drag or paste an image into the editor, or click the image button to pick a file.',
+        sbOnDragEnter: 'Drop the image to upload it.',
+        sbOnDrop: 'Uploading image #images_names#…',
+        sbProgress: 'Uploading #file_name#: #progress#%',
+        sbOnUploaded: 'Uploaded #image_name#'
+      },
+      errorMessages: {
+        noFileGiven: 'You must select a file.',
+        typeNotAllowed: 'This image type is not allowed.',
+        fileTooLarge: 'Image #image_name# is too large (#image_size#). Max #image_max_size#.',
+        importError: 'Something went wrong while uploading #image_name#.'
+      },
+      imageUploadFunction: this._uploadImage.bind(this),
+      // Show the image toolbar button only when we have an upload URL.
+      hideIcons: this.uploadUrl ? ["side-by-side"] : ["image", "side-by-side"],
+      showIcons: this.uploadUrl ? ["image", "code", "table", "horizontal-rule"] : ["code", "table", "horizontal-rule"],
       toolbar: [
         "bold", "italic", "heading", "|",
         "quote", "unordered-list", "ordered-list", "|",
-        "link", "code", "table", "horizontal-rule", "|",
+        "link", ...(this.uploadUrl ? ["image"] : []), "code", "table", "horizontal-rule", "|",
         "preview", "fullscreen", "|",
         "guide"
       ],
@@ -89,5 +112,45 @@ export default class extends Controller {
     const cm = this.editor.codemirror
     cm.replaceSelection(text)
     cm.focus()
+  }
+
+  // Extract the campaign upload URL from the current pathname. Returns null
+  // for /campaigns/new (no persisted campaign yet) so the image button stays
+  // hidden until the campaign exists.
+  _computeUploadUrl() {
+    const match = window.location.pathname.match(/^\/account\/campaigns\/([^/]+)/)
+    return match ? `/account/campaigns/${match[1]}/assets` : null
+  }
+
+  // EasyMDE-shaped upload callback. Receives a single File, posts it as
+  // multipart, then resolves with the public URL we should splice into the
+  // markdown. EasyMDE handles inserting `![alt](url)` at the cursor itself.
+  async _uploadImage(file, onSuccess, onError) {
+    if (!this.uploadUrl) {
+      onError("Save the campaign first, then images can be uploaded.")
+      return
+    }
+
+    const csrf = document.querySelector('meta[name=csrf-token]')?.content || ''
+    const body = new FormData()
+    body.append('file', file)
+
+    try {
+      const res = await fetch(this.uploadUrl, {
+        method: 'POST',
+        headers: { 'X-CSRF-Token': csrf, 'Accept': 'application/json' },
+        body,
+        credentials: 'same-origin'
+      })
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}))
+        onError(payload.error || `Upload failed (${res.status}).`)
+        return
+      }
+      const data = await res.json()
+      onSuccess(data.url)
+    } catch (err) {
+      onError(`Upload failed: ${err.message || err}`)
+    }
   }
 }
