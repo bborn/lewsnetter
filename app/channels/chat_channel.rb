@@ -1,16 +1,18 @@
 # frozen_string_literal: true
 
-# ActionCable channel for the in-app agent chat. Subscribes to a single Chat;
-# messages perform `send_message` actions.
+# ActionCable channel for the in-app agent chat.
 #
-# Lifecycle per send_message:
-#   1. Add user message to chat (persisted by acts_as_chat).
-#   2. Broadcast it.
-#   3. Configure tools (per-context MCP adapter).
-#   4. Configure on_new_message / on_end_message callbacks to broadcast each
-#      assistant message + tool result as it arrives.
-#   5. chat.complete — runs the model loop. ruby_llm handles memory by
-#      replaying the chat's persisted messages on every turn.
+# Subscribe with chat_id; client `perform("send_message", {content})` runs a
+# turn. ruby_llm handles memory, the tool loop, and persistence — we just
+# wire its callbacks into broadcasts so the UI updates live.
+#
+# Event payloads (all carry `type` and `chat_id`):
+#   {type: "message_start",  message_id, role}                        — empty bubble appears
+#   {type: "chunk",          message_id, content_delta}               — append text to bubble
+#   {type: "message_end",    message_id, html}                        — replace bubble with final rendered HTML (markdown formatted)
+#   {type: "tool_call",      tool_call_id, name, arguments}           — "→ Calling foo({...})"
+#   {type: "tool_result",    tool_call_id, name, result_excerpt}      — "← result"
+#   {type: "error",          html}                                    — turn-level failure
 class ChatChannel < ApplicationCable::Channel
   def subscribed
     chat = Chat.find_by(id: params[:chat_id])
@@ -31,12 +33,12 @@ class ChatChannel < ApplicationCable::Channel
 
     unless ::Llm::Configuration.current.usable?
       user_msg = @chat.messages.create!(role: "user", content: content)
-      broadcast_message(user_msg)
+      broadcast_full_message(user_msg)
       not_configured = @chat.messages.create!(
         role: "assistant",
         content: "LLM not configured. Set credentials.llm.api_key (or ANTHROPIC_API_KEY) and restart."
       )
-      broadcast_message(not_configured)
+      broadcast_full_message(not_configured)
       return
     end
 
@@ -47,7 +49,7 @@ class ChatChannel < ApplicationCable::Channel
       role: "assistant",
       content: "Sorry — that turn errored: #{e.class}: #{e.message}"
     )
-    broadcast_message(err)
+    broadcast_full_message(err)
   end
 
   private
@@ -59,30 +61,89 @@ class ChatChannel < ApplicationCable::Channel
     @chat.with_instructions(system_prompt(ctx), append: false)
     @chat.with_tools(*tools) if tools.any?
 
-    # Broadcast each persisted message as it lands. ruby_llm fires this
-    # callback after the assistant/tool message has been saved, so we just
-    # need to fetch by id and push it.
-    seen_ids = @chat.messages.pluck(:id).to_set
-    @chat.on_end_message do |_msg|
-      @chat.messages.where("id NOT IN (?)", seen_ids).order(:id).each do |record|
-        broadcast_message(record)
-        seen_ids << record.id
+    # Wire ruby_llm callbacks → ActionCable broadcasts.
+    # on_new_message fires when a fresh assistant turn starts (after the user
+    # message persists). on_end_message fires when the LLM finishes a turn
+    # (final assistant or tool message saved). on_tool_call/on_tool_result
+    # bracket each tool invocation.
+    last_streamed_message_id = nil
+    user_msg_persisted = false
+
+    @chat.on_new_message do
+      # Persist + broadcast the user message before the assistant placeholder.
+      unless user_msg_persisted
+        user_msg = @chat.messages.where(role: "user").order(:id).last
+        broadcast_full_message(user_msg) if user_msg
+        user_msg_persisted = true
       end
     end
 
-    # ask() adds the user message + runs the tool loop until the model stops.
-    # ruby_llm replays the persisted history automatically (acts_as_chat).
-    @chat.ask(content)
+    @chat.on_end_message do |_msg|
+      record = @chat.messages.order(:id).last
+      next if record.nil?
+
+      # Skip messages already represented by live events to avoid duplicate
+      # renders in the chat panel:
+      # - assistant placeholders (empty content, only tool_calls) → the live
+      #   tool_call event already drew the "→ name(args)" line
+      # - tool result messages → live tool_result event drew the "← result"
+      role = record.role.to_s
+      next if role == "tool"
+      next if role == "assistant" && record.content.to_s.strip.empty?
+
+      broadcast(type: "message_end", message_id: record.id, html: render_message_html(record))
+      last_streamed_message_id = nil
+    end
+
+    @chat.on_tool_call do |tool_call|
+      broadcast(
+        type: "tool_call",
+        tool_call_id: tool_call.id,
+        name: tool_call.name,
+        arguments: tool_call.arguments
+      )
+    end
+
+    @chat.on_tool_result do |result|
+      # ruby_llm yields the raw tool return value (string/hash). Format
+      # compactly for the UI; full result is in the persisted Message
+      # (role: "tool") that on_end_message also broadcasts.
+      excerpt = result.is_a?(String) ? result : result.to_json
+      broadcast(
+        type: "tool_result",
+        result_excerpt: excerpt.to_s.truncate(200)
+      )
+    end
+
+    # Block form: chunk-by-chunk streaming. Each chunk has .content (text
+    # delta). The first chunk starts a streaming bubble; subsequent chunks
+    # append. on_end_message replaces it with the final rendered HTML.
+    @chat.ask(content) do |chunk|
+      next unless chunk&.content&.present?
+      if last_streamed_message_id.nil?
+        # Find or create the placeholder assistant message id ruby_llm created.
+        last_streamed_message_id = @chat.messages.order(:id).last&.id
+        broadcast(type: "message_start", message_id: last_streamed_message_id, role: "assistant")
+      end
+      broadcast(
+        type: "chunk",
+        message_id: last_streamed_message_id,
+        content_delta: chunk.content.to_s
+      )
+    end
   end
 
-  def broadcast_message(message)
-    ChatChannel.broadcast_to(@chat, {
-      type: "message",
-      role: message.role,
-      content: message.content,
+  def broadcast_full_message(message)
+    broadcast(
+      type: "message_full",
       message_id: message.id,
+      role: message.role,
       html: render_message_html(message)
-    })
+    )
+  end
+
+  def broadcast(payload)
+    ChatChannel.broadcast_to(@chat, payload.merge(chat_id: @chat.id))
   end
 
   def render_message_html(message)

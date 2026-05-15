@@ -1,12 +1,12 @@
 <%# A single chat message bubble. Rendered both at page load (server) and %>
-<%# in real-time via the ChatChannel (broadcasts the rendered HTML). %>
+<%# in real-time via the ChatChannel (broadcasts the rendered HTML at turn-end). %>
 <%# locals: { message: Message } %>
 
 <% case message.role.to_s %>
 <% when "user" %>
   <div class="flex justify-end">
-    <div class="bg-zinc-100 text-zinc-900 rounded-lg px-4 py-2 max-w-[85%] text-sm">
-      <%= simple_format(message.content) %>
+    <div class="bg-zinc-100 text-zinc-900 rounded-lg px-4 py-2 max-w-[85%] text-sm whitespace-pre-wrap">
+      <%= message.content %>
     </div>
   </div>
 <% when "assistant" %>
@@ -14,23 +14,27 @@
   <%# row before a tool call resolves; the tool_calls below render the action. %>
   <% if message.content.present? %>
     <div class="flex justify-start">
-      <div class="bg-white border border-zinc-200 text-zinc-900 rounded-lg px-4 py-2 max-w-[85%] text-sm">
-        <%= simple_format(message.content) %>
+      <div class="bg-white border border-zinc-200 text-zinc-900 rounded-lg px-4 py-2 max-w-[85%] text-sm prose prose-sm prose-zinc max-w-none">
+        <%= sanitize(Commonmarker.to_html(message.content.to_s, options: {render: {hardbreaks: true, unsafe: false}}),
+              tags: %w[p strong em a code pre ul ol li br blockquote h1 h2 h3 h4 h5 h6],
+              attributes: %w[href]) %>
       </div>
     </div>
   <% end %>
 <% when "system" %>
   <%# system messages are instructions; don't render in the UI %>
 <% when "tool" %>
-  <div class="text-xs text-zinc-500 font-mono px-2">
-    ← <%= message.content.to_s.truncate(180) %>
+  <div class="flex items-start gap-2 text-xs text-zinc-500 font-mono px-2 py-1">
+    <span class="text-emerald-500">←</span>
+    <span class="break-all"><%= message.content.to_s.truncate(180) %></span>
   </div>
 <% end %>
 
 <% if message.respond_to?(:tool_calls) && message.tool_calls.any? %>
   <% message.tool_calls.each do |tc| %>
-    <div class="text-xs text-zinc-500 font-mono px-2">
-      → <%= tc.name %>(<%= tc.arguments&.to_json %>)
+    <div class="flex items-center gap-2 text-xs text-zinc-500 font-mono px-2 py-1">
+      <span class="text-orange-500">→</span>
+      <span class="text-zinc-700"><%= tc.name %></span><span>(<%= tc.arguments&.to_json %>)</span>
     </div>
   <% end %>
 <% end %>
