@@ -25,8 +25,10 @@ module Agent
       refute_nil asst_msg
       assert_match(/stub|not configured|missing/i, asst_msg.content)
 
-      assert_includes events.map { |e| e[:type] }, :user_message
-      assert_includes events.map { |e| e[:type] }, :assistant_message
+      # Event types are strings ("#{role}_message") so they survive JSON
+      # serialization over ActionCable.
+      assert_includes events.map { |e| e[:type] }, "user_message"
+      assert_includes events.map { |e| e[:type] }, "assistant_message"
     end
 
     test "when LLM is not configured, returns a 'configure your key' assistant message" do
