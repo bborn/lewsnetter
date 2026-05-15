@@ -1,0 +1,35 @@
+<%# Ejected. Flash/inline alert chrome — used by _notices.html.erb for both
+    success notices and error alerts. Tones: green (success, default),
+    yellow (warning), red (error). See DESIGN.md → "Semantic colors". %>
+<% color ||= "green" %>
+<% tighter ||= false %>
+
+<%
+  case color.to_sym
+  when :green
+    classes = "bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/30 dark:border-emerald-900/60 dark:text-emerald-200"
+    eyebrow_color = "text-emerald-600 dark:text-emerald-400"
+    eyebrow_label = "Done"
+  when :yellow
+    classes = "bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-950/30 dark:border-amber-900/60 dark:text-amber-200"
+    eyebrow_color = "text-amber-700 dark:text-amber-400"
+    eyebrow_label = "Heads up"
+  when :red
+    classes = "bg-rose-50 border-rose-200 text-rose-800 dark:bg-rose-950/30 dark:border-rose-900/60 dark:text-rose-200"
+    eyebrow_color = "text-rose-700 dark:text-rose-400"
+    eyebrow_label = "Error"
+  else
+    classes = "bg-zinc-50 border-zinc-200 text-zinc-800 dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-200"
+    eyebrow_color = "text-zinc-500 dark:text-zinc-400"
+    eyebrow_label = "Notice"
+  end
+%>
+
+<div class="rounded-md border <%= classes %> px-5 py-3.5 mb-4 flex items-start gap-3">
+  <span class="font-mono text-[10px] uppercase tracking-widest <%= eyebrow_color %> shrink-0 mt-0.5">
+    <%= eyebrow_label %>
+  </span>
+  <div class="text-[14px] leading-relaxed flex-1">
+    <%= yield %>
+  </div>
+</div>

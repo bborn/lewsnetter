@@ -7,13 +7,13 @@
   <% box.description "Per-subscriber data carried over from your CSV import or API events. Available in MJML templates as {{key}}." %>
 
   <% box.body do %>
-    <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+    <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5 text-sm">
       <% custom_attrs.each do |key, value| %>
         <div>
-          <dt class="text-base-500 font-medium"><%= key.to_s.humanize %></dt>
-          <dd class="text-base-900 dark:text-base-100 font-mono break-words">
+          <dt class="font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-1"><%= key.to_s.humanize %></dt>
+          <dd class="font-sans text-zinc-900 dark:text-zinc-100 break-words">
             <% if value.is_a?(Hash) || value.is_a?(Array) %>
-              <pre class="text-xs whitespace-pre-wrap"><%= JSON.pretty_generate(value) %></pre>
+              <pre class="font-mono text-[12px] whitespace-pre-wrap text-zinc-700 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded px-3 py-2"><%= JSON.pretty_generate(value) %></pre>
             <% else %>
               <%= value.to_s %>
             <% end %>
