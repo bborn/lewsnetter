@@ -69,7 +69,10 @@
     <%# Agent chat panel — fixed bottom-right, always available while signed in. %>
     <%# Lazy-creates a Chat per user so the Cable subscription always has an %>
     <%# id to bind to. Powered by ruby_llm acts_as_chat. %>
-    <% if user_signed_in? && current_team %>
+    <%# Llm::Configuration guard avoids creating Chat rows (and triggering %>
+    <%# acts_as_chat's model resolution) when no API key is configured — %>
+    <%# important for CI and dev-without-secrets. %>
+    <% if user_signed_in? && current_team && Llm::Configuration.current.usable? %>
       <% chat = current_team.chats.where(user_id: current_user.id).order(updated_at: :desc).first %>
       <% chat ||= current_team.chats.create!(user: current_user) %>
       <%= render "account/chats/panel", chat: chat %>
