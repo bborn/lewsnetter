@@ -29,6 +29,15 @@ Rails.application.routes.draw do
   # team happens via Team::SesConfiguration topic ARN lookup.
   post "/webhooks/ses/sns", to: "webhooks/ses/sns#create"
 
+  # OAuth 2.1 discovery + RFC 7591 dynamic client registration for MCP.
+  # Mounted BEFORE the BulletTrain engines so they're publicly readable
+  # (no Devise auth required to fetch the metadata or register a client).
+  # See app/controllers/well_known_controller.rb and
+  # app/controllers/oauth/registrations_controller.rb.
+  get "/.well-known/oauth-protected-resource", to: "well_known#oauth_protected_resource"
+  get "/.well-known/oauth-authorization-server", to: "well_known#oauth_authorization_server"
+  post "/oauth/register", to: "oauth/registrations#create"
+
   # MCP server. Token-authed via Mcp::DoorkeeperAuth middleware (composed
   # inline below). Mounted BEFORE the BulletTrain engines so it skips
   # Devise/CSRF and runs as a pure Rack endpoint. Routes POST + GET to

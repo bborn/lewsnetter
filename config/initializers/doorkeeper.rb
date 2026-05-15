@@ -239,6 +239,12 @@ Doorkeeper.configure do
   # I'm pretty sure it's going to make sense to line these scopes up 1:1 with team roles.
   # For now, every connection is an admin on the team it connects to.
   default_scopes :admin
+  # mcp:read / mcp:write are requested by external MCP clients (Claude Desktop,
+  # Cursor, etc.) via the OAuth authorization-code flow. The Mcp::DoorkeeperAuth
+  # middleware doesn't enforce scope-level restrictions yet — any valid token
+  # gets full read/write — but advertising them lets RFC 7591 dynamic
+  # registration negotiate properly.
+  optional_scopes :"mcp:read", :"mcp:write"
 
   # Allows to restrict only certain scopes for grant_type.
   # By default, all the scopes will be available for all the grant types.
@@ -282,6 +288,11 @@ Doorkeeper.configure do
   # force_ssl_in_redirect_uri !Rails.env.development?
   #
   # force_ssl_in_redirect_uri { |uri| uri.host != 'localhost' }
+  #
+  # MCP desktop clients (Claude Desktop, Cursor) bind a transient HTTP server
+  # on localhost for the OAuth callback (RFC 8252 §7.3). Allow http:// for
+  # localhost / 127.0.0.1 only; everything else still requires HTTPS.
+  force_ssl_in_redirect_uri { |uri| uri.host != "localhost" && uri.host != "127.0.0.1" }
 
   # Specify what redirect URI's you want to block during Application creation.
   # Any redirect URI is whitelisted by default.

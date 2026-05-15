@@ -51,5 +51,13 @@ module Mcp
       status, _headers, _body = @middleware.call(env)
       assert_equal 401, status
     end
+
+    test "401 includes WWW-Authenticate header pointing at protected-resource metadata" do
+      env = Rack::MockRequest.env_for("/mcp", method: "POST")
+      _status, headers, _body = @middleware.call(env)
+      assert headers["www-authenticate"].present?, "Expected www-authenticate header"
+      assert_match(/Bearer/, headers["www-authenticate"])
+      assert_match(%r{/.well-known/oauth-protected-resource}, headers["www-authenticate"])
+    end
   end
 end
