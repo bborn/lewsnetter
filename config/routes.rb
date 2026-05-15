@@ -29,6 +29,16 @@ Rails.application.routes.draw do
   # team happens via Team::SesConfiguration topic ARN lookup.
   post "/webhooks/ses/sns", to: "webhooks/ses/sns#create"
 
+  # MCP server. Token-authed via Mcp::DoorkeeperAuth middleware (composed
+  # inline below). Mounted BEFORE the BulletTrain engines so it skips
+  # Devise/CSRF and runs as a pure Rack endpoint. Routes POST + GET to
+  # the same Rack app — GET is used by clients that upgrade to SSE for
+  # streamable HTTP.
+  mount Rack::Builder.new {
+    use Mcp::DoorkeeperAuth
+    run ->(env) { Mcp::Server.rack_app.call(env) }
+  } => "/mcp"
+
   # See `config/routes/*.rb` to customize these configurations.
   draw "concerns"
   draw "devise"
