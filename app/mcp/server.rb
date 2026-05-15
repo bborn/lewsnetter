@@ -28,7 +28,34 @@ module Mcp
   #   We use Thread.current[:mcp_context] (set per-request in rack_app) to
   #   pass the Mcp::Tool::Context into each delegating call. This is safe under
   #   Puma (one thread per request).
+  #
+  # Transport note: FastMcp's RackTransport is SSE-oriented — responses are
+  # broadcast back over the SSE stream, not returned from the HTTP POST body.
+  # SyncTransport overrides send_message to capture the response in
+  # Thread.current[:mcp_last_response] so that the messages endpoint can
+  # return it synchronously in the HTTP response body. This enables both
+  # standard MCP clients (using SSE + /mcp/messages) and simple JSON-RPC-
+  # over-HTTP clients (POST to /mcp/messages, read body directly).
   module Server
+    # A thin subclass of FastMcp's RackTransport that stores each outbound
+    # JSON-RPC response in Thread.current[:mcp_last_response] in addition to
+    # (or instead of) broadcasting it over any open SSE streams.  The messages
+    # endpoint's `process_json_request_with_server` uses the return value of
+    # `server.handle_request`, which in turn returns whatever `send_message`
+    # returns.  By returning [json_string] here we satisfy the Rack body
+    # contract and make the HTTP response body non-empty.
+    class SyncTransport < FastMcp::Transports::RackTransport
+      def send_message(message)
+        json_message = message.is_a?(String) ? message : JSON.generate(message)
+        Thread.current[:mcp_last_response] = [json_message]
+        # Still broadcast to any active SSE clients (no-op when none exist).
+        super
+        # Return a Rack-body-compatible array so handle_request's caller can
+        # use it directly as the HTTP response body.
+        [json_message]
+      end
+    end
+
     module_function
 
     def instance
@@ -44,8 +71,10 @@ module Mcp
         not_found = ->(_env) { [404, {"Content-Type" => "text/plain"}, ["Not Found"]] }
 
         transport = instance.start_rack(not_found,
+          transport: SyncTransport,
           path_prefix: "/mcp",
           localhost_only: false,
+          allowed_origins: [],
           logger: Rails.logger)
 
         lambda do |env|
@@ -56,6 +85,7 @@ module Mcp
           transport.call(env)
         ensure
           Thread.current[:mcp_context] = nil
+          Thread.current[:mcp_last_response] = nil
         end
       end
     end
