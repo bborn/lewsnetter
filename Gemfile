@@ -321,4 +321,8 @@ gem "commonmarker"
 # LLM agent framework (already proven in IK Kit refactor).
 gem "ruby_llm"
 
+# MCP (Model Context Protocol) server. Mounted at /mcp via a Rack endpoint
+# in routes.rb; auth handled by Mcp::DoorkeeperAuth middleware.
+gem "fast-mcp", "~> 1.5", require: "fast_mcp"
+
 # 🚅 super scaffolding will insert new oauth providers above this line.
