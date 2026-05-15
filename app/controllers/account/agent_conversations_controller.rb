@@ -12,9 +12,13 @@ class Account::AgentConversationsController < Account::ApplicationController
   def create
     @agent_conversation.user = current_user
     if @agent_conversation.save
+      starter = params[:starter_prompt].to_s.strip
+      if starter.present?
+        Agent::Runner.new(conversation: @agent_conversation).handle_user_message(starter)
+      end
       redirect_to [:account, @agent_conversation]
     else
-      redirect_to [:account, :agent_conversations], alert: "Could not start conversation"
+      redirect_to [:account, current_team, :agent_conversations], alert: "Could not start conversation"
     end
   end
 
