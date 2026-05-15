@@ -18,7 +18,7 @@ module Mcp
         )
 
         def call(arguments:, context:)
-          seg = context.team.segments.find(arguments["id"])
+          seg = context.team.segments.find_by!(id: arguments["id"])
           id = seg.id
           if seg.destroy
             {deleted: true, id: id}

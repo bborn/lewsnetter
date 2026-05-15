@@ -26,7 +26,7 @@ module Mcp
         )
 
         def call(arguments:, context:)
-          template = context.team.email_templates.find(arguments["id"])
+          template = context.team.email_templates.find_by!(id: arguments["id"])
 
           subscriber = build_subscriber(arguments, context, template)
 
@@ -60,7 +60,7 @@ module Mcp
         def build_subscriber(arguments, context, template)
           if arguments["subscriber_id"]
             # Use a real subscriber — find scoped to team for security.
-            context.team.subscribers.find(arguments["subscriber_id"])
+            context.team.subscribers.find_by!(id: arguments["subscriber_id"])
           elsif arguments["sample_data"]
             # Build an in-memory subscriber whose custom_attributes carry the
             # sample_data so CampaignRenderer's substitute() picks them up.

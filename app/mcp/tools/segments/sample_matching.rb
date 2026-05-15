@@ -19,7 +19,7 @@ module Mcp
         )
 
         def call(arguments:, context:)
-          seg = context.team.segments.find(arguments["id"])
+          seg = context.team.segments.find_by!(id: arguments["id"])
           limit = arguments["limit"] || 10
           begin
             matching_scope = seg.applies_to(context.team.subscribers)

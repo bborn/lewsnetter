@@ -22,7 +22,7 @@ module Mcp
         )
 
         def call(arguments:, context:)
-          sub = context.team.subscribers.find(arguments["id"])
+          sub = context.team.subscribers.find_by!(id: arguments["id"])
           attrs = arguments.slice("email", "name", "subscribed", "custom_attributes")
           sub.update!(attrs)
           {subscriber: serialize_subscriber(sub)}

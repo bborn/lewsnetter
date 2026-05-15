@@ -32,7 +32,7 @@ module Mcp
           segment_id sender_address_id scheduled_for].freeze
 
         def call(arguments:, context:)
-          campaign = context.team.campaigns.find(arguments["id"])
+          campaign = context.team.campaigns.find_by!(id: arguments["id"])
           attrs = arguments.slice(*PERMITTED)
           if (sf = attrs.delete("scheduled_for"))
             attrs["scheduled_for"] = Time.parse(sf)

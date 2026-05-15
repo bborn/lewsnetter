@@ -18,7 +18,7 @@ module Mcp
         )
 
         def call(arguments:, context:)
-          template = context.team.email_templates.find(arguments["id"])
+          template = context.team.email_templates.find_by!(id: arguments["id"])
           {email_template: serialize_email_template(template)}
         end
       end

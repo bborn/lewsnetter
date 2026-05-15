@@ -16,7 +16,7 @@ module Mcp
         )
 
         def call(arguments:, context:)
-          campaign = context.team.campaigns.find(arguments["campaign_id"])
+          campaign = context.team.campaigns.find_by!(id: arguments["campaign_id"])
 
           unless ::Llm::Configuration.current.usable?
             return {configured: false, error: "LLM not configured. Set credentials.llm.api_key or ANTHROPIC_API_KEY."}

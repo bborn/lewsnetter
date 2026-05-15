@@ -19,7 +19,7 @@ module Mcp
         )
 
         def call(arguments:, context:)
-          sa = context.team.sender_addresses.find(arguments["id"])
+          sa = context.team.sender_addresses.find_by!(id: arguments["id"])
           send_email = arguments["send_verification_email"] || false
 
           verification_triggered = false

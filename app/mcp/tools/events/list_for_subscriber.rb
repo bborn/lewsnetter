@@ -20,7 +20,7 @@ module Mcp
         )
 
         def call(arguments:, context:)
-          sub = context.team.subscribers.find(arguments["subscriber_id"])
+          sub = context.team.subscribers.find_by!(id: arguments["subscriber_id"])
           scope = sub.events.order(occurred_at: :desc)
           total = scope.count
           limit = arguments["limit"] || 50

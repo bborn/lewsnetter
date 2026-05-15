@@ -18,7 +18,7 @@ module Mcp
         )
 
         def call(arguments:, context:)
-          sa = context.team.sender_addresses.find(arguments["id"])
+          sa = context.team.sender_addresses.find_by!(id: arguments["id"])
           {sender_address: serialize_sender_address(sa)}
         end
       end

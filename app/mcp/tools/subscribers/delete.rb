@@ -18,7 +18,7 @@ module Mcp
         )
 
         def call(arguments:, context:)
-          sub = context.team.subscribers.find(arguments["id"])
+          sub = context.team.subscribers.find_by!(id: arguments["id"])
           id = sub.id
           sub.destroy!
           {deleted: true, id: id}

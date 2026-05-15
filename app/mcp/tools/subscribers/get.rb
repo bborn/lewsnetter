@@ -18,7 +18,7 @@ module Mcp
         )
 
         def call(arguments:, context:)
-          sub = context.team.subscribers.find(arguments["id"])
+          sub = context.team.subscribers.find_by!(id: arguments["id"])
           {subscriber: serialize_subscriber(sub)}
         end
       end

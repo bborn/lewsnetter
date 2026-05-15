@@ -24,7 +24,7 @@ module Mcp
         )
 
         def call(arguments:, context:)
-          campaign = context.team.campaigns.find(arguments["id"])
+          campaign = context.team.campaigns.find_by!(id: arguments["id"])
 
           recipient = arguments["recipient_email"] || context.user.email
           user_name = [context.user.first_name, context.user.last_name].compact.join(" ").presence || context.user.email

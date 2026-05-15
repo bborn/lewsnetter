@@ -23,7 +23,7 @@ module Mcp
         )
 
         def call(arguments:, context:)
-          campaign = context.team.campaigns.find(arguments["id"])
+          campaign = context.team.campaigns.find_by!(id: arguments["id"])
 
           parsed_time = begin
             Time.parse(arguments["scheduled_for"])

@@ -18,7 +18,7 @@ module Mcp
         )
 
         def call(arguments:, context:)
-          campaign = context.team.campaigns.find(arguments["id"])
+          campaign = context.team.campaigns.find_by!(id: arguments["id"])
           {campaign: serialize_campaign(campaign)}
         end
       end

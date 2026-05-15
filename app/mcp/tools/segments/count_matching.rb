@@ -18,7 +18,7 @@ module Mcp
         )
 
         def call(arguments:, context:)
-          seg = context.team.segments.find(arguments["id"])
+          seg = context.team.segments.find_by!(id: arguments["id"])
           total = context.team.subscribers.count
           begin
             count = seg.applies_to(context.team.subscribers).count

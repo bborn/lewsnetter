@@ -22,7 +22,7 @@ module Mcp
             return {configured: false, error: "LLM not configured. Set credentials.llm.api_key or ANTHROPIC_API_KEY."}
           end
 
-          segment = arguments["segment_id"] ? context.team.segments.find(arguments["segment_id"]) : nil
+          segment = arguments["segment_id"] ? context.team.segments.find_by!(id: arguments["segment_id"]) : nil
           drafter = AI::CampaignDrafter.new(team: context.team, brief: arguments["brief"], segment: segment, tone: arguments["tone"])
           draft = drafter.call
           {

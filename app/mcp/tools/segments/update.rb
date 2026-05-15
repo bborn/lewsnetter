@@ -21,7 +21,7 @@ module Mcp
         )
 
         def call(arguments:, context:)
-          seg = context.team.segments.find(arguments["id"])
+          seg = context.team.segments.find_by!(id: arguments["id"])
           attrs = arguments.slice("name", "predicate", "natural_language_source")
           seg.update!(attrs)
           {segment: serialize_segment(seg)}
