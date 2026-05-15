@@ -1,0 +1,38 @@
+<%# Ejected from bullet_train-1.45.1/app/views/devise/registrations/new.html.erb.
+    Customizations vs. upstream:
+      * "Create account" instead of "Create An Account"
+      * Tagline below title (Geist Mono caption)
+      * "Already have an account?" link moves to bottom alt-action slot
+    See DESIGN.md → devise screens. %>
+<%= render 'account/shared/workflow/box' do |box| %>
+  <% box.title "Create account" %>
+  <% box.description "It only takes a moment." %>
+  <% box.body do %>
+    <% within_fields_namespace(:sign_up) do %>
+     <%= form_for resource, as: resource_name, url: registration_path(resource_name), html: {class: 'form'} do |f| %>
+       <%= render 'account/shared/notices' %>
+       <%= render 'account/shared/forms/errors', form: f %>
+
+       <%= render 'shared/fields/email_field', form: f, method: :email, options: {autofocus: true} %>
+
+       <div class="grid md:grid-cols-2 gap-5">
+         <div>
+           <%= render 'shared/fields/password_field', form: f, method: :password, options: {show_strength_indicator: true} %>
+         </div>
+         <div>
+           <%= render 'shared/fields/password_field', form: f, method: :password_confirmation, other_options: {required: true, error: f.object.errors.full_messages_for(:password).first, hide_custom_error: true} %>
+         </div>
+       </div>
+
+       <%= f.submit "Create account", class: 'button full' %>
+
+       <p class="auth-card__alt-action mt-5 pt-5 border-t border-zinc-100 dark:border-zinc-800 text-center text-[13px] text-zinc-500 dark:text-zinc-400">
+         Already have an account?
+         <%= link_to "Sign in instead", new_user_session_path, class: "auth-card__alt-action-link" %>
+       </p>
+     <% end %>
+
+     <%= render 'devise/shared/oauth', verb: 'Sign Up' %>
+   <% end %>
+  <% end %>
+<% end %>

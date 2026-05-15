@@ -1,0 +1,15 @@
+<%# Ejected from bullet_train-themes-light to apply Lewsnetter design system.
+    See DESIGN.md → "Layout". Replaces the orange-on-orange gradient body
+    with a quiet zinc-50 chrome that matches the rest of the app. The card
+    chrome lives in themes/light/workflow/_box.html.erb. %>
+<!DOCTYPE html>
+<html class="theme-<%= BulletTrain::Themes::Light.color %> <%= "theme-secondary-#{BulletTrain::Themes::Light.secondary_color}" if BulletTrain::Themes::Light.secondary_color %> <%= BulletTrain::Themes::Light.force_color_scheme_to.to_s.presence %>" lang="<%= I18n.locale %>">
+  <head>
+    <%= render 'shared/layouts/head' %>
+  </head>
+  <body class="devise_layout electron-draggable min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 text-sm font-normal antialiased">
+    <div data-turn-enter data-turn-exit>
+      <%= yield %>
+    </div>
+  </body>
+</html>

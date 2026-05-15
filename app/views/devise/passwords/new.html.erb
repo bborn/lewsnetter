@@ -1,0 +1,26 @@
+<%# Ejected from bullet_train-1.45.1/app/views/devise/passwords/new.html.erb.
+    Customizations vs. upstream:
+      * "Reset password" instead of "Reset Your Password"
+      * Tagline below title (Geist Mono caption)
+      * "Back to sign in" link sits at the bottom as alt-action (not help text)
+    See DESIGN.md → devise screens. %>
+<%= render 'account/shared/workflow/box' do |box| %>
+  <% box.title "Reset password" %>
+  <% box.description "We'll email you a link to set a new one." %>
+  <% box.body do %>
+    <% within_fields_namespace(:sign_up) do %>
+      <%= form_for resource, as: resource_name, url: password_path(resource_name), html: {method: :post, class: 'form'} do |f| %>
+        <%= render 'account/shared/forms/errors', form: f %>
+
+        <%= render 'shared/fields/email_field', form: f, method: :email, options: {autofocus: true} %>
+
+        <%= f.submit "Send reset link", class: 'button full' %>
+
+        <p class="auth-card__alt-action mt-5 pt-5 border-t border-zinc-100 dark:border-zinc-800 text-center text-[13px] text-zinc-500 dark:text-zinc-400">
+          Remembered it?
+          <%= link_to "Sign in instead", new_user_session_path, class: "auth-card__alt-action-link" %>
+        </p>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

@@ -1,0 +1,43 @@
+<%# Ejected. Lewsnetter devise card chrome — replaces the BulletTrain
+    rounded-bubble + shadow + plane-logo splash with a quiet hairline card
+    sitting on bg-zinc-50, topped by the Lewsnetter wordmark and a Geist
+    Mono caps footer. See DESIGN.md → "Cards" + "Layout". %>
+<% width ||= "max-w-md" %>
+
+<div class="min-h-screen flex flex-col items-center justify-center py-12 px-4">
+  <div class="w-full <%= width %> mx-auto">
+    <%# Wordmark — matches account/shared/menu/_logo. %>
+    <a href="<%= main_app.root_path %>" class="flex items-center justify-center mb-8 group">
+      <span class="font-sans font-semibold tracking-tight text-[17px] text-zinc-900 dark:text-zinc-100">Lewsnetter</span>
+      <span class="ml-1.5 w-1.5 h-1.5 rounded-full bg-primary-600 group-hover:bg-primary-500 transition-colors"></span>
+    </a>
+
+    <%# Card. %>
+    <div class="auth-card bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg">
+      <div class="px-8 pt-7 pb-2">
+        <h1 class="auth-card__title text-zinc-900 dark:text-zinc-50">
+          <%= partial.title %>
+        </h1>
+        <% if partial.description? %>
+          <p class="auth-card__tagline mt-1">
+            <%= partial.description %>
+          </p>
+        <% end %>
+      </div>
+
+      <div class="electron-undraggable px-8 pb-8 pt-5">
+        <%= partial.body %>
+      </div>
+    </div>
+
+    <%# Footer wordmark. %>
+    <p class="auth-footer mt-6 text-center font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-600">
+      Lewsnetter &middot; AI-native email marketing
+    </p>
+  </div>
+</div>
+
+<% # We have to list out every option we want to be available at runtime so they're included in our Tailwind output. %>
+<% if false %>
+  <div class="max-w-md max-w-lg"></div>
+<% end %>

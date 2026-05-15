@@ -1,0 +1,62 @@
+<%# Ejected from bullet_train-1.45.1/app/views/devise/sessions/new.html.erb.
+    Customizations vs. upstream:
+      * "Sign in" instead of "Sign In" (sentence case)
+      * Tagline below title (Geist Mono caption)
+      * "Forgot password?" link sits under the password field, not as help text
+    See DESIGN.md → devise screens. %>
+<%= render 'account/shared/workflow/box' do |box| %>
+  <% box.title "Sign in" %>
+  <% box.description "Welcome back." %>
+  <% box.body do %>
+    <% within_fields_namespace(:self) do %>
+      <%= form_for resource, as: resource_name, url: two_factor_authentication_enabled? ? users_pre_otp_path : session_path(resource_name), html: {class: 'form'}, authenticity_token: true do |form| %>
+        <% with_field_settings form: form do %>
+          <%= render 'account/shared/notices', form: form %>
+          <%= render 'account/shared/forms/errors', form: form %>
+
+          <% email_field = capture do %>
+            <%= render 'shared/fields/email_field', method: :email, options: {autofocus: true} %>
+          <% end %>
+
+          <% if two_factor_authentication_enabled? %>
+            <div id="step-1" class="space-y">
+              <%= email_field %>
+              <%= form.submit t('global.buttons.next'), class: 'button full' %>
+            </div>
+          <% else %>
+            <%= email_field %>
+          <% end %>
+
+          <div id="step-2" class="<%= 'hidden' if two_factor_authentication_enabled? %> space-y">
+            <%= render 'shared/fields/password_field', method: :password do %>
+              <% content_for :help do %>
+                <%= link_to t('devise.links.forgot_password'), new_user_password_path %>
+              <% end %>
+            <% end %>
+
+            <% if two_factor_authentication_enabled? %>
+              <div id="step-2-otp" class="hidden">
+                <%= render 'shared/fields/text_field', method: :otp_attempt %>
+              </div>
+            <% end %>
+
+            <%= form.submit "Sign in", class: 'button full', id: 'sign_in_submit' %>
+          </div>
+
+          <% if devise_mapping.rememberable? %>
+            <%= render 'shared/fields/option', method: :remember_me, form: form, single_check_box: true %>
+          <% end %>
+
+          <% if show_sign_up_options? %>
+            <p class="auth-card__alt-action mt-5 pt-5 border-t border-zinc-100 dark:border-zinc-800 text-center text-[13px] text-zinc-500 dark:text-zinc-400">
+              Don't have an account?
+              <%= link_to "Create one", new_user_registration_path, class: "auth-card__alt-action-link" %>
+            </p>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <%= render 'devise/shared/oauth' %>
+  <% end %>
+<% end %>
