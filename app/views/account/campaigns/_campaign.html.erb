@@ -33,7 +33,12 @@
     <td><%= status_pill(campaign.status) %></td>
     <td class="font-mono tabular-nums text-sm text-zinc-700 dark:text-zinc-300"><%= count_display %></td>
     <td>
-      <span class="block font-mono text-[10px] uppercase tracking-widest text-zinc-400 dark:text-zinc-500"><%= date_label %></span>
+      <%# Only label the date when it's NOT the default Created (i.e. when it's
+          informative: Sent or Scheduled). Draft campaigns just show the date —
+          the DATE column header already tells you what it is. %>
+      <% if date_label != "Created" %>
+        <span class="block font-mono text-[10px] uppercase tracking-widest text-zinc-400 dark:text-zinc-500"><%= date_label %></span>
+      <% end %>
       <span class="font-mono text-[13px] text-zinc-500 dark:text-zinc-400"><%= l(date_value.to_datetime, format: :short) if date_value %></span>
     </td>
     <%# 🚅 super scaffolding will insert new fields above this line. %>

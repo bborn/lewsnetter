@@ -7,6 +7,12 @@
 # Reference: https://bullettrain.co/docs/field-partials
 %>
 
+<%# Execute the calling block first (if any) so its content_for :field
+    has a chance to register before we read it. Super_select / ckeditor /
+    trix_editor / emoji_field pass their <select>/<textarea> markup that
+    way. %>
+<% yield if defined?(yield) %>
+
 <%
 %i[label field error help after_help].each do |key|
   if (content = content_for(key).presence)
