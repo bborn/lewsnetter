@@ -40,11 +40,10 @@
           </table>
         <% elsif context == team && can?(:create, Subscriber.new(team: team)) %>
           <div class="text-center py-12 px-6">
-            <h2 class="text-xl font-semibold text-base-800 dark:text-base-200 mb-2">
-              Add your audience
-            </h2>
-            <p class="text-base-600 dark:text-base-400 max-w-md mx-auto mb-6">
-              Manually add subscribers one at a time, or import an existing list from CSV. There's one audience per team &mdash; target subsets with Segments later.
+            <div class="font-mono text-[11px] uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-2">No subscribers yet</div>
+            <h3 class="text-[18px] font-semibold text-zinc-900 dark:text-zinc-100 mb-2">Add your audience</h3>
+            <p class="text-zinc-500 dark:text-zinc-400 max-w-md mx-auto mb-6">
+              Add one at a time, or import from CSV. There's one audience per team — target subsets with Segments.
             </p>
             <div class="flex flex-wrap gap-3 justify-center">
               <%= link_to "Add subscriber", [:new, :account, team, :subscriber], class: "button" %>

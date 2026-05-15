@@ -37,6 +37,16 @@
               <%= render partial: 'account/sender_addresses/sender_address', collection: sender_addresses %>
             </tbody>
           </table>
+        <% elsif context == team && can?(:create, SenderAddress.new(team: team)) %>
+          <div class="text-center py-12 px-6">
+            <div class="font-mono text-[11px] uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-2">No senders yet</div>
+            <h3 class="text-[18px] font-semibold text-zinc-900 dark:text-zinc-100 mb-2">Add a from-address</h3>
+            <p class="text-zinc-500 dark:text-zinc-400 max-w-md mx-auto mb-6">
+              Recipients see this address in their inbox. Each must be verified
+              with Amazon SES before it can send.
+            </p>
+            <%= link_to "Add sender address →", [:new, :account, team, :sender_address], class: "button" %>
+          </div>
         <% end %>
       <% end %>
 
