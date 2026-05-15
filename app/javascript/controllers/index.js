@@ -21,6 +21,7 @@ import SubscriberSearchController from "./subscriber_search_controller"
 import VariablePickerController from "./variable_picker_controller"
 import CodeEditorController from "./code_editor_controller"
 import ClipboardController from "./clipboard_controller"
+import AgentChatController from "./agent_chat_controller"
 
 const application = Application.start()
 
@@ -54,6 +55,7 @@ application.register('subscriber-search', SubscriberSearchController)
 application.register('variable-picker', VariablePickerController)
 application.register('code-editor', CodeEditorController)
 application.register('clipboard', ClipboardController)
+application.register('agent-chat', AgentChatController)
 
 CableReady.initialize({ consumer })
 
