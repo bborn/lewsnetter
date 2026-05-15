@@ -34,6 +34,34 @@
   --lw-accent-tint: #2D1B0E;
 }
 
+/* ============================================================
+   Link defaults
+   ============================================================
+   BulletTrain's theme sets every <a> to var(--secondary-500) (orange,
+   since theme.rb is :orange). That collides with DESIGN.md's "accent
+   is rare" rule and makes table cells / inline copy feel saturated.
+   Override globally: link text inherits body color, hover goes orange
+   + underline. Buttons / nav items / status pills set their own
+   colors via class specificity, so this only affects unstyled <a>s. */
+a {
+  color: rgb(24 24 27);  /* zinc-900 */
+  text-decoration-line: none;
+}
+a:hover {
+  color: var(--primary-600);
+  text-decoration-line: underline;
+}
+.dark a,
+html.dark a,
+[data-theme="dark"] a {
+  color: rgb(244 244 245);  /* zinc-100 */
+}
+.dark a:hover,
+html.dark a:hover,
+[data-theme="dark"] a:hover {
+  color: var(--primary-400);
+}
+
 /* EasyMDE floats preview / side-by-side / fullscreen / guide buttons to the
    right by default. In our toolbar that produces an awkward orphaned button
    off to the right when only one float-right button fits on the first row.
@@ -85,16 +113,108 @@
     @apply bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-900;
   }
 
-  /* Destructive button — red text, transparent background, red border on hover.
-     Inherits sizing + base rules from `.button` / `.button-secondary` defined
-     in the theme. Use as: <button class="button-secondary button-danger"> or
-     drop in `button-danger` on its own where the secondary chrome is already
-     applied via the button helper. */
+  /* ============================================================
+     Buttons — override BulletTrain's defaults so secondary actions
+     are actually discoverable. See DESIGN.md → "Buttons".
+
+     .button         primary  → orange CTA (theme default already
+                                renders bg-primary-500 / hover-600)
+     .button-secondary        → secondary: hairline-bordered, zinc
+                                text. Replaces the orange-text-link
+                                BT default.
+     .button-secondary.button-back → matches the same chrome
+     .button-light            → ghost: transparent, no border, zinc
+                                text. For tertiary actions only.
+     ============================================================ */
+
+  /* Primary button polish — keep BT's bg-primary, tighten typography. */
+  .button,
+  form.button_to input[type=submit].button {
+    @apply inline-flex items-center justify-center font-medium border border-transparent;
+    font-family: 'Geist', ui-sans-serif, system-ui, sans-serif;
+    padding: 9px 16px;
+    font-size: 14px;
+    line-height: 1.2;
+    border-radius: 6px;
+    transition: background-color 100ms ease-out, border-color 100ms ease-out, color 100ms ease-out;
+  }
+
+  /* Secondary: hairline-bordered button with zinc text, not an orange link. */
+  .button-secondary {
+    @apply inline-flex items-center justify-center font-medium;
+    @apply text-zinc-700 dark:text-zinc-200 bg-white dark:bg-zinc-900;
+    @apply border border-zinc-300 dark:border-zinc-700;
+    @apply hover:text-zinc-900 dark:hover:text-zinc-50 hover:bg-zinc-50 dark:hover:bg-zinc-800;
+    @apply hover:border-zinc-400 dark:hover:border-zinc-600 hover:no-underline;
+    font-family: 'Geist', ui-sans-serif, system-ui, sans-serif;
+    padding: 8px 14px;
+    font-size: 14px;
+    line-height: 1.2;
+    border-radius: 6px;
+    transition: background-color 100ms ease-out, border-color 100ms ease-out, color 100ms ease-out;
+    text-decoration: none;
+  }
+  .button-secondary:focus {
+    @apply outline-none ring-2 ring-offset-2 ring-zinc-300 dark:ring-zinc-700 dark:ring-offset-zinc-900;
+  }
+
+  /* Light / ghost: transparent, no border, zinc text. Use sparingly. */
+  .button-light {
+    @apply inline-flex items-center justify-center font-medium border border-transparent bg-transparent;
+    @apply text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100;
+    @apply hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:no-underline;
+    font-family: 'Geist', ui-sans-serif, system-ui, sans-serif;
+    padding: 8px 12px;
+    font-size: 14px;
+    line-height: 1.2;
+    border-radius: 6px;
+    transition: background-color 100ms ease-out, color 100ms ease-out;
+    text-decoration: none;
+  }
+
+  /* Destructive button — red text + border on hover. Stacks on .button-secondary. */
   .button-danger {
-    @apply text-red-600 bg-transparent;
+    @apply text-red-600 dark:text-red-400 bg-transparent border-red-200 dark:border-red-900;
   }
   .button-danger:hover {
-    @apply text-red-700 border-red-600;
+    @apply text-red-700 dark:text-red-300 border-red-400 dark:border-red-700 bg-red-50 dark:bg-red-950;
+  }
+
+  /* "Back" — same chrome as secondary, optionally a left-arrow via ::before. */
+  .button-secondary.button-back::before {
+    content: "←";
+    margin-right: 6px;
+    color: currentColor;
+    opacity: 0.6;
+  }
+
+  /* Smaller modifier — for inline row actions (Edit, Delete in tables). */
+  .button.button-smaller,
+  .button-secondary.button-smaller,
+  .button-light.button-smaller {
+    padding: 4px 10px;
+    font-size: 12px;
+    line-height: 1.2;
+    border-radius: 4px;
+  }
+
+  /* Bump .btn-editorial--ghost legibility — was zinc-500 with transparent
+     border; promote to zinc-700 so it reads as actionable at rest. */
+  .btn-editorial--ghost {
+    @apply text-zinc-700 dark:text-zinc-300 border-transparent bg-transparent;
+    @apply hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800;
+  }
+
+  /* Card-header inline link (e.g. "Edit campaign" on Details card header). Mono
+     caps, like dashboard's "VIEW ALL". Use the .card-action class for this. */
+  .card-action,
+  .campaign-show-meta__edit {
+    @apply inline-flex items-center font-mono uppercase tracking-widest;
+    @apply text-zinc-500 dark:text-zinc-400 hover:text-orange-700 dark:hover:text-orange-400 hover:no-underline;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-decoration: none;
   }
 
   /* ============================================================
@@ -412,6 +532,421 @@
     font-size: 14px;
     margin: 0;
     padding: 16px;
+  }
+
+  /* ============================================================
+     Campaign edit — sectioned authoring surface
+     See DESIGN.md → "Specific surfaces → Campaign edit". Three (or
+     four) sectioned cards, each with a Geist 18/600 header, a one-
+     line description, and the fields below. Scoped classes
+     (.campaign-edit-*) so they don't leak to other surfaces.
+     ============================================================ */
+
+  /* The page-title H1 is sr-only on edit (the editorial header inside the
+     form is the visual title). Collapse the empty title row so the form
+     sits closer to the breadcrumb — same trick as campaign-show. */
+  body:has(.campaign-edit-header) .flex.flex-row.items-end.gap-4.mb-8 {
+    margin-bottom: 0;
+    margin-top: -16px;
+  }
+
+  /* Card primitive — matches campaign-show chrome (8px radius, hairline,
+     header/body split). Each card has a header (Geist 18/600 title + 13px
+     description) and a body. */
+  .campaign-edit-section {
+    @apply bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800;
+    border-radius: 8px;
+    margin-bottom: 24px;
+    overflow: visible;
+  }
+  .campaign-edit-section__header {
+    @apply border-b border-zinc-200 dark:border-zinc-800;
+    padding: 20px 24px 16px;
+  }
+  .campaign-edit-section__eyebrow {
+    @apply text-zinc-500 dark:text-zinc-400;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .campaign-edit-section__title {
+    @apply text-zinc-900 dark:text-zinc-50 font-semibold;
+    font-size: 18px;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  .campaign-edit-section__description {
+    @apply text-zinc-500 dark:text-zinc-400;
+    font-size: 13px;
+    line-height: 1.5;
+    margin: 4px 0 0;
+  }
+  .campaign-edit-section__body {
+    padding: 24px;
+  }
+
+  /* Editorial header — small mono eyebrow + campaign subject as the visual
+     H1 for this surface. */
+  .campaign-edit-header {
+    margin-bottom: 28px;
+  }
+  .campaign-edit-header__eyebrow {
+    @apply flex items-center gap-2 text-zinc-500 dark:text-zinc-400;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .campaign-edit-header__id {
+    @apply text-zinc-600 dark:text-zinc-300;
+  }
+  .campaign-edit-header__title {
+    @apply text-zinc-900 dark:text-zinc-50 font-semibold;
+    font-size: 28px;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    margin: 0;
+  }
+  @media (max-width: 768px) {
+    .campaign-edit-header__title {
+      font-size: 24px;
+    }
+  }
+
+  /* Locked banner — campaign already sent. */
+  .campaign-edit-locked-banner {
+    @apply border;
+    border-color: #FDE68A;
+    background: #FFFBEB;
+    color: #92400E;
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .dark .campaign-edit-locked-banner,
+  [data-theme="dark"] .campaign-edit-locked-banner {
+    background: #2D1F08;
+    border-color: #92400E;
+    color: #FDE68A;
+  }
+  .campaign-edit-locked-banner strong {
+    font-weight: 600;
+    margin-right: 4px;
+  }
+  .campaign-edit-locked-banner__link {
+    @apply underline hover:no-underline;
+    color: inherit;
+    font-weight: 500;
+  }
+
+  /* AI drafter — its own bordered region within Content. Eyebrow + textarea
+     + right-aligned CTA. Feels like a smart suggestion mechanism, not a
+     misc form field. */
+  .campaign-edit-drafter {
+    margin-bottom: 24px;
+  }
+  .campaign-edit-drafter__panel {
+    @apply bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800;
+    border-radius: 8px;
+    padding: 16px 18px;
+  }
+  .campaign-edit-drafter__panel--disabled {
+    opacity: 0.85;
+  }
+  .campaign-edit-drafter__header {
+    @apply flex items-start justify-between gap-3;
+    margin-bottom: 10px;
+  }
+  .campaign-edit-drafter__eyebrow {
+    @apply text-zinc-500 dark:text-zinc-400;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .campaign-edit-drafter__label {
+    @apply block text-zinc-800 dark:text-zinc-200 font-medium;
+    font-size: 14px;
+    margin: 0;
+  }
+  .campaign-edit-drafter__textarea {
+    @apply block w-full bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100;
+    @apply border border-zinc-300 dark:border-zinc-700;
+    @apply focus:outline-none focus:ring-2 focus:ring-orange-200 dark:focus:ring-orange-900 focus:border-orange-500;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    resize: vertical;
+    transition: border-color 100ms ease-out, box-shadow 100ms ease-out;
+  }
+  .campaign-edit-drafter__textarea:disabled {
+    @apply bg-zinc-100 dark:bg-zinc-900 cursor-not-allowed;
+  }
+  .campaign-edit-drafter__footer {
+    @apply flex items-center justify-between gap-4 flex-wrap;
+  }
+  .campaign-edit-drafter__hint {
+    @apply text-zinc-500 dark:text-zinc-400;
+    font-size: 12px;
+    margin: 0;
+    flex: 1 1 auto;
+  }
+  .campaign-edit-drafter__actions {
+    @apply flex items-center gap-3 shrink-0;
+  }
+  .campaign-edit-drafter__spinner {
+    @apply text-zinc-500 dark:text-zinc-400;
+    font-size: 13px;
+  }
+  .campaign-edit-drafter__error {
+    @apply text-rose-600 dark:text-rose-400;
+    font-size: 13px;
+    margin: 8px 0 0;
+  }
+
+  /* Body field header — label + variable picker on the right. */
+  .campaign-edit-body-field {
+    margin-bottom: 24px;
+  }
+  .campaign-edit-body-field__header {
+    @apply flex items-start justify-between gap-3;
+    margin-bottom: 8px;
+  }
+
+  /* Reusable field chrome — labels, hints, native inputs/selects. */
+  .campaign-edit-field {
+    margin-bottom: 0;
+  }
+  .campaign-edit-field-label,
+  label.campaign-edit-field-label {
+    @apply block text-zinc-800 dark:text-zinc-200;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .campaign-edit-field-hint {
+    @apply text-zinc-500 dark:text-zinc-400;
+    font-size: 12px;
+    line-height: 1.5;
+    margin: 6px 0 0;
+  }
+  .campaign-edit-field-hint__mono {
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 11px;
+    @apply text-zinc-600 dark:text-zinc-300;
+  }
+  .campaign-edit-input,
+  .campaign-edit-select {
+    @apply block w-full bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100;
+    @apply border border-zinc-300 dark:border-zinc-700;
+    @apply focus:outline-none focus:ring-2 focus:ring-orange-200 dark:focus:ring-orange-900 focus:border-orange-500;
+    font-family: 'Geist', ui-sans-serif, system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.4;
+    padding: 8px 12px;
+    border-radius: 6px;
+    transition: border-color 100ms ease-out, box-shadow 100ms ease-out;
+  }
+  .campaign-edit-select {
+    padding-right: 32px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2371717A' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 18px;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  /* Two-column grid on wide viewports for Audience + Settings cards. */
+  .campaign-edit-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px 24px;
+  }
+  @media (max-width: 768px) {
+    .campaign-edit-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Raw-MJML disclosure — quieter than a top-level callout. */
+  .campaign-edit-disclosure {
+    @apply bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800;
+    border-radius: 6px;
+    margin-bottom: 0;
+  }
+  .campaign-edit-disclosure__summary {
+    @apply cursor-pointer text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100;
+    list-style: none;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .campaign-edit-disclosure__summary::-webkit-details-marker { display: none; }
+  .campaign-edit-disclosure__summary::before {
+    content: "›";
+    display: inline-block;
+    color: #71717A;
+    font-size: 16px;
+    line-height: 1;
+    transition: transform 150ms ease-out;
+  }
+  .campaign-edit-disclosure[open] .campaign-edit-disclosure__summary::before {
+    transform: rotate(90deg);
+  }
+  .campaign-edit-disclosure__eyebrow {
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    @apply text-zinc-500 dark:text-zinc-400;
+  }
+  .campaign-edit-disclosure__caution {
+    @apply text-zinc-500 dark:text-zinc-400;
+    font-weight: 400;
+  }
+  .campaign-edit-disclosure__body {
+    @apply border-t border-zinc-200 dark:border-zinc-800;
+    padding: 14px;
+  }
+
+  /* Live preview card — extends .campaign-edit-section. */
+  .campaign-edit-preview__header {
+    @apply flex items-start justify-between gap-4;
+  }
+  .campaign-edit-preview__actions {
+    @apply flex items-center gap-3 shrink-0;
+  }
+  .campaign-edit-preview__status {
+    @apply text-zinc-500 dark:text-zinc-400;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 11px;
+  }
+  .campaign-edit-preview__frame {
+    background: #FAFAFA;
+    padding: 20px;
+  }
+  .dark .campaign-edit-preview__frame,
+  [data-theme="dark"] .campaign-edit-preview__frame {
+    background: #09090B;
+  }
+  .campaign-edit-preview__iframe {
+    @apply w-full border border-zinc-200 dark:border-zinc-800;
+    background: #FFFFFF;
+    border-radius: 6px;
+    height: 600px;
+  }
+
+  /* Assets section wrapper — re-skins the shared partial's card chrome
+     in-place without modifying the shared partial. Targets the partial's
+     top-level <section> and rewrites its border/bg/padding to match
+     .campaign-edit-section. */
+  .campaign-edit-assets-wrap > section {
+    @apply bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800;
+    border-radius: 8px;
+    padding: 0;
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+  .campaign-edit-assets-wrap > section > header {
+    @apply border-b border-zinc-200 dark:border-zinc-800;
+    padding: 20px 24px 16px;
+    margin-bottom: 0;
+  }
+  .campaign-edit-assets-wrap > section > header h2 {
+    @apply text-zinc-900 dark:text-zinc-50 font-semibold;
+    font-size: 18px;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+  }
+  .campaign-edit-assets-wrap > section > header p {
+    @apply text-zinc-500 dark:text-zinc-400;
+    font-size: 13px;
+    line-height: 1.5;
+    margin: 4px 0 0;
+  }
+  .campaign-edit-assets-wrap > section > div,
+  .campaign-edit-assets-wrap > section > ul,
+  .campaign-edit-assets-wrap > section > p {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+  .campaign-edit-assets-wrap > section > div:first-of-type {
+    padding-top: 20px;
+  }
+  .campaign-edit-assets-wrap > section > ul:last-child,
+  .campaign-edit-assets-wrap > section > p:last-child,
+  .campaign-edit-assets-wrap > section > div:last-of-type {
+    padding-bottom: 24px;
+  }
+
+  /* Sticky action bar — pinned to bottom of viewport so the primary CTA
+     is always reachable after editing a long body. */
+  .campaign-edit-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 30;
+    margin: 32px -32px 0;
+    padding: 0 32px;
+    background: linear-gradient(180deg, rgba(250,250,250,0) 0%, rgba(250,250,250,0.92) 28%, rgba(250,250,250,1) 100%);
+    padding-top: 24px;
+    padding-bottom: 20px;
+    border-top: 0;
+  }
+  .dark .campaign-edit-actions,
+  [data-theme="dark"] .campaign-edit-actions {
+    background: linear-gradient(180deg, rgba(9,9,11,0) 0%, rgba(9,9,11,0.92) 28%, rgba(9,9,11,1) 100%);
+  }
+  .campaign-edit-actions__inner {
+    @apply flex items-center justify-between gap-4 flex-wrap;
+    @apply bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800;
+    border-radius: 8px;
+    padding: 12px 16px 12px 20px;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.04);
+  }
+  .campaign-edit-actions__hint {
+    @apply text-zinc-500 dark:text-zinc-400;
+    font-size: 13px;
+    line-height: 1.5;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .campaign-edit-actions__link {
+    @apply text-zinc-700 dark:text-zinc-200 hover:text-orange-700 dark:hover:text-orange-400 hover:no-underline;
+    font-weight: 500;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .campaign-edit-actions__buttons {
+    @apply flex items-center gap-2 shrink-0;
+  }
+
+  /* When the sticky bar is present, suppress the default .buttons row from
+     shared/limits/form (we render our own). Defensive — if the partial
+     somehow surfaces, it stays hidden. */
+  .campaign-edit-actions ~ .buttons,
+  form.form > .buttons:last-child {
+    display: none;
   }
 
   /* Footer */
