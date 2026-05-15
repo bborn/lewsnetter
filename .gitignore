@@ -102,7 +102,11 @@ CLAUDE.md
 # Local QA / agent tooling
 tmp/qa/
 .playwright-mcp/
+.gstack/
 erd.pdf
+
+# QA screenshots accidentally saved at repo root by earlier sessions.
+/*.png
 
 # Ignore key files for decrypting credentials and more.
 /config/*.key
