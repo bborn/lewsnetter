@@ -418,8 +418,14 @@ html.dark a:hover,
   .campaign-show-hero__preview-as-input:focus {
     @apply outline-none border-orange-500 ring-2 ring-orange-100 dark:ring-orange-900/40;
   }
+  /* Visibility is toggled by the subscriber-search Stimulus controller via
+     the `.hidden` utility class. We do NOT bake `@apply hidden` into the
+     base rule — that would burn `display: none` into the class itself, so
+     `classList.remove("hidden")` couldn't ever reveal the dropdown. The
+     markup ships with the `hidden` utility class on initial render; the
+     controller removes it when results arrive. */
   .campaign-show-hero__preview-as-results {
-    @apply absolute z-10 mt-1 w-full bg-white dark:bg-zinc-800 rounded-md shadow-lg border border-zinc-200 dark:border-zinc-700 hidden max-h-80 overflow-auto;
+    @apply absolute z-10 mt-1 w-full bg-white dark:bg-zinc-800 rounded-md shadow-lg border border-zinc-200 dark:border-zinc-700 max-h-80 overflow-auto;
   }
 
   /* Callouts */
