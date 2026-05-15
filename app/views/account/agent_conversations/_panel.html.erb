@@ -1,0 +1,43 @@
+<%# Right-side agent chat panel. Rendered by the account layout for any %>
+<%# signed-in user. Conversation id is the most-recent or a new auto-created. %>
+<%# locals: { conversation: AgentConversation } %>
+
+<aside data-controller="agent-chat"
+       data-agent-chat-conversation-id-value="<%= conversation&.id %>"
+       class="fixed right-4 bottom-4 z-40 font-sans">
+  <button type="button"
+          data-action="click->agent-chat#toggle"
+          class="button button-secondary button-smaller">
+    💬 Agent
+  </button>
+
+  <div data-agent-chat-target="panel" hidden
+       class="absolute bottom-12 right-0 w-96 max-h-[70vh] bg-white border border-zinc-200 rounded-lg shadow-sm flex flex-col">
+    <div class="px-4 py-3 border-b border-zinc-100 flex items-center justify-between">
+      <div>
+        <div class="text-[10px] uppercase tracking-wider text-zinc-500 font-mono">
+          AGENT · <%= conversation ? "CONVERSATION ##{conversation.id}" : "NEW" %>
+        </div>
+        <div class="text-sm text-zinc-900 mt-0.5">
+          <%= conversation&.derived_title || "Ask the agent" %>
+        </div>
+      </div>
+      <%= link_to "Open", [:account, conversation], class: "text-xs text-zinc-500 hover:text-orange-600" if conversation %>
+    </div>
+
+    <div data-agent-chat-target="messages"
+         class="flex-1 overflow-y-auto p-3 space-y-2 text-sm">
+      <% (conversation&.agent_messages || []).each do |m| %>
+        <%= render partial: "account/agent_conversations/message", locals: { message: m } %>
+      <% end %>
+    </div>
+
+    <form data-action="submit->agent-chat#submit"
+          class="border-t border-zinc-100 p-3 flex gap-2">
+      <textarea data-agent-chat-target="input" rows="2"
+                placeholder="What should I do?"
+                class="flex-1 border border-zinc-200 rounded px-2 py-1 text-sm font-sans focus:border-orange-600 focus:ring-0"></textarea>
+      <button type="submit" class="button button-smaller">Send</button>
+    </form>
+  </div>
+</aside>

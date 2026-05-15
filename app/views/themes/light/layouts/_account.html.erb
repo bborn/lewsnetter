@@ -65,5 +65,11 @@
         </div>
       </form>
     </dialog>
+
+    <%# Agent chat panel — fixed bottom-right, always available while signed in. %>
+    <% if user_signed_in? && current_team %>
+      <% conv = current_team.agent_conversations.where(user_id: current_user.id).order(updated_at: :desc).first %>
+      <%= render "account/agent_conversations/panel", conversation: conv %>
+    <% end %>
   </body>
 </html>

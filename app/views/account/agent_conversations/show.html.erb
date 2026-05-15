@@ -1,8 +1,28 @@
-<h1><%= @agent_conversation.derived_title %></h1>
-<% @messages.each do |m| %>
-  <div data-role="<%= m.role %>"><strong><%= m.role %>:</strong> <%= m.content %></div>
-<% end %>
-<%= form_with url: [:account, @agent_conversation, :agent_messages], method: :post do |f| %>
-  <%= f.text_area :content %>
-  <%= f.submit "Send" %>
+<%= render "account/shared/page" do |page| %>
+  <% page.title @agent_conversation.derived_title %>
+  <% page.body do %>
+    <%= render "account/shared/box" do |box| %>
+      <% box.body do %>
+        <div data-controller="agent-chat"
+             data-agent-chat-conversation-id-value="<%= @agent_conversation.id %>">
+          <div data-agent-chat-target="messages" class="space-y-3 max-h-[60vh] overflow-y-auto pr-2 mb-4">
+            <% @messages.each do |m| %>
+              <%= render partial: "account/agent_conversations/message", locals: { message: m } %>
+            <% end %>
+          </div>
+
+          <form data-action="submit->agent-chat#submit" class="flex gap-2 border-t border-zinc-100 pt-4">
+            <textarea data-agent-chat-target="input" rows="3"
+                      placeholder="Ask the agent…"
+                      class="flex-1 border border-zinc-200 rounded px-3 py-2 font-sans text-sm focus:border-orange-600 focus:ring-0"></textarea>
+            <button type="submit" class="button">Send</button>
+          </form>
+
+          <div class="mt-3 text-xs text-zinc-500">
+            <%= link_to "← Back to conversations", [:account, current_team, :agent_conversations], class: "hover:text-orange-600" %>
+          </div>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
 <% end %>
