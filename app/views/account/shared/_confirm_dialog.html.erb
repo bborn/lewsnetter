@@ -1,0 +1,23 @@
+<%# Styled <dialog> rendered once per page. Replaces window.confirm() for every
+    data-turbo-confirm link/button — see app/javascript/turbo_confirm.js.
+    Pattern from https://boringrails.com/articles/data-turbo-confirm-beautiful-dialog/ %>
+<dialog id="turbo-confirm" class="confirm-dialog">
+  <form method="dialog" class="confirm-dialog__form">
+    <div class="confirm-dialog__eyebrow" data-eyebrow>Confirm</div>
+    <p class="confirm-dialog__message" data-message></p>
+    <div class="confirm-dialog__actions">
+      <button type="submit"
+              value="cancel"
+              data-cancel
+              class="button-secondary">
+        Cancel
+      </button>
+      <button type="submit"
+              value="confirm"
+              data-confirm
+              class="button confirm-dialog__confirm">
+        Yes, continue
+      </button>
+    </div>
+  </form>
+</dialog>

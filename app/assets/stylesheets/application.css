@@ -74,6 +74,19 @@ html.dark a:hover,
   float: none;
 }
 
+/* EasyMDE's table toolbar button has class="fa fa-table no-disable", which
+   collides with Tailwind's `.table { display: table }` utility — making the
+   <a> stretch like a <table> across the toolbar row. Force inline-block
+   layout so it sits next to the other icons. */
+.EasyMDEContainer .editor-toolbar a.table {
+  display: inline-block;
+  width: auto;
+  height: 30px;
+  min-width: 30px;
+  padding: 0 6px;
+  border-collapse: separate;
+}
+
 /* ✅ YOUR APPLICATION'S CSS */
 /* If you need to customize your application's CSS, this is the place to do it. This helps
    avoid merge conflicts in the future when Rails or Bullet Train update their own CSS.
@@ -215,6 +228,65 @@ html.dark a:hover,
     font-weight: 500;
     letter-spacing: 0.08em;
     text-decoration: none;
+  }
+
+  /* ============================================================
+     Styled <dialog> for data-turbo-confirm. See
+     app/javascript/turbo_confirm.js + the #turbo-confirm partial.
+     ============================================================ */
+  .confirm-dialog {
+    @apply bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100;
+    @apply border border-zinc-200 dark:border-zinc-800;
+    border-radius: 12px;
+    padding: 0;
+    max-width: 460px;
+    width: calc(100% - 32px);
+    box-shadow: 0 10px 24px rgb(0 0 0 / 0.12), 0 4px 8px rgb(0 0 0 / 0.06);
+  }
+  .confirm-dialog::backdrop {
+    background: rgb(9 9 11 / 0.55);
+    backdrop-filter: blur(2px);
+  }
+  /* Open-state animation */
+  .confirm-dialog[open] {
+    animation: confirm-dialog-pop 150ms ease-out;
+  }
+  @keyframes confirm-dialog-pop {
+    from { opacity: 0; transform: scale(0.96) translateY(8px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .confirm-dialog__form {
+    padding: 28px 28px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .confirm-dialog__eyebrow {
+    @apply font-mono uppercase tracking-widest text-zinc-500 dark:text-zinc-400;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+  }
+  .confirm-dialog.is-destructive .confirm-dialog__eyebrow {
+    @apply text-rose-600 dark:text-rose-400;
+  }
+  .confirm-dialog__message {
+    @apply text-zinc-900 dark:text-zinc-100;
+    font-family: 'Geist', ui-sans-serif, system-ui, sans-serif;
+    font-size: 17px;
+    font-weight: 500;
+    line-height: 1.4;
+    letter-spacing: -0.005em;
+    margin: 0 0 22px;
+  }
+  .confirm-dialog__actions {
+    @apply flex items-center justify-end;
+    gap: 8px;
+  }
+  /* Destructive confirm — red button instead of orange. */
+  .confirm-dialog.is-destructive .confirm-dialog__confirm {
+    @apply bg-rose-600 hover:bg-rose-700;
+    color: #fff;
   }
 
   /* ============================================================
