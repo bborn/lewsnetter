@@ -52,7 +52,7 @@ module Mcp
         end
 
         test "raises ArgumentError when natural_language is missing" do
-          assert_raises(Mcp::Tool::ArgumentError) do
+          assert_raises(::Mcp::Tool::ArgumentError) do
             TranslateSegment.new.invoke(arguments: {}, context: @ctx)
           end
         end

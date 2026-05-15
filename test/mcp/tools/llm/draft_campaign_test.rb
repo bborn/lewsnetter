@@ -48,7 +48,7 @@ module Mcp
         end
 
         test "raises ArgumentError when brief is missing" do
-          assert_raises(Mcp::Tool::ArgumentError) do
+          assert_raises(::Mcp::Tool::ArgumentError) do
             DraftCampaign.new.invoke(arguments: {}, context: @ctx)
           end
         end
