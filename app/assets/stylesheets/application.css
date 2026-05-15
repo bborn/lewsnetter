@@ -1,3 +1,7 @@
+/* Geist Sans + Geist Mono — see DESIGN.md. Must come before the theme stylesheet
+   so the font face is registered before any theme rule references `font-sans`. */
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap');
+
 /* The theme's stylesheet initializes tailwindcss and imports the theme's default styles.
 
    The $ThemeStylesheet path is evaluated via a postcss resolver, which finds the theme's
@@ -17,6 +21,19 @@
    and leave them intact. */
 @import "easymde/dist/easymde.min.css";
 
+/* Lewsnetter design tokens. Accent is rare — used only for primary CTAs,
+   focus rings, link color, brand mark. See DESIGN.md "Color → Accent". */
+:root {
+  --lw-accent: #EA580C;
+  --lw-accent-hover: #C2410C;
+  --lw-accent-tint: #FFF7ED;
+}
+[data-theme="dark"], html.dark {
+  --lw-accent: #FB923C;
+  --lw-accent-hover: #F97316;
+  --lw-accent-tint: #2D1B0E;
+}
+
 /* EasyMDE floats preview / side-by-side / fullscreen / guide buttons to the
    right by default. In our toolbar that produces an awkward orphaned button
    off to the right when only one float-right button fits on the first row.
@@ -35,30 +52,37 @@
 */
 
 @layer components {
-  /* Status pill / badge component — used by status_pill_helper. Maps to:
-     - badge-neutral (gray) → draft, not_in_ses
-     - badge-info    (blue) → scheduled
-     - badge-warn    (amber) → sending, pending
-     - badge-success (green) → sent, verified
-     - badge-error   (red) → failed, verification_failed
+  /* Status pill — used by status_pill_helper. Geist Mono, 11px, uppercase,
+     1px border in state color, tinted background. See DESIGN.md "Status pills".
+     - badge-neutral → draft, not_in_ses
+     - badge-info    → scheduled
+     - badge-warn    → sending, pending
+     - badge-success → sent, verified
+     - badge-error   → failed, verification_failed
   */
   .badge {
-    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
+    @apply inline-flex items-center font-mono uppercase tracking-wider border;
+    padding: 2px 8px;
+    font-size: 11px;
+    line-height: 1.4;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    border-radius: 4px;
   }
   .badge-neutral {
-    @apply bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200;
+    @apply bg-zinc-100 text-zinc-700 border-zinc-300 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700;
   }
   .badge-info {
-    @apply bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200;
+    @apply bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-900;
   }
   .badge-warn {
-    @apply bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200;
+    @apply bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-900;
   }
   .badge-success {
-    @apply bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200;
+    @apply bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-900;
   }
   .badge-error {
-    @apply bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200;
+    @apply bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-900;
   }
 
   /* Destructive button — red text, transparent background, red border on hover.

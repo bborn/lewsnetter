@@ -269,10 +269,10 @@ BulletTrain::Themes::Light.color = :blue
 Change to:
 
 ```ruby
-BulletTrain::Themes::Light.color = :primary
+BulletTrain::Themes::Light.color = :orange
 ```
 
-This makes the `text-primary-*` / `bg-primary-*` classes throughout `themes-light` resolve to our orange.
+This adds the `theme-orange` class to `<body>`, which remaps `--primary-50` through `--primary-900` (used throughout `themes-light`) to Tailwind's orange palette. `primary-600` resolves to `#EA580C` — our accent.
 
 ### Step 3 — Load Geist + design tokens in `application.css`
 
