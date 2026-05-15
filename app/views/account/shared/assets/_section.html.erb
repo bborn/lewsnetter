@@ -38,28 +38,29 @@
   end
 %>
 
-<section class="mb-8 p-4 border rounded-md bg-white dark:bg-sky-950 dark:border-sky-800">
-  <header class="mb-4">
-    <h2 class="text-lg font-semibold">Assets</h2>
-    <p class="text-sm text-gray-500">
-      Upload images to host them on Cloudflare R2. Copy the URL and paste it into
-      your MJML as <code class="font-mono text-xs">&lt;mj-image src="…" /&gt;</code>
-      or into your markdown body as <code class="font-mono text-xs">![alt](url)</code>.
+<section class="mb-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-6">
+  <header class="mb-5">
+    <div class="font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-1">Assets</div>
+    <h2 class="text-[18px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 mb-1">Hosted images</h2>
+    <p class="text-sm text-zinc-500 dark:text-zinc-400">
+      Upload images to Cloudflare R2. Drag and drop also works directly in the
+      markdown editor above — drop a file into the body and we'll splice in
+      <code class="font-mono text-[12px] text-zinc-700 dark:text-zinc-300">![alt](url)</code>.
     </p>
   </header>
 
-  <div class="mb-4">
-    <%= form.label :assets, "Add images", class: "block text-sm font-medium" %>
-    <div class="mt-1.5">
+  <div class="mb-5">
+    <%= form.label :assets, "Add images", class: "block font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-2" %>
+    <div>
       <%# multipart: true is set on the surrounding form_with via html: option;
           we still pass it on the file input so screen-readers + native validation
           both treat this as a true file picker. %>
       <%= form.file_field :assets,
             multiple: true,
             accept: "image/*",
-            class: "block w-full text-sm rounded-md border border-base-300 dark:border-base-900 bg-white dark:bg-base-800 dark:text-base-300 px-3 py-2 file:mr-3 file:rounded-md file:border-0 file:bg-primary-500 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white hover:file:bg-primary-600" %>
+            class: "block w-full text-sm rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 px-3 py-2 file:mr-3 file:rounded-md file:border-0 file:bg-primary-600 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white hover:file:bg-primary-700" %>
     </div>
-    <p class="mt-1.5 text-xs text-base-500 dark:text-base-400">
+    <p class="mt-2 text-[12px] text-zinc-500 dark:text-zinc-400">
       Images only, 5MB max each. Multiple selection allowed.
     </p>
   </div>
@@ -75,13 +76,13 @@
       <% persisted_attachments.each do |attachment| %>
         <% blob = attachment.blob %>
         <% public_url = rails_storage_proxy_url(blob) %>
-        <li class="flex items-start gap-3 p-3 border rounded-md bg-base-50 dark:bg-base-800/40 border-base-200 dark:border-base-700"
+        <li class="flex items-start gap-3 p-3 border rounded-md bg-zinc-50 dark:bg-zinc-950/40 border-zinc-200 dark:border-zinc-800"
             data-controller="clipboard">
           <%# Thumbnail. Tailwind's object-cover keeps the aspect ratio while
               filling the box; for non-image blobs (shouldn't happen given
               the model validator) we'd render a generic icon, but the
               accept="image/*" + model validation gate covers us. %>
-          <div class="shrink-0 w-[60px] h-[60px] rounded-md overflow-hidden bg-white dark:bg-base-900 border border-base-200 dark:border-base-700">
+          <div class="shrink-0 w-[60px] h-[60px] rounded overflow-hidden bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
             <%= image_tag public_url,
                   alt: blob.filename.to_s,
                   class: "w-full h-full object-cover",
@@ -89,19 +90,19 @@
           </div>
 
           <div class="flex-1 min-w-0">
-            <p class="text-sm font-medium text-base-900 dark:text-base-100 truncate" title="<%= blob.filename %>">
+            <p class="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate" title="<%= blob.filename %>">
               <%= blob.filename %>
             </p>
-            <p class="text-xs text-gray-500 mt-0.5">
+            <p class="font-mono text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 tabular-nums">
               <%= number_to_human_size(blob.byte_size) %>
             </p>
             <div class="mt-2 flex items-center gap-2">
-              <code class="flex-1 min-w-0 truncate text-xs font-mono px-2 py-1 rounded bg-white dark:bg-base-900 border border-base-200 dark:border-base-700 text-base-700 dark:text-base-300"
+              <code class="flex-1 min-w-0 truncate text-[12px] font-mono px-2 py-1 rounded bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300"
                     data-clipboard-target="source"><%= public_url %></code>
               <button type="button"
                       data-clipboard-target="button"
                       data-action="click->clipboard#copy"
-                      class="shrink-0 button-secondary text-xs">
+                      class="shrink-0 button-secondary button-smaller">
                 Copy URL
               </button>
             </div>
@@ -119,15 +120,19 @@
             <%= link_to "Delete",
                   destroy_asset_path.call(attachment),
                   data: { turbo_method: :delete, turbo_confirm: "Delete this asset? This cannot be undone." },
-                  class: "button-secondary text-xs" %>
+                  class: "button-secondary button-smaller button-danger" %>
           </div>
         </li>
       <% end %>
     </ul>
   <% elsif resource.persisted? %>
-    <p class="text-sm text-gray-500 italic">No assets uploaded yet.</p>
+    <p class="text-sm text-zinc-500 dark:text-zinc-400">
+      <span class="font-mono text-[11px] uppercase tracking-widest mr-1">Empty</span>
+      No assets uploaded yet. Add files above or drop them into the markdown editor.
+    </p>
   <% else %>
-    <p class="text-sm text-gray-500 italic">
+    <p class="text-sm text-zinc-500 dark:text-zinc-400">
+      <span class="font-mono text-[11px] uppercase tracking-widest mr-1">Pending save</span>
       Save this <%= resource_name.humanize.downcase %> first to start uploading assets.
     </p>
   <% end %>
