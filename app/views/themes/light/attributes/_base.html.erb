@@ -1,0 +1,23 @@
+<%# Ejected. Attribute row rendering used on every show page. Mono caps
+    label + Geist Sans value matches DESIGN.md and is consistent with the
+    explicit dl/dt/dd grids on the editorial show pages (campaign show,
+    sender show). See DESIGN.md → "Tables" + "Specific surfaces". %>
+<% url ||= nil %>
+<% strategy ||= current_attributes_strategy || :none %>
+<% link_html_options ||= {} %>
+
+<% body = link_to_if url.present?, partial.body, url, link_html_options %>
+
+<% case strategy %>
+<% when :label %>
+  <div>
+    <label class="block font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-1">
+      <%= partial.heading %>
+    </label>
+    <div class="font-sans text-zinc-900 dark:text-zinc-100 break-all">
+      <%= body %>
+    </div>
+  </div>
+<% else %>
+  <%= body %>
+<% end %>

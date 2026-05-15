@@ -40,7 +40,13 @@
         </tbody>
       </table>
     <% else %>
-      <p class="text-sm text-base-500">No events recorded yet for this subscriber.</p>
+      <div class="text-center px-6 py-10">
+        <div class="font-mono text-[11px] uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-2">No events yet</div>
+        <p class="text-zinc-600 dark:text-zinc-400 max-w-md mx-auto">
+          Behavioral events (opens, clicks, custom signals) appear here.
+          Segments target campaigns based on this activity.
+        </p>
+      </div>
     <% end %>
   <% end %>
 

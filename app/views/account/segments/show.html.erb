@@ -72,12 +72,19 @@
 
         <% box.body do %>
           <% if predicate.present? %>
-            <pre class="bg-gray-100 dark:bg-sky-950 dark:border dark:border-sky-800 rounded-md p-3 overflow-x-auto whitespace-pre-wrap break-words"><code class="font-mono text-xs"><%= predicate %></code></pre>
+            <pre class="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md p-4 overflow-x-auto whitespace-pre-wrap break-words"><code class="font-mono text-[12px] text-zinc-700 dark:text-zinc-300"><%= predicate %></code></pre>
           <% else %>
-            <p class="text-sm text-gray-500">
-              No predicate set yet. Edit this segment and use the AI translator
-              to generate one, or write SQL directly.
-            </p>
+            <div class="text-center px-6 py-10">
+              <div class="font-mono text-[11px] uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-2">No predicate</div>
+              <p class="text-zinc-600 dark:text-zinc-400 max-w-md mx-auto mb-5">
+                Tell the AI translator who this segment targets (e.g.
+                "brand-tenant managers active in the last 30 days") or
+                write SQL against the subscribers table directly.
+              </p>
+              <% if can? :edit, @segment %>
+                <%= link_to "Edit segment →", [:edit, :account, @segment], class: "button" %>
+              <% end %>
+            </div>
           <% end %>
         <% end %>
       <% end %>
@@ -91,29 +98,36 @@
 
         <% box.body do %>
           <% if match_count.nil? %>
-            <p class="text-sm text-red-600">
-              Couldn't run this segment's predicate — it may reference invalid
-              columns. Edit the segment to fix it.
-            </p>
+            <div class="rounded-md border border-rose-200 dark:border-rose-900/60 bg-rose-50 dark:bg-rose-950/30 px-4 py-3">
+              <div class="font-mono text-[11px] uppercase tracking-widest text-rose-700 dark:text-rose-400 mb-1">Predicate error</div>
+              <p class="text-sm text-rose-700 dark:text-rose-300">
+                Couldn't run this segment's predicate — it may reference invalid
+                columns. Edit the segment to fix it.
+              </p>
+            </div>
           <% else %>
-            <p class="text-sm mb-3">
-              <strong><%= match_count %></strong>
-              <%= "subscriber".pluralize(match_count) %> match right now.
-            </p>
+            <div class="flex items-baseline gap-3 mb-4">
+              <span class="font-sans text-[28px] font-semibold tabular-nums tracking-tight text-zinc-900 dark:text-zinc-100 leading-none">
+                <%= number_with_delimiter(match_count) %>
+              </span>
+              <span class="font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
+                <%= "subscriber".pluralize(match_count) %> match right now
+              </span>
+            </div>
 
             <% if sample_subscribers.any? %>
-              <table class="w-full text-sm border-collapse">
+              <table class="w-full text-sm">
                 <thead>
-                  <tr class="text-left border-b border-gray-200 dark:border-sky-800">
-                    <th class="py-1 pr-3 font-medium">Name</th>
-                    <th class="py-1 font-medium">Email</th>
+                  <tr class="font-mono text-[11px] uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+                    <th class="text-left font-medium py-2 pr-3">Name</th>
+                    <th class="text-left font-medium py-2">Email</th>
                   </tr>
                 </thead>
                 <tbody>
                   <% sample_subscribers.each do |s| %>
-                    <tr class="border-b border-gray-100 dark:border-sky-900">
-                      <td class="py-1 pr-3"><%= s.name.presence || "—" %></td>
-                      <td class="py-1 font-mono text-xs"><%= s.email %></td>
+                    <tr class="border-t border-zinc-200 dark:border-zinc-800">
+                      <td class="py-2 pr-3 text-zinc-900 dark:text-zinc-100"><%= s.name.presence || "—" %></td>
+                      <td class="py-2 font-mono text-[13px] text-zinc-700 dark:text-zinc-300"><%= s.email %></td>
                     </tr>
                   <% end %>
                 </tbody>
