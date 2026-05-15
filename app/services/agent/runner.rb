@@ -26,7 +26,7 @@ module Agent
 
     def handle_user_message(content)
       user_msg = @conversation.agent_messages.create!(role: "user", content: content)
-      emit(type: :user_message, message_id: user_msg.id, content: content)
+      emit_message(user_msg)
 
       unless ::Llm::Configuration.current.usable?
         return persist_assistant(NOT_CONFIGURED_MESSAGE)
@@ -36,7 +36,7 @@ module Agent
     rescue => e
       Rails.logger.error("[agent] runner failed: #{e.class}: #{e.message}\n#{e.backtrace.first(8).join("\n")}")
       err_msg = @conversation.agent_messages.create!(role: "error", error_class: e.class.name, error_message: e.message)
-      emit(type: :error, message_id: err_msg.id, message: "#{e.class}: #{e.message}")
+      emit_message(err_msg)
     end
 
     private
@@ -82,12 +82,33 @@ module Agent
 
     def persist_assistant(text)
       msg = @conversation.agent_messages.create!(role: "assistant", content: text)
-      emit(type: :assistant_message, message_id: msg.id, content: text)
+      emit_message(msg)
       msg
     end
 
-    def emit(payload)
+    # Broadcast a single AgentMessage to the channel. Includes the rendered
+    # HTML so the Stimulus controller appends a styled bubble that matches
+    # the page-load render of `_message.html.erb`. Without `html`, the JS
+    # would have to duplicate the partial's Tailwind classes inline.
+    def emit_message(message)
+      payload = {
+        type: "#{message.role}_message",
+        message_id: message.id,
+        role: message.role,
+        content: message.content,
+        html: render_message_html(message)
+      }
       @on_event&.call(payload)
+    end
+
+    def render_message_html(message)
+      ApplicationController.render(
+        partial: "account/agent_conversations/message",
+        locals: {message: message}
+      )
+    rescue => e
+      Rails.logger.warn("[agent] failed to render message partial: #{e.class}: #{e.message}")
+      nil
     end
   end
 end

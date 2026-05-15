@@ -54,22 +54,20 @@ export default class extends Controller {
 
   handleEvent(event) {
     if (!this.hasMessagesTarget) return
-    const node = document.createElement("div")
-    node.className = `agent-chat-msg agent-chat-msg--${event.type}`
-    if (event.type === "user_message" || event.type === "assistant_message") {
-      node.textContent = event.content
-    } else if (event.type === "tool_call") {
-      const args = event.arguments ? JSON.stringify(event.arguments) : "{}"
-      node.textContent = `→ ${event.tool_name}(${args})`
-    } else if (event.type === "tool_result") {
-      const r = event.result ? JSON.stringify(event.result).slice(0, 200) : ""
-      node.textContent = `← ${event.tool_name}: ${r}`
-    } else if (event.type === "error") {
-      node.textContent = `error: ${event.message}`
+
+    const wrapper = document.createElement("div")
+    if (event.html) {
+      // Server-rendered partial — already styled to match the page-load
+      // render. Just splice it in.
+      wrapper.innerHTML = event.html
     } else {
-      node.textContent = JSON.stringify(event)
+      // Fallback path (no rendered HTML in event payload — e.g. an old
+      // server build, or an event the runner doesn't know how to render).
+      // Render bare text so at least nothing is silently lost.
+      wrapper.className = `text-xs text-zinc-500 px-2`
+      wrapper.textContent = `[${event.type}] ${event.content || JSON.stringify(event)}`
     }
-    this.messagesTarget.appendChild(node)
+    this.messagesTarget.appendChild(wrapper)
     this.messagesTarget.scrollTop = this.messagesTarget.scrollHeight
   }
 }
