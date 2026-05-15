@@ -18,9 +18,11 @@ Rails.application.config.after_initialize do
     c.default_model = config.default_model
     c.request_timeout = 60
 
-    # Gateway override. ruby_llm 1.15 exposes anthropic_api_base= for the
-    # per-provider base URL. The respond_to? guard ensures this is a no-op
-    # on versions that don't support it rather than raising.
+    # Generic gateway support: any gateway that exposes an Anthropic- or
+    # OpenAI-compatible URL works by setting credentials.llm.base_url. ruby_llm
+    # 1.15 exposes anthropic_api_base= / openai_api_base= for the per-provider
+    # base URL. The respond_to? guard makes this a no-op on versions that
+    # don't support it rather than raising.
     if config.base_url.present?
       case config.provider
       when :anthropic, :cloudflare

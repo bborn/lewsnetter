@@ -44,6 +44,14 @@ module Llm
       @env["LLM_BASE_URL"].presence || llm_namespace[:base_url].presence
     end
 
+    # Cloudflare AI Gateway "Authenticated Gateway" token. When present we
+    # send `cf-aig-authorization: Bearer <token>` instead of the upstream
+    # provider key. Pairs with Cloudflare's BYOK / Stored Keys feature where
+    # CF holds the Anthropic key and attaches it on the way out.
+    def cf_aig_token
+      @env["CF_AIG_TOKEN"].presence || llm_namespace[:cf_aig_token].presence
+    end
+
     def default_model
       @env["LLM_DEFAULT_MODEL"].presence || llm_namespace[:default_model].presence || DEFAULT_MODEL
     end
