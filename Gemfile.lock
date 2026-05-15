@@ -455,6 +455,9 @@ GEM
     letter_opener (1.10.0)
       launchy (>= 2.2, < 4)
     lint_roller (1.1.0)
+    liquid (5.12.0)
+      bigdecimal
+      strscan (>= 3.1.1)
     logger (1.7.0)
     loofah (2.25.1)
       crass (~> 1.0.2)
@@ -791,6 +794,7 @@ GEM
     stripe (19.1.0)
       bigdecimal
       logger
+    strscan (3.1.8)
     thor (1.5.0)
     thread-local (1.1.0)
     timeout (0.6.1)
@@ -884,6 +888,7 @@ DEPENDENCIES
   kamal (~> 2.0)
   knapsack_pro
   letter_opener
+  liquid (~> 5.5)
   magic_test
   mailkick
   minitest

@@ -131,37 +131,82 @@ class CampaignRenderer
     end
   end
 
+  # Render via Liquid (https://shopify.github.io/liquid/). Standard syntax:
+  #   {{ var }}
+  #   {{ var | default: "fallback" }}
+  #   {{ var | upcase }}
+  #   {% if var %}…{% endif %}
+  #
+  # Backwards-compat shim: legacy `{{key|fallback}}` (Lewsnetter's old
+  # custom syntax, no spaces, fallback as a bare word) is rewritten to
+  # Liquid's `{{ key | default: "fallback" }}` BEFORE Liquid parses.
+  # This means existing campaign bodies keep working without a one-shot
+  # migration.
+  #
+  # Lewsnetter convention: unknown variables (no fallback) stay in place
+  # so the user notices the broken template. Liquid's default is to
+  # render unknowns as empty — we pre-fill missing vars with their own
+  # `{{name}}` literal so the output round-trips.
   def substitute(string)
     return string if string.blank?
-    vars = variables
-    # Match {{key}} or {{key|fallback}} with optional whitespace around the key
-    # and pipe. Fallback can contain anything except '}' so it stops at the
-    # closing braces. Comparisons use the symbol form of the key.
-    #
-    # Behavior:
-    #   - {{known}} with a value → value
-    #   - {{known}} with blank value → "" (existing behavior — substitute even if empty)
-    #   - {{unknown}} (no fallback, key not in vars) → left in place so the
-    #     user notices the broken template
-    #   - {{key|fallback}} → fallback when key resolves blank (including unknown keys)
-    string.gsub(/\{\{\s*(\w+)\s*(?:\|([^}]*))?\s*\}\}/) do |match|
-      key = $1.to_sym
-      fallback = $2
-      has_fallback = !fallback.nil?
-      if vars.key?(key)
-        value = vars[key]
-        if value.to_s.strip.empty? && has_fallback
-          fallback.to_s.strip
-        else
-          value.to_s
-        end
-      elsif has_fallback
-        fallback.to_s.strip
-      else
-        # Unknown key, no fallback — leave the token intact.
-        match
-      end
+
+    source = rewrite_legacy_fallback_syntax(string)
+    template = Liquid::Template.parse(source, error_mode: :lax)
+    vars = string_keyed_variables
+    fill_unknown_vars_with_literals!(vars, template)
+    template.render(vars)
+  rescue Liquid::SyntaxError => e
+    Rails.logger.warn("[CampaignRenderer] Liquid parse failed: #{e.message} — leaving source unchanged")
+    string
+  end
+
+  # Rewrite legacy `{{var|fallback}}` → `{{ var | default: "fallback" }}`.
+  #
+  # The pattern is intentionally strict: NO whitespace around the pipe and
+  # NO whitespace in the fallback word. This distinguishes Lewsnetter's
+  # original syntax (always written compact, e.g. `{{subdomain|app}}`) from
+  # standard Liquid (`{{ var | upcase }}` or `{{ var | default: "x" }}`),
+  # which we let Liquid parse natively.
+  def rewrite_legacy_fallback_syntax(string)
+    string.gsub(/\{\{\s*(\w+)\|([^}|:\s][^}|:]*?)\s*\}\}/) do
+      key, fallback = $1, $2.strip
+      escaped = fallback.gsub('\\', '\\\\').gsub('"', '\\"')
+      %({{ #{key} | default: "#{escaped}" }})
     end
+  end
+
+  # Liquid renders unknown variables as empty by default. Lewsnetter's
+  # convention is to leave them as `{{name}}` so the author notices.
+  # Walk the parsed template's variable references; for any name that
+  # isn't already in `vars` (and isn't a Liquid built-in like `forloop`),
+  # set vars[name] = "{{name}}" so it round-trips.
+  def fill_unknown_vars_with_literals!(vars, template)
+    return unless template.root.respond_to?(:nodelist)
+    referenced_names(template.root).each do |name|
+      vars[name] = "{{#{name}}}" unless vars.key?(name)
+    end
+  end
+
+  # Walks the parsed Liquid template and returns the names of variable
+  # references that have NO default filter. Those are the ones we want to
+  # round-trip as `{{name}}` literals so the author notices the broken
+  # template. Variables with a `default:` filter are intentionally left
+  # alone — Liquid's default filter handles missing/empty values.
+  def referenced_names(node, names = Set.new)
+    if node.is_a?(Liquid::Variable)
+      has_default = Array(node.filters).any? { |f| Array(f).first.to_s == "default" }
+      first = node.name
+      if !has_default && first.respond_to?(:name)
+        names << first.name
+      end
+    elsif node.respond_to?(:nodelist) && node.nodelist
+      node.nodelist.each { |child| referenced_names(child, names) }
+    end
+    names
+  end
+
+  def string_keyed_variables
+    variables.transform_keys(&:to_s)
   end
 
   def variables

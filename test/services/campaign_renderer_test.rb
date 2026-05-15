@@ -285,4 +285,33 @@ class CampaignRendererTest < ActiveSupport::TestCase
     refute_includes result.html, "%7Bsubdomain%7D",
       "expected no URL-encoded braces in the rendered href"
   end
+
+  # Liquid-native features (post-Liquid swap). Confirm the standard syntax
+  # works end-to-end so authors and AI agents can use it.
+
+  test "Liquid-native default filter: {{ var | default: \"x\" }}" do
+    @campaign.update!(subject: "Hi {{ first_name | default: \"there\" }}")
+    @subscriber.update!(name: "")
+    result = CampaignRenderer.new(campaign: @campaign, subscriber: @subscriber.reload).call
+    assert_equal "Hi there", result.subject
+  end
+
+  test "Liquid filters chain: {{ var | upcase }}" do
+    @campaign.update!(subject: "{{ first_name | upcase }}")
+    result = CampaignRenderer.new(campaign: @campaign, subscriber: @subscriber).call
+    assert_equal "ALICE", result.subject
+  end
+
+  test "Liquid conditionals: {% if … %}…{% endif %}" do
+    @subscriber.update!(custom_attributes: {"plan" => "growth"})
+    @campaign.update!(subject: "{% if plan == 'growth' %}Welcome to Growth{% else %}Hello{% endif %}")
+    result = CampaignRenderer.new(campaign: @campaign, subscriber: @subscriber.reload).call
+    assert_equal "Welcome to Growth", result.subject
+  end
+
+  test "Liquid syntax error in body falls back to original source instead of crashing" do
+    @campaign.update!(subject: "Broken {% if missing_endif")
+    result = CampaignRenderer.new(campaign: @campaign, subscriber: @subscriber).call
+    assert_equal "Broken {% if missing_endif", result.subject
+  end
 end

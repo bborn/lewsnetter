@@ -321,6 +321,12 @@ gem "commonmarker"
 # LLM agent framework (already proven in IK Kit refactor).
 gem "ruby_llm"
 
+# Liquid templating for campaign body/subject/preheader variable substitution.
+# Standard email-marketing syntax (Shopify, Mailchimp, Customer.io use it),
+# so authors and AI agents both already speak it. Replaces the old custom
+# {{key|fallback}} regex renderer.
+gem "liquid", "~> 5.5"
+
 # MCP (Model Context Protocol) server. Mounted at /mcp via a Rack endpoint
 # in routes.rb; auth handled by Mcp::DoorkeeperAuth middleware.
 gem "fast-mcp", "~> 1.5", require: "fast_mcp"
