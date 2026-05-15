@@ -133,7 +133,9 @@ module Mcp
           ctx = Thread.current[:mcp_context]
           raise "missing per-request MCP context" if ctx.nil?
 
-          result = our_tool.new.invoke(arguments: args, context: ctx)
+          result = Mcp::Telemetry.around(tool_name: our_tool._tool_name, team_id: ctx.team.id) do
+            our_tool.new.invoke(arguments: args, context: ctx)
+          end
           result.is_a?(String) ? result : JSON.generate(result)
         end
       end
