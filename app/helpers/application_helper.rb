@@ -5,9 +5,9 @@ module ApplicationHelper
     :light
   end
 
-  # Renders a "→ Open in agent" button that creates a new AgentConversation
-  # pre-seeded with the given prompt. Only renders when the user is signed in
-  # and a current_team is available.
+  # Renders a "→ Open in agent" button that creates a new Chat pre-seeded
+  # with the given prompt. Only renders when the user is signed in and a
+  # current_team is available.
   #
   # Example:
   #   <%= open_in_agent_link("Draft a newsletter about: #{@brief}", label: "→ Open in agent") %>
@@ -15,9 +15,9 @@ module ApplicationHelper
     return unless user_signed_in? && current_team
     button_to(
       label,
-      account_team_agent_conversations_path(current_team),
+      account_team_chats_path(current_team),
       method: :post,
-      params: {agent_conversation: {}, starter_prompt: prompt},
+      params: {chat: {}, starter_prompt: prompt},
       class: html_options[:class] || "card-action",
       data: html_options[:data] || {turbo: false}
     )

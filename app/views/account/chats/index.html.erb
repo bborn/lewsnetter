@@ -1,0 +1,37 @@
+<% content_for :title, "Chats" %>
+
+<%= render 'account/shared/page' do |page| %>
+  <% page.title { "Agent chats" } %>
+
+  <%= render 'account/shared/box' do |box| %>
+    <% box.body do %>
+      <% if @chats.any? %>
+        <ul class="divide-y divide-zinc-100">
+          <% @chats.each do |c| %>
+            <li class="py-3 flex items-center justify-between">
+              <div>
+                <%= link_to c.derived_title, [:account, c], class: "text-zinc-900 hover:text-orange-600 font-medium" %>
+                <div class="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mt-1">
+                  CHAT · #<%= c.id %> · <%= c.messages.size %> MESSAGES · <%= c.updated_at.strftime("%Y-%m-%d") %>
+                </div>
+              </div>
+              <%= button_to "Delete", [:account, c],
+                    method: :delete,
+                    data: {turbo_confirm: "Delete this chat?"},
+                    class: "button button-secondary button-smaller button-danger" %>
+            </li>
+          <% end %>
+        </ul>
+      <% else %>
+        <div class="py-8 text-center text-zinc-500">
+          <div class="text-[10px] uppercase tracking-wider font-mono mb-2">NO CHATS YET</div>
+          <p class="text-sm">Start a new chat to get help drafting campaigns, building segments, and more.</p>
+        </div>
+      <% end %>
+
+      <div class="mt-6">
+        <%= button_to "Start new chat", [:account, current_team, :chats], method: :post, class: "button" %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

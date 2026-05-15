@@ -1,7 +1,0 @@
-<% agent_conversation ||= @agent_conversation %>
-<% team ||= @team || agent_conversation&.team || current_team %>
-<%= render 'account/teams/breadcrumbs', team: team %>
-<%= render 'account/shared/breadcrumb', label: 'Agent', url: [:account, team, :agent_conversations] %>
-<% if agent_conversation&.persisted? %>
-  <%= render 'account/shared/breadcrumb', label: agent_conversation.derived_title, url: [:account, agent_conversation] %>
-<% end %>

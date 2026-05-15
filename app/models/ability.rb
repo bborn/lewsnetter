@@ -23,8 +23,8 @@ class Ability
       # We only allow users to work with the access tokens they've created, e.g. those not created via OAuth2.
       can :manage, Platform::AccessToken, application: {team_id: user.team_ids}, provisioned: true
 
-      can :manage, AgentConversation, team_id: user.team_ids, user_id: user.id
-      can :manage, AgentMessage, agent_conversation: {team_id: user.team_ids, user_id: user.id}
+      can :manage, Chat, team_id: user.team_ids, user_id: user.id
+      can :manage, Message, chat: {team_id: user.team_ids, user_id: user.id}
 
       if stripe_enabled?
         can [:read, :create, :destroy], Oauth::StripeAccount, user_id: user.id

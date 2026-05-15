@@ -1,9 +1,8 @@
-<%# Right-side agent chat panel. Rendered by the account layout for any %>
-<%# signed-in user. Conversation id is the most-recent or a new auto-created. %>
-<%# locals: { conversation: AgentConversation } %>
+<%# Right-side fixed agent chat panel. Toggleable. %>
+<%# locals: { chat: Chat } %>
 
 <aside data-controller="agent-chat"
-       data-agent-chat-conversation-id-value="<%= conversation&.id %>"
+       data-agent-chat-chat-id-value="<%= chat&.id %>"
        class="fixed right-4 bottom-4 z-40 font-sans">
   <button type="button"
           data-action="click->agent-chat#toggle"
@@ -16,19 +15,19 @@
     <div class="px-4 py-3 border-b border-zinc-100 flex items-center justify-between">
       <div>
         <div class="text-[10px] uppercase tracking-wider text-zinc-500 font-mono">
-          AGENT · <%= conversation ? "CONVERSATION ##{conversation.id}" : "NEW" %>
+          AGENT · <%= chat ? "CHAT ##{chat.id}" : "NEW" %>
         </div>
         <div class="text-sm text-zinc-900 mt-0.5">
-          <%= conversation&.derived_title || "Ask the agent" %>
+          <%= chat&.derived_title || "Ask the agent" %>
         </div>
       </div>
-      <%= link_to "Open", [:account, conversation], class: "text-xs text-zinc-500 hover:text-orange-600" if conversation %>
+      <%= link_to "Open", [:account, chat], class: "text-xs text-zinc-500 hover:text-orange-600" if chat %>
     </div>
 
     <div data-agent-chat-target="messages"
          class="flex-1 overflow-y-auto p-3 space-y-2 text-sm">
-      <% (conversation&.agent_messages || []).each do |m| %>
-        <%= render partial: "account/agent_conversations/message", locals: { message: m } %>
+      <% (chat&.messages || []).each do |m| %>
+        <%= render partial: "account/chats/message", locals: {message: m} %>
       <% end %>
     </div>
 

@@ -67,14 +67,12 @@
     </dialog>
 
     <%# Agent chat panel — fixed bottom-right, always available while signed in. %>
-    <%# Lazy-creates an empty conversation per user so the Cable subscription %>
-    <%# always has an id to bind to. Without this, the panel renders with %>
-    <%# blank conversation_id, Stimulus skips subscribe, and Send appears %>
-    <%# silent. Cost is one row per user; cheap. %>
+    <%# Lazy-creates a Chat per user so the Cable subscription always has an %>
+    <%# id to bind to. Powered by ruby_llm acts_as_chat. %>
     <% if user_signed_in? && current_team %>
-      <% conv = current_team.agent_conversations.where(user_id: current_user.id).order(updated_at: :desc).first %>
-      <% conv ||= current_team.agent_conversations.create!(user: current_user) %>
-      <%= render "account/agent_conversations/panel", conversation: conv %>
+      <% chat = current_team.chats.where(user_id: current_user.id).order(updated_at: :desc).first %>
+      <% chat ||= current_team.chats.create!(user: current_user) %>
+      <%= render "account/chats/panel", chat: chat %>
     <% end %>
   </body>
 </html>

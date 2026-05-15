@@ -8,6 +8,17 @@ Bundler.require(*Rails.groups)
 
 require_relative "../lib/bullet_train_oauth_scaffolder_support"
 
+# ruby_llm Railtie checks `RubyLLM.config.use_new_acts_as` inside
+# ActiveSupport.on_load(:active_record), which can fire BEFORE app initializers
+# in some boot paths. Setting the flag here (in application.rb, before the
+# Application class loads) ensures the new acts_as_* DSL is the one included
+# into ActiveRecord::Base. The api_key + gateway config still lives in
+# config/initializers/ruby_llm.rb (deferred to after_initialize so Zeitwerk
+# can find Llm::Configuration).
+RubyLLM.configure do |c|
+  c.use_new_acts_as = true
+end
+
 module Lewsnetter
   class Application < Rails::Application
     # Initialize configuration defaults for originally generated Rails version.

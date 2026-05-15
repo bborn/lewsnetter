@@ -200,9 +200,7 @@ Rails.application.routes.draw do
           end
         end
 
-        resources :agent_conversations, only: [:index, :show, :create, :destroy] do
-          resources :agent_messages, only: [:create]
-        end
+        resources :chats, only: [:index, :show, :create, :destroy]
 
         # Singleton "Email Sending" page — there's at most one
         # Team::SesConfiguration per team. We use member routes rather than

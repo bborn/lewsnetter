@@ -1,15 +1,17 @@
 # frozen_string_literal: true
 
-# Configures the ruby_llm gem from Llm::Configuration.current. When the
-# config is unusable (no API key, e.g. local dev without secrets), the
-# initializer is a no-op and AI::* services run in stub mode.
+# API-key-and-gateway config. Deferred to after_initialize so that Zeitwerk
+# has finished loading app/services/llm/configuration.rb before we call it.
+#
+# `use_new_acts_as = true` is set in config/application.rb (must run BEFORE
+# the ruby_llm Railtie's on_load(:active_record) callback fires).
+#
+# When the config is unusable (no API key, e.g. local dev without secrets),
+# the block is a no-op and AI::* services run in stub mode.
 #
 # To route through an LLM gateway (e.g. Cloudflare AI Gateway), set
 # credentials.llm.base_url or ENV["LLM_BASE_URL"] to the gateway's
-# Anthropic-compatible URL. ruby_llm respects the override.
-#
-# The configuration is deferred to after_initialize so that Zeitwerk has
-# finished loading app/services/llm/configuration.rb before we call it.
+# Anthropic-compatible URL.
 Rails.application.config.after_initialize do
   config = Llm::Configuration.current
 
@@ -18,11 +20,6 @@ Rails.application.config.after_initialize do
     c.default_model = config.default_model
     c.request_timeout = 60
 
-    # Generic gateway support: any gateway that exposes an Anthropic- or
-    # OpenAI-compatible URL works by setting credentials.llm.base_url. ruby_llm
-    # 1.15 exposes anthropic_api_base= / openai_api_base= for the per-provider
-    # base URL. The respond_to? guard makes this a no-op on versions that
-    # don't support it rather than raising.
     if config.base_url.present?
       case config.provider
       when :anthropic, :cloudflare

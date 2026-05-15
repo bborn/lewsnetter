@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_15_135224) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_15_195400) do
   create_table "account_onboarding_invitation_lists", force: :cascade do |t|
     t.integer "team_id", null: false
     t.json "invitations"
@@ -81,32 +81,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_15_135224) do
     t.index ["addressable_type", "addressable_id"], name: "index_addresses_on_addressable"
   end
 
-  create_table "agent_conversations", force: :cascade do |t|
-    t.integer "team_id", null: false
-    t.integer "user_id", null: false
-    t.string "title"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["team_id", "user_id"], name: "index_agent_conversations_on_team_id_and_user_id"
-    t.index ["team_id"], name: "index_agent_conversations_on_team_id"
-    t.index ["user_id"], name: "index_agent_conversations_on_user_id"
-  end
-
-  create_table "agent_messages", force: :cascade do |t|
-    t.integer "agent_conversation_id", null: false
-    t.string "role", null: false
-    t.text "content"
-    t.string "tool_name"
-    t.json "tool_arguments"
-    t.json "tool_result"
-    t.string "error_class"
-    t.text "error_message"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["agent_conversation_id", "created_at"], name: "index_agent_messages_on_agent_conversation_id_and_created_at"
-    t.index ["agent_conversation_id"], name: "index_agent_messages_on_agent_conversation_id"
-  end
-
   create_table "campaigns", force: :cascade do |t|
     t.integer "team_id", null: false
     t.integer "email_template_id"
@@ -129,6 +103,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_15_135224) do
     t.index ["team_id", "scheduled_for"], name: "index_campaigns_on_team_id_and_scheduled_for"
     t.index ["team_id", "status"], name: "index_campaigns_on_team_id_and_status"
     t.index ["team_id"], name: "index_campaigns_on_team_id"
+  end
+
+  create_table "chats", force: :cascade do |t|
+    t.integer "team_id", null: false
+    t.integer "user_id", null: false
+    t.string "title"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "model_id"
+    t.index ["model_id"], name: "index_chats_on_model_id"
+    t.index ["team_id", "user_id"], name: "index_chats_on_team_id_and_user_id"
+    t.index ["team_id"], name: "index_chats_on_team_id"
+    t.index ["user_id"], name: "index_chats_on_user_id"
   end
 
   create_table "companies", force: :cascade do |t|
@@ -220,6 +207,48 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_15_135224) do
     t.index ["platform_agent_of_id"], name: "index_memberships_on_platform_agent_of_id"
     t.index ["team_id"], name: "index_memberships_on_team_id"
     t.index ["user_id"], name: "index_memberships_on_user_id"
+  end
+
+  create_table "messages", force: :cascade do |t|
+    t.string "role", null: false
+    t.text "content"
+    t.json "content_raw"
+    t.text "thinking_text"
+    t.text "thinking_signature"
+    t.integer "thinking_tokens"
+    t.integer "input_tokens"
+    t.integer "output_tokens"
+    t.integer "cached_tokens"
+    t.integer "cache_creation_tokens"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "chat_id", null: false
+    t.integer "model_id"
+    t.integer "tool_call_id"
+    t.index ["chat_id"], name: "index_messages_on_chat_id"
+    t.index ["model_id"], name: "index_messages_on_model_id"
+    t.index ["role"], name: "index_messages_on_role"
+    t.index ["tool_call_id"], name: "index_messages_on_tool_call_id"
+  end
+
+  create_table "models", force: :cascade do |t|
+    t.string "model_id", null: false
+    t.string "name", null: false
+    t.string "provider", null: false
+    t.string "family"
+    t.datetime "model_created_at"
+    t.integer "context_window"
+    t.integer "max_output_tokens"
+    t.date "knowledge_cutoff"
+    t.json "modalities", default: {}
+    t.json "capabilities", default: []
+    t.json "pricing", default: {}
+    t.json "metadata", default: {}
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family"], name: "index_models_on_family"
+    t.index ["provider", "model_id"], name: "index_models_on_provider_and_model_id", unique: true
+    t.index ["provider"], name: "index_models_on_provider"
   end
 
   create_table "oauth_access_grants", force: :cascade do |t|
@@ -415,6 +444,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_15_135224) do
     t.string "locale"
   end
 
+  create_table "tool_calls", force: :cascade do |t|
+    t.string "tool_call_id", null: false
+    t.string "name", null: false
+    t.text "thought_signature"
+    t.json "arguments", default: {}
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "message_id", null: false
+    t.index ["message_id"], name: "index_tool_calls_on_message_id"
+    t.index ["name"], name: "index_tool_calls_on_name"
+    t.index ["tool_call_id"], name: "index_tool_calls_on_tool_call_id", unique: true
+  end
+
   create_table "users", force: :cascade do |t|
     t.string "email", default: "", null: false
     t.string "encrypted_password", default: "", null: false
@@ -530,13 +572,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_15_135224) do
   add_foreign_key "account_onboarding_invitation_lists", "teams"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
-  add_foreign_key "agent_conversations", "teams"
-  add_foreign_key "agent_conversations", "users"
-  add_foreign_key "agent_messages", "agent_conversations"
   add_foreign_key "campaigns", "email_templates"
   add_foreign_key "campaigns", "segments"
   add_foreign_key "campaigns", "sender_addresses"
   add_foreign_key "campaigns", "teams"
+  add_foreign_key "chats", "models"
+  add_foreign_key "chats", "teams"
+  add_foreign_key "chats", "users"
   add_foreign_key "companies", "teams"
   add_foreign_key "email_templates", "teams"
   add_foreign_key "events", "subscribers"
@@ -550,6 +592,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_15_135224) do
   add_foreign_key "memberships", "oauth_applications", column: "platform_agent_of_id"
   add_foreign_key "memberships", "teams"
   add_foreign_key "memberships", "users"
+  add_foreign_key "messages", "chats"
+  add_foreign_key "messages", "models"
+  add_foreign_key "messages", "tool_calls"
   add_foreign_key "oauth_access_grants", "oauth_applications", column: "application_id"
   add_foreign_key "oauth_access_tokens", "oauth_applications", column: "application_id"
   add_foreign_key "oauth_applications", "teams"
@@ -564,6 +609,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_15_135224) do
   add_foreign_key "subscribers", "teams"
   add_foreign_key "subscribers_imports", "teams"
   add_foreign_key "team_ses_configurations", "teams"
+  add_foreign_key "tool_calls", "messages"
   add_foreign_key "users", "oauth_applications", column: "platform_agent_of_id"
   add_foreign_key "webhooks_outgoing_endpoints", "scaffolding_absolutely_abstract_creative_concepts"
   add_foreign_key "webhooks_outgoing_endpoints", "teams"

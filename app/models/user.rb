@@ -5,7 +5,7 @@ class User < ApplicationRecord
 
   # 🚅 add belongs_to associations above.
 
-  has_many :agent_conversations, dependent: :destroy
+  has_many :chats, dependent: :destroy
   # 🚅 add has_many associations above.
 
   # 🚅 add oauth providers above.

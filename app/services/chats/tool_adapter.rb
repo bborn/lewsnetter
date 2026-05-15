@@ -1,10 +1,11 @@
 # frozen_string_literal: true
 
-module Agent
+module Chats
   # Bridges Mcp::Tool::Base descendants into RubyLLM::Tool subclasses so the
-  # in-app agent can use the same registry as the MCP server. Each adaptation
-  # is per-context: the wrapper class closes over a specific Mcp::Tool::Context
-  # so the running conversation's user + team scope every tool call.
+  # in-app chat (powered by ruby_llm's acts_as_chat) uses the same registry
+  # as the MCP server. Each adaptation is per-context: the wrapper class
+  # closes over a specific Mcp::Tool::Context so the running chat's user +
+  # team scope every tool call.
   module ToolAdapter
     module_function
 
@@ -29,12 +30,11 @@ module Agent
           param key_s.to_sym, type: ruby_type, desc: desc, required: required.include?(key_s)
         end
 
-        # INSTANCE method override — RubyLLM calls tool_instance.name
+        # ruby_llm calls tool_instance.name to get the wire name. Override
+        # the instance method so external clients see our snake_case names.
         define_method(:name) { our_tool.tool_name }
 
         define_method(:execute) do |args = {}|
-          # ruby_llm passes args as a Hash with string OR symbol keys depending
-          # on version; normalize to strings (our tools expect strings).
           string_args = (args || {}).transform_keys(&:to_s)
           our_tool.new.invoke(arguments: string_args, context: ctx)
         rescue ActiveRecord::RecordNotFound => e

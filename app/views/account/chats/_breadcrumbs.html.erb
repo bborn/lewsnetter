@@ -1,0 +1,7 @@
+<% chat ||= @chat %>
+<% team ||= @team || chat&.team || current_team %>
+<%= render 'account/teams/breadcrumbs', team: team %>
+<%= render 'account/shared/breadcrumb', label: 'Chats', url: [:account, team, :chats] %>
+<% if chat&.persisted? %>
+  <%= render 'account/shared/breadcrumb', label: chat.derived_title, url: [:account, chat] %>
+<% end %>

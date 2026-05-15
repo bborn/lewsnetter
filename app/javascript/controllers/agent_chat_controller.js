@@ -1,32 +1,22 @@
 import { Controller } from "@hotwired/stimulus"
 import { createConsumer } from "@rails/actioncable"
 
-// Wires the right-side agent chat panel.
-//
-// Usage (rendered by _panel.html.erb):
-//   <aside data-controller="agent-chat"
-//          data-agent-chat-conversation-id-value="<%= conv.id %>">
-//     <button data-action="click->agent-chat#toggle">Chat</button>
-//     <div data-agent-chat-target="panel" hidden>
-//       <div data-agent-chat-target="messages"></div>
-//       <form data-action="submit->agent-chat#submit">
-//         <textarea data-agent-chat-target="input"></textarea>
-//         <button type="submit">Send</button>
-//       </form>
-//     </div>
-//   </aside>
+// Wires the agent chat panel (right-side floating + dedicated show page).
+// Subscribes to ChatChannel for the given chat_id; submit perform sends a
+// `send_message` action; received events render styled bubbles via the
+// server-rendered HTML in the payload.
 export default class extends Controller {
   static targets = ["messages", "input", "panel"]
-  static values = { conversationId: Number }
+  static values = { chatId: Number }
 
   connect() {
-    if (!this.hasConversationIdValue || !this.conversationIdValue) {
-      console.debug("[agent-chat] no conversation id; subscription skipped")
+    if (!this.hasChatIdValue || !this.chatIdValue) {
+      console.debug("[agent-chat] no chat id; subscription skipped")
       return
     }
     this.consumer = createConsumer()
     this.subscription = this.consumer.subscriptions.create(
-      { channel: "AgentChannel", conversation_id: this.conversationIdValue },
+      { channel: "ChatChannel", chat_id: this.chatIdValue },
       {
         received: (event) => this.handleEvent(event),
         connected: () => console.debug("[agent-chat] connected"),
