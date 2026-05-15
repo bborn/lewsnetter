@@ -429,6 +429,8 @@ GEM
     jsbundling-rails (1.3.1)
       railties (>= 6.0.0)
     json (2.19.5)
+    json-schema (5.1.0)
+      addressable (~> 2.8)
     jwt (3.1.2)
       base64
     kamal (2.11.0)
@@ -878,6 +880,7 @@ DEPENDENCIES
   image_processing (~> 1.2)
   jbuilder
   jsbundling-rails
+  json-schema (~> 5.1)
   kamal (~> 2.0)
   knapsack_pro
   letter_opener

@@ -325,4 +325,7 @@ gem "ruby_llm"
 # in routes.rb; auth handled by Mcp::DoorkeeperAuth middleware.
 gem "fast-mcp", "~> 1.5", require: "fast_mcp"
 
+# JSON Schema validation for MCP tool argument schemas.
+gem "json-schema", "~> 5.1"
+
 # 🚅 super scaffolding will insert new oauth providers above this line.
