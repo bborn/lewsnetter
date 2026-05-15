@@ -13,7 +13,8 @@
 
           <form data-action="submit->agent-chat#submit" class="flex gap-2 border-t border-zinc-100 pt-4">
             <textarea data-agent-chat-target="input" rows="3"
-                      placeholder="Ask the agent…"
+                      data-action="keydown->agent-chat#keydown"
+                      placeholder="Ask the agent… (⌘+Enter to send)"
                       class="flex-1 border border-zinc-200 rounded px-3 py-2 font-sans text-sm focus:border-orange-600 focus:ring-0"></textarea>
             <button type="submit" class="button">Send</button>
           </form>

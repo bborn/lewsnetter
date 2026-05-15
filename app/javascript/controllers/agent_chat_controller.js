@@ -52,6 +52,16 @@ export default class extends Controller {
     this.inputTarget.value = ""
   }
 
+  // ⌘+Enter (mac) / Ctrl+Enter (everyone else) submits. Plain Enter inserts
+  // a newline so multi-line prompts still work. Wired via:
+  //   data-action="keydown->agent-chat#keydown"
+  // on the textarea.
+  keydown(e) {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      this.submit(e)
+    }
+  }
+
   handleEvent(event) {
     if (!this.hasMessagesTarget) return
 
