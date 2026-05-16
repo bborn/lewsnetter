@@ -21,6 +21,10 @@
    and leave them intact. */
 @import "easymde/dist/easymde.min.css";
 
+/* Tom Select — searchable selects in the segment builder. Same rationale
+   as EasyMDE: imported here so postcss processes the rules. */
+@import "tom-select/dist/css/tom-select.css";
+
 /* Lewsnetter design tokens. Accent is rare — used only for primary CTAs,
    focus rings, link color, brand mark. See DESIGN.md "Color → Accent". */
 :root {
@@ -1247,6 +1251,118 @@ html.dark a:hover,
   .auth-card form .checkbox {
     @apply text-zinc-600 dark:text-zinc-400;
     font-size: 13px;
+  }
+
+  /* ============================================================
+     Segment builder — Tom Select chrome overrides
+     ============================================================
+     Tom Select wraps each rule's <select> in a `.ts-wrapper`. We restyle
+     the wrapper, control, and dropdown to match the rest of the form
+     (Geist + zinc + orange focus, 6px radius, hairline borders). Scoped
+     to .segments-builder__* identifiers we add on the native <select>s
+     so this doesn't leak into other Tom Select usage. */
+  .segments-builder__field-select + .ts-wrapper {
+    min-width: 220px;
+  }
+  .segments-builder__operator-select + .ts-wrapper {
+    min-width: 140px;
+  }
+  .segments-builder__field-select + .ts-wrapper,
+  .segments-builder__operator-select + .ts-wrapper,
+  .segments-builder__field-select + .ts-wrapper .ts-control,
+  .segments-builder__operator-select + .ts-wrapper .ts-control,
+  /* boolean-value select shares the rule's value-input class but also gets
+     [data-segments-builder-enhance="boolean"]. Match it via attribute. */
+  select[data-segments-builder-enhance] + .ts-wrapper,
+  select[data-segments-builder-enhance] + .ts-wrapper .ts-control {
+    font-family: 'Geist', ui-sans-serif, system-ui, sans-serif;
+    font-size: 14px;
+  }
+  select[data-segments-builder-enhance] + .ts-wrapper .ts-control {
+    @apply bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100;
+    @apply border border-zinc-300 dark:border-zinc-700;
+    border-radius: 6px;
+    padding: 6px 32px 6px 10px;
+    min-height: 34px;
+    box-shadow: none;
+    transition: border-color 100ms ease-out, box-shadow 100ms ease-out;
+  }
+  select[data-segments-builder-enhance] + .ts-wrapper.focus .ts-control {
+    @apply border-orange-500 ring-2 ring-orange-100 dark:ring-orange-900/40;
+    outline: none;
+  }
+  /* Dropdown chevron — replace Tom Select's default with the same SVG used
+     by .campaign-edit-select so all selects look identical. */
+  select[data-segments-builder-enhance] + .ts-wrapper .ts-control::after {
+    content: "";
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    width: 18px;
+    height: 18px;
+    transform: translateY(-50%);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2371717A' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    pointer-events: none;
+  }
+  /* Hide Tom Select's stock single-select caret (we draw our own above). */
+  select[data-segments-builder-enhance] + .ts-wrapper.single .ts-control::before {
+    display: none;
+  }
+  /* Search input shown inside the dropdown (field picker only) — match the
+     form's text-input chrome. */
+  select[data-segments-builder-enhance] + .ts-wrapper .ts-dropdown .dropdown-input {
+    @apply bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100;
+    @apply border border-zinc-200 dark:border-zinc-800;
+    font-family: 'Geist', ui-sans-serif, system-ui, sans-serif;
+    font-size: 13px;
+    padding: 8px 10px;
+    border-radius: 4px;
+    margin: 6px;
+    box-shadow: none;
+  }
+  select[data-segments-builder-enhance] + .ts-wrapper .ts-dropdown .dropdown-input:focus {
+    @apply border-orange-500 ring-2 ring-orange-100 dark:ring-orange-900/40;
+    outline: none;
+  }
+  /* Dropdown panel */
+  select[data-segments-builder-enhance] + .ts-wrapper .ts-dropdown {
+    @apply bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100;
+    @apply border border-zinc-200 dark:border-zinc-800;
+    border-radius: 6px;
+    margin-top: 4px;
+    box-shadow: 0 6px 16px rgb(0 0 0 / 0.08), 0 2px 4px rgb(0 0 0 / 0.04);
+    font-family: 'Geist', ui-sans-serif, system-ui, sans-serif;
+  }
+  select[data-segments-builder-enhance] + .ts-wrapper .ts-dropdown .option {
+    font-size: 13px;
+    padding: 7px 12px;
+    line-height: 1.4;
+  }
+  select[data-segments-builder-enhance] + .ts-wrapper .ts-dropdown .option.active {
+    @apply bg-orange-50 text-orange-900 dark:bg-orange-950/50 dark:text-orange-100;
+  }
+  select[data-segments-builder-enhance] + .ts-wrapper .ts-dropdown .option.selected {
+    @apply bg-zinc-50 dark:bg-zinc-800/60 font-medium;
+  }
+  select[data-segments-builder-enhance] + .ts-wrapper .ts-dropdown .optgroup-header {
+    @apply text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-900;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 6px 12px;
+    border-bottom: 1px solid;
+    @apply border-zinc-100 dark:border-zinc-800;
+  }
+  /* No-results state */
+  select[data-segments-builder-enhance] + .ts-wrapper .ts-dropdown .no-results {
+    @apply text-zinc-500 dark:text-zinc-400;
+    font-size: 13px;
+    padding: 10px 12px;
   }
 
   /* Footer */

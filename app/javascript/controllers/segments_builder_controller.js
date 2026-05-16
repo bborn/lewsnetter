@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import TomSelect from "tom-select"
 
 // Visual segment builder — Intercom-style nested rule groups with AND/OR
 // combinators. The state is a recursive tree of {type, combinator, rules} for
@@ -38,8 +39,19 @@ export default class extends Controller {
     // attribute stays in sync for inspection / debugging).
     const initial = this.treeValue && Object.keys(this.treeValue).length ? this.treeValue : this.emptyGroup()
     this._tree = JSON.parse(JSON.stringify(initial))  // deep clone so we own the references
+    this._tomSelects = []
     this.render()
     this.schedulePreview()
+  }
+
+  disconnect() {
+    this.destroyTomSelects()
+  }
+
+  destroyTomSelects() {
+    if (!this._tomSelects) return
+    this._tomSelects.forEach(ts => { try { ts.destroy() } catch { /* ignore */ } })
+    this._tomSelects = []
   }
 
   // ── tree helpers ─────────────────────────────────────────────────────────
@@ -206,10 +218,32 @@ export default class extends Controller {
 
   render() {
     if (!this.hasTreeTarget) return
+    this.destroyTomSelects()
     this.treeTarget.innerHTML = this.renderNode(this._tree, [])
+    this.enhanceSelects()
     if (this.hasHiddenInputTarget) {
       this.hiddenInputTarget.value = JSON.stringify(this._tree)
     }
+  }
+
+  // Tom Select wraps every <select data-segments-builder-enhance> in the tree.
+  // We rebuild on every render (the tree HTML is re-templated wholesale), so
+  // destroy + recreate is cheap and avoids stale-instance bugs.
+  enhanceSelects() {
+    const selects = this.treeTarget.querySelectorAll("select[data-segments-builder-enhance]")
+    selects.forEach(el => {
+      const variant = el.dataset.segmentsBuilderEnhance  // "field" | "operator" | "boolean"
+      const ts = new TomSelect(el, {
+        controlInput: variant === "field" ? "<input>" : null,
+        maxOptions: 500,
+        plugins: variant === "field" ? ["dropdown_input"] : [],
+        hideSelected: false,
+        openOnFocus: true,
+        allowEmptyOption: false,
+        sortField: variant === "field" ? null : {field: "$order"}
+      })
+      this._tomSelects.push(ts)
+    })
   }
 
   renderNode(node, path) {
@@ -283,12 +317,14 @@ export default class extends Controller {
       <div class="flex items-center gap-2 flex-wrap py-1">
         <select data-action="change->segments-builder#changeField"
                 data-segments-builder-path-param='${pathStr}'
-                class="border border-zinc-200 rounded px-2 py-1 text-sm bg-white focus:border-orange-600 focus:ring-0">
+                data-segments-builder-enhance="field"
+                class="segments-builder__field-select">
           ${fieldOptions}
         </select>
         <select data-action="change->segments-builder#changeOperator"
                 data-segments-builder-path-param='${pathStr}'
-                class="border border-zinc-200 rounded px-2 py-1 text-sm bg-white focus:border-orange-600 focus:ring-0">
+                data-segments-builder-enhance="operator"
+                class="segments-builder__operator-select">
           ${opOptions}
         </select>
         ${valueInput}
@@ -306,7 +342,7 @@ export default class extends Controller {
                     class="border border-zinc-200 rounded px-2 py-1 text-sm bg-white focus:border-orange-600 focus:ring-0 flex-1 min-w-[12rem]"`
     if (type === "boolean") {
       return `
-        <select ${common}>
+        <select ${common} data-segments-builder-enhance="boolean">
           <option value="true"  ${String(rule.value) === "true"  ? "selected" : ""}>true</option>
           <option value="false" ${String(rule.value) === "false" ? "selected" : ""}>false</option>
         </select>`

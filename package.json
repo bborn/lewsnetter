@@ -33,6 +33,7 @@
     "stimulus-reveal": "^1.4.2",
     "stimulus-scroll-reveal": "^3.2.0",
     "tailwindcss": "^3.4.17",
+    "tom-select": "^2.6.1",
     "trix": "^2.1.18"
   },
   "scripts": {
