@@ -34,16 +34,14 @@
            data-segments-builder-operators-value="<%= operators_json.to_json %>"
            data-segments-builder-preview-url-value="<%= preview_url %>"
            data-segments-builder-csrf-value="<%= form_authenticity_token %>"
-           class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div class="lg:col-span-2 space-y-3">
+           class="space-y-4">
+        <div class="space-y-3">
           <div data-segments-builder-target="tree"></div>
           <%= form.hidden_field :rules, value: segment.rules.to_json,
                 data: {segments_builder_target: "hiddenInput"} %>
         </div>
-        <div class="lg:col-span-1">
-          <div data-segments-builder-target="preview"
-               class="sticky top-4"></div>
-        </div>
+        <%# Matching count + sample below the rules, full width. %>
+        <div data-segments-builder-target="preview"></div>
       </div>
     </div>
 

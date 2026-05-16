@@ -38,6 +38,34 @@ class SendCampaignJobTest < ActiveJob::TestCase
     assert_not_nil @campaign.sent_at
   end
 
+  test "bumps last_contacted_at + times_contacted for everyone the SES call accepted" do
+    original = Rails.application.config.ses_client
+    Rails.application.config.ses_client = :stub
+    a = @team.subscribers.find_by(email: "a@example.com")
+    b = @team.subscribers.find_by(email: "b@example.com")
+    assert_nil a.last_contacted_at
+    assert_equal 0, a.times_contacted
+
+    begin
+      freeze_time do
+        SendCampaignJob.perform_now(@campaign.id)
+        a.reload
+        b.reload
+        assert_equal Time.current.to_i, a.last_contacted_at.to_i
+        assert_equal Time.current.to_i, b.last_contacted_at.to_i
+        assert_equal 1, a.times_contacted
+        assert_equal 1, b.times_contacted
+      end
+    ensure
+      Rails.application.config.ses_client = original
+    end
+
+    # Unsubscribed subscriber was never sent to → never bumped.
+    c = @team.subscribers.find_by(email: "c@example.com")
+    assert_nil c.last_contacted_at
+    assert_equal 0, c.times_contacted
+  end
+
   test "skips when campaign is already sent" do
     @campaign.update!(status: "sent", sent_at: 1.hour.ago)
     SendCampaignJob.perform_now(@campaign.id)

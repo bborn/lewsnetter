@@ -38,6 +38,8 @@ class SendCampaignJob < ApplicationJob
       failed_count += result.failed.size
       errors.concat(result.failed.map { |f| "#{f[:subscriber]&.email}: #{f[:error]}" })
 
+      bump_last_contacted!(batch, result)
+
       stats = campaign.stats.dup
       stats["sent"] = sent_count
       stats["failed"] = failed_count
@@ -76,5 +78,21 @@ class SendCampaignJob < ApplicationJob
     stats = campaign.stats.dup
     stats["errors"] = (stats["errors"] || []) + [message]
     campaign.update!(status: "failed", stats: stats)
+  end
+
+  # Stamp `last_contacted_at` + bump `times_contacted` for everyone in the
+  # batch that SES accepted. Powers the "contacted in last N days" /
+  # "never contacted" segment filters. One UPDATE per batch — cheap.
+  # Test sends don't come through this job, so they don't bump the counter
+  # (which is the right call — a test send isn't a real campaign contact).
+  def bump_last_contacted!(batch, result)
+    failed_ids = result.failed.map { |f| f[:subscriber]&.id }.compact.to_set
+    succeeded_ids = batch.map(&:id).reject { |id| failed_ids.include?(id) }
+    return if succeeded_ids.empty?
+
+    Subscriber.where(id: succeeded_ids).update_all([
+      "last_contacted_at = ?, times_contacted = COALESCE(times_contacted, 0) + 1",
+      Time.current
+    ])
   end
 end

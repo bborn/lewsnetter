@@ -48,6 +48,8 @@ module Segments
       "subscribers.complained_at"   => {sql: "subscribers.complained_at",   type: :datetime, label: "Complained at"},
       "subscribers.created_at"      => {sql: "subscribers.created_at",      type: :datetime, label: "Created at"},
       "subscribers.updated_at"      => {sql: "subscribers.updated_at",      type: :datetime, label: "Updated at"},
+      "subscribers.last_contacted_at" => {sql: "subscribers.last_contacted_at", type: :datetime, label: "Last contacted"},
+      "subscribers.times_contacted"   => {sql: "COALESCE(subscribers.times_contacted, 0)", type: :number, label: "Times contacted"},
       "companies.name"              => {sql: "companies.name",              type: :string,   label: "Company name"},
       "companies.external_id"       => {sql: "companies.external_id",       type: :string,   label: "Company external ID"}
     }.freeze

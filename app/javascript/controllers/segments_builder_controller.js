@@ -224,22 +224,30 @@ export default class extends Controller {
         </li>`
     }).join("")
 
+    // Horizontal layout — big count on the left, sample column on the right.
+    // The preview lives full-width below the rule builder; this layout makes
+    // the number feel like a banner instead of a footnote.
     this.previewTarget.innerHTML = `
-      <div class="border border-zinc-200 rounded-lg p-5 bg-white">
-        <div class="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mb-1">MATCHING</div>
-        <div class="text-5xl font-semibold text-zinc-900 tracking-tight tabular-nums leading-none mb-1">
-          ${data.count.toLocaleString()}
+      <div class="border border-zinc-200 rounded-lg bg-white overflow-hidden">
+        <div class="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-zinc-100">
+          <div class="p-6 md:col-span-1 flex flex-col justify-center">
+            <div class="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mb-1">MATCHING</div>
+            <div class="text-6xl font-semibold text-zinc-900 tracking-tight tabular-nums leading-none mb-1">
+              ${data.count.toLocaleString()}
+            </div>
+            <div class="text-xs text-zinc-500 font-mono">${data.count === 1 ? "subscriber" : "subscribers"}</div>
+            <details class="mt-4 text-xs text-zinc-500">
+              <summary class="cursor-pointer hover:text-zinc-700 font-mono uppercase tracking-wider">SQL</summary>
+              <pre class="mt-2 p-2 bg-zinc-50 rounded text-zinc-700 overflow-x-auto text-[11px]">${this.escape(data.sql || "(none)")}</pre>
+            </details>
+          </div>
+          <div class="p-6 md:col-span-2">
+            ${data.count > 0 ? `
+              <div class="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mb-2">SAMPLE</div>
+              <ul class="divide-y divide-zinc-100">${sample}</ul>` : `
+              <div class="text-sm text-zinc-400 italic h-full flex items-center justify-center">No subscribers match this filter.</div>`}
+          </div>
         </div>
-        <div class="text-xs text-zinc-500 font-mono mb-4">${data.count === 1 ? "subscriber" : "subscribers"}</div>
-
-        ${data.count > 0 ? `
-          <div class="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mt-5 mb-1">SAMPLE</div>
-          <ul class="divide-y divide-zinc-100">${sample}</ul>` : ""}
-
-        <details class="mt-4 text-xs text-zinc-500">
-          <summary class="cursor-pointer hover:text-zinc-700 font-mono uppercase tracking-wider">SQL</summary>
-          <pre class="mt-2 p-2 bg-zinc-50 rounded text-zinc-700 overflow-x-auto text-[11px]">${this.escape(data.sql || "(none)")}</pre>
-        </details>
       </div>`
   }
 
@@ -279,7 +287,13 @@ export default class extends Controller {
         hideSelected: false,
         openOnFocus: true,
         allowEmptyOption: false,
-        sortField: variant === "field" ? null : {field: "$order"}
+        sortField: variant === "field" ? null : {field: "$order"},
+        // Detach the dropdown from the rule's container so it can't be
+        // clipped by parent overflow / overflow-hidden card chrome.
+        dropdownParent: "body",
+        // Marker class so our CSS can target body-attached dropdowns
+        // without leaking into other Tom Select instances.
+        dropdownClass: "ts-dropdown segments-builder__dropdown"
       })
       this._tomSelects.push(ts)
     })

@@ -1313,7 +1313,7 @@ html.dark a:hover,
   }
   /* Search input shown inside the dropdown (field picker only) — match the
      form's text-input chrome. */
-  select[data-segments-builder-enhance] + .ts-wrapper .ts-dropdown .dropdown-input {
+  .segments-builder__dropdown .dropdown-input {
     @apply bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100;
     @apply border border-zinc-200 dark:border-zinc-800;
     font-family: 'Geist', ui-sans-serif, system-ui, sans-serif;
@@ -1323,12 +1323,12 @@ html.dark a:hover,
     margin: 6px;
     box-shadow: none;
   }
-  select[data-segments-builder-enhance] + .ts-wrapper .ts-dropdown .dropdown-input:focus {
+  .segments-builder__dropdown .dropdown-input:focus {
     @apply border-orange-500 ring-2 ring-orange-100 dark:ring-orange-900/40;
     outline: none;
   }
   /* Dropdown panel */
-  select[data-segments-builder-enhance] + .ts-wrapper .ts-dropdown {
+  .segments-builder__dropdown {
     @apply bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100;
     @apply border border-zinc-200 dark:border-zinc-800;
     border-radius: 6px;
@@ -1336,18 +1336,18 @@ html.dark a:hover,
     box-shadow: 0 6px 16px rgb(0 0 0 / 0.08), 0 2px 4px rgb(0 0 0 / 0.04);
     font-family: 'Geist', ui-sans-serif, system-ui, sans-serif;
   }
-  select[data-segments-builder-enhance] + .ts-wrapper .ts-dropdown .option {
+  .segments-builder__dropdown .option {
     font-size: 13px;
     padding: 7px 12px;
     line-height: 1.4;
   }
-  select[data-segments-builder-enhance] + .ts-wrapper .ts-dropdown .option.active {
+  .segments-builder__dropdown .option.active {
     @apply bg-orange-50 text-orange-900 dark:bg-orange-950/50 dark:text-orange-100;
   }
-  select[data-segments-builder-enhance] + .ts-wrapper .ts-dropdown .option.selected {
+  .segments-builder__dropdown .option.selected {
     @apply bg-zinc-50 dark:bg-zinc-800/60 font-medium;
   }
-  select[data-segments-builder-enhance] + .ts-wrapper .ts-dropdown .optgroup-header {
+  .segments-builder__dropdown .optgroup-header {
     @apply text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-900;
     font-family: 'Geist Mono', ui-monospace, monospace;
     font-size: 10px;
@@ -1359,7 +1359,7 @@ html.dark a:hover,
     @apply border-zinc-100 dark:border-zinc-800;
   }
   /* No-results state */
-  select[data-segments-builder-enhance] + .ts-wrapper .ts-dropdown .no-results {
+  .segments-builder__dropdown .no-results {
     @apply text-zinc-500 dark:text-zinc-400;
     font-size: 13px;
     padding: 10px 12px;
