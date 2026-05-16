@@ -63,17 +63,28 @@ export default class extends Controller {
   emptyRule() {
     const firstGroup = Object.values(this.fieldsValue)[0] || []
     const first = firstGroup[0]
+    const type = first ? first.type : "string"
     return {
       type: "rule",
       field: first ? first.key : "subscribers.email",
-      operator: this.defaultOperatorFor(first ? first.type : "string"),
-      value: ""
+      operator: this.defaultOperatorFor(type),
+      value: this.defaultValueFor(type)
     }
   }
 
   defaultOperatorFor(type) {
     const ops = (this.operatorsValue[type] || ["equals"])
     return ops[0]
+  }
+
+  // Default rule.value for a freshly-typed slot. Empty string is fine for
+  // strings + datetimes (they have a placeholder), but for booleans an empty
+  // value compiles to `subscribers.foo = 0` — which silently matches the
+  // "false" set without the user seeing why. Pick "true" so the visible
+  // dropdown state matches the saved state.
+  defaultValueFor(type) {
+    if (type === "boolean") return "true"
+    return ""
   }
 
   // Walk the tree to the node at `path` (array of indices into rules).
@@ -130,7 +141,7 @@ export default class extends Controller {
     // a different value type).
     const type = this.typeForField(rule.field)
     rule.operator = this.defaultOperatorFor(type)
-    rule.value = ""
+    rule.value = this.defaultValueFor(type)
     this.commit()
   }
 
