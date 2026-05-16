@@ -106,7 +106,7 @@ class Account::SenderAddressesControllerTest < ActionDispatch::IntegrationTest
       create_calls << args
       Object.new
     end
-    pending_status = Struct.new(:verified_for_sending_status).new("PENDING")
+    pending_status = Struct.new(:verification_status).new("PENDING")
     fake.define_singleton_method(:get_email_identity) { |_| pending_status }
     install_client_stub(fake)
 
@@ -127,7 +127,7 @@ class Account::SenderAddressesControllerTest < ActionDispatch::IntegrationTest
     fake.define_singleton_method(:create_email_identity) do |_args|
       raise Aws::SESV2::Errors::AlreadyExistsException.new(nil, "exists")
     end
-    success_status = Struct.new(:verified_for_sending_status).new("SUCCESS")
+    success_status = Struct.new(:verification_status).new("SUCCESS")
     fake.define_singleton_method(:get_email_identity) { |_| success_status }
     install_client_stub(fake)
 
@@ -171,7 +171,7 @@ class Account::SenderAddressesControllerTest < ActionDispatch::IntegrationTest
 
   def install_ses_stub_returning(status)
     fake = Object.new
-    response = Struct.new(:verified_for_sending_status).new(status)
+    response = Struct.new(:verification_status).new(status)
     fake.define_singleton_method(:get_email_identity) { |_| response }
     install_client_stub(fake)
   end

@@ -31,7 +31,7 @@ class Ses::IdentityCheckerTest < ActiveSupport::TestCase
 
   test "sets verified=true and ses_status=success when SES returns SUCCESS" do
     stub_ses_client_returning(
-      Struct.new(:verified_for_sending_status).new("SUCCESS")
+      Struct.new(:verification_status).new("SUCCESS")
     )
 
     Ses::IdentityChecker.new(sender_address: @sender_address).call
@@ -43,7 +43,7 @@ class Ses::IdentityCheckerTest < ActiveSupport::TestCase
 
   test "sets verified=false and ses_status=pending when SES returns PENDING" do
     stub_ses_client_returning(
-      Struct.new(:verified_for_sending_status).new("PENDING")
+      Struct.new(:verification_status).new("PENDING")
     )
 
     Ses::IdentityChecker.new(sender_address: @sender_address).call
