@@ -1,0 +1,20 @@
+<%# Footer with legal links + abuse mailbox + company line. Rendered on
+    every public-facing surface (landing, devise auth screens, legal
+    pages). The links are deliberately tiny — they're for compliance,
+    not navigation. %>
+<footer class="border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 mt-16">
+  <div class="max-w-5xl mx-auto px-6 py-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+    <div class="font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
+      Lewsnetter · AI-native email marketing
+    </div>
+    <nav class="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
+      <a href="/privacy"        class="text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100">Privacy</a>
+      <a href="/terms"          class="text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100">Terms</a>
+      <a href="/dpa"            class="text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100">DPA</a>
+      <a href="/acceptable-use" class="text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100">Acceptable Use</a>
+      <span class="text-zinc-300 dark:text-zinc-700">·</span>
+      <a href="mailto:abuse@lewsnetter.com" class="text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 font-mono">abuse@</a>
+      <a href="https://github.com/bborn/lewsnetter" target="_blank" rel="noopener" class="text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100">GitHub</a>
+    </nav>
+  </div>
+</footer>

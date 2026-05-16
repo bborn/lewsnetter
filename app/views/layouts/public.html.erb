@@ -1,0 +1,15 @@
+<%# Local override of bullet_train's public layout. Adds the shared
+    legal footer so anything mounted under Public::ApplicationController
+    (root home + the legal pages at /privacy /terms /dpa /acceptable-use)
+    gets the same compliance links. %>
+<!DOCTYPE html>
+<html class="theme-<%= BulletTrain::Themes::Light.color %> <%= "theme-secondary-#{BulletTrain::Themes::Light.secondary_color}" if BulletTrain::Themes::Light.secondary_color %>" lang="<%= I18n.locale %>">
+  <head>
+    <%= render 'shared/layouts/head' %>
+  </head>
+
+  <body class="min-h-screen flex flex-col <%= BulletTrain::Themes::Light.background %> text-base-700 text-sm font-normal dark:text-base-300">
+    <main class="flex-1"><%= yield %></main>
+    <%= render 'shared/legal_footer' %>
+  </body>
+</html>
