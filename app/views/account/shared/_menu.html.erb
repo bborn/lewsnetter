@@ -36,13 +36,13 @@
     <% end %>
   <% end %>
 
-  <%# TODO: re-add Developers section when Doorkeeper/Webhooks Platform features are user-visible.
-      Hidden during alpha because clicking through bounces users to "not authorized" pages (U21). %>
-  <% if false # disable_developer_menu? %>
-    <%= render 'account/shared/menu/subsection', title: t('menus.main.labels.developers'), expand: expand do %>
-      <%= render 'account/platform/applications/menu_item' %>
-      <%= render 'account/webhooks/outgoing/endpoints/menu_item' if webhooks_enabled? %>
-    <% end %>
+  <%# Developers: lewsnetter-rails sync setup + raw OAuth applications +
+      outgoing webhook endpoints. The "Sync setup" page is the
+      friendly path; the others are for advanced users. %>
+  <%= render 'account/shared/menu/subsection', title: t('menus.main.labels.developers', default: 'Developers'), expand: expand do %>
+    <%= render 'account/developers/menu_item' %>
+    <%= render 'account/platform/applications/menu_item' %>
+    <%= render 'account/webhooks/outgoing/endpoints/menu_item' if webhooks_enabled? %>
   <% end %>
 
   <%# Team Settings + Members live in the avatar dropdown — see

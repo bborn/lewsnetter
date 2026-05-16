@@ -18,7 +18,14 @@ module Ses
       client = Ses::ClientFor.call(@sender_address.team)
       result = client.get_email_identity(email_identity: @sender_address.email)
 
-      status = result.verified_for_sending_status
+      # AWS SESv2 returns TWO related fields on GetEmailIdentity:
+      #   verification_status         → String enum: SUCCESS/PENDING/FAILED/...
+      #   verified_for_sending_status → Boolean
+      # We want the string enum so ses_status reads as "success" / "pending"
+      # and the status-pill helper renders the right label. Earlier this
+      # used the Boolean field, which serialized as "true"/"false" — leaking
+      # raw booleans into the UI.
+      status = result.verification_status
       @sender_address.update!(
         verified: status.to_s == "SUCCESS",
         ses_status: status.to_s.downcase.presence || "unknown"

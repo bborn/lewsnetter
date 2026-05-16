@@ -1,0 +1,176 @@
+<% base_url = request.base_url %>
+<%= render 'account/shared/page' do |page| %>
+  <% page.title "Sync setup" %>
+  <% page.body do %>
+    <div class="max-w-3xl space-y-6">
+
+      <%# ============================================================
+          Intro
+          ============================================================ %>
+      <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-6">
+        <h2 class="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-1">
+          Push subscribers from your app into Lewsnetter
+        </h2>
+        <p class="text-sm text-zinc-600 dark:text-zinc-300">
+          Use the <code class="bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-[12px]">lewsnetter-rails</code> gem to mirror your users' data into this team. Every save in your source app pushes within seconds; nightly catch-up handles anything missed.
+        </p>
+      </div>
+
+      <%# ============================================================
+          New-token reveal (one-shot, shown only on creation)
+          ============================================================ %>
+      <% if @new_token_plaintext %>
+        <div class="bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 rounded-lg p-6">
+          <div class="text-xs uppercase tracking-widest font-mono text-amber-700 dark:text-amber-300 mb-2">
+            Your new sync token — copy now, won't be shown again
+          </div>
+          <div class="flex items-center gap-2">
+            <code class="flex-1 bg-white dark:bg-zinc-950 border border-amber-200 dark:border-amber-900 rounded p-3 font-mono text-[13px] text-zinc-900 dark:text-zinc-100 break-all">
+              <%= @new_token_plaintext %>
+            </code>
+            <button type="button"
+                    onclick="navigator.clipboard.writeText('<%= j @new_token_plaintext %>'); this.textContent = 'Copied'; setTimeout(()=>this.textContent='Copy', 1500);"
+                    class="button-secondary shrink-0">
+              Copy
+            </button>
+          </div>
+        </div>
+      <% end %>
+
+      <%# ============================================================
+          Existing tokens
+          ============================================================ %>
+      <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden">
+        <div class="p-6 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+          <div>
+            <h3 class="text-base font-semibold text-zinc-900 dark:text-zinc-50">Active sync tokens</h3>
+            <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+              One token per source app is the right pattern — separate keys make revocation surgical.
+            </p>
+          </div>
+          <%= button_to "Generate new token", account_team_create_sync_app_developers_path(@team),
+                method: :post, class: "button" %>
+        </div>
+
+        <% if @access_tokens.any? %>
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="font-mono text-[11px] uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+                <th class="text-left font-medium px-6 py-3">App</th>
+                <th class="text-left font-medium px-6 py-3">Token (last 8)</th>
+                <th class="text-left font-medium px-6 py-3">Created</th>
+                <th class="text-left font-medium px-6 py-3">Last used</th>
+                <th class="px-6 py-3"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @access_tokens.each do |token| %>
+                <tr class="border-t border-zinc-100 dark:border-zinc-800">
+                  <td class="px-6 py-3 text-zinc-900 dark:text-zinc-100"><%= token.application.name %></td>
+                  <td class="px-6 py-3 font-mono text-zinc-600 dark:text-zinc-300">••••<%= token.token[-8..] %></td>
+                  <td class="px-6 py-3 font-mono text-zinc-500 dark:text-zinc-400 text-[12px]">
+                    <%= token.created_at.strftime("%b %-d, %Y") %>
+                  </td>
+                  <td class="px-6 py-3 font-mono text-zinc-500 dark:text-zinc-400 text-[12px]">
+                    <%= token.last_used_at ? time_ago_in_words(token.last_used_at) + " ago" : "never" %>
+                  </td>
+                  <td class="px-6 py-3 text-right">
+                    <%= button_to "Revoke", account_team_revoke_token_developers_path(@team, id: token.id),
+                          method: :delete,
+                          class: "text-xs text-rose-600 hover:text-rose-700",
+                          form: {style: "display:inline"},
+                          data: {turbo_confirm: "Revoke this token? Any app using it will lose access."} %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        <% else %>
+          <div class="p-8 text-center">
+            <p class="text-sm text-zinc-500 dark:text-zinc-400">
+              No sync tokens yet. Click <strong>Generate new token</strong> above to create one.
+            </p>
+          </div>
+        <% end %>
+      </div>
+
+      <%# ============================================================
+          Setup snippet
+          ============================================================ %>
+      <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden">
+        <div class="p-6 border-b border-zinc-100 dark:border-zinc-800">
+          <h3 class="text-base font-semibold text-zinc-900 dark:text-zinc-50">Install in your source app</h3>
+          <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+            Drop these three blocks into your Rails app. Replace <code>YOUR_TOKEN</code> with the value above.
+          </p>
+        </div>
+
+        <div class="p-6 space-y-4 text-sm">
+          <div>
+            <div class="text-[10px] uppercase tracking-widest font-mono text-zinc-500 dark:text-zinc-400 mb-2">
+              1. Gemfile
+            </div>
+            <pre class="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded p-3 text-[12px] font-mono text-zinc-800 dark:text-zinc-200 overflow-x-auto">gem "lewsnetter-rails"</pre>
+          </div>
+
+          <div>
+            <div class="text-[10px] uppercase tracking-widest font-mono text-zinc-500 dark:text-zinc-400 mb-2">
+              2. config/initializers/lewsnetter.rb
+            </div>
+<pre class="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded p-3 text-[12px] font-mono text-zinc-800 dark:text-zinc-200 overflow-x-auto">LewsnetterRails.configure do |c|
+  c.base_url  = "<%= base_url %>"
+  c.api_token = ENV["LEWSNETTER_API_TOKEN"]    # paste your token into this env var
+  c.team_slug = "<%= @team.slug %>"
+  c.enabled   = !Rails.env.test?
+end</pre>
+          </div>
+
+          <div>
+            <div class="text-[10px] uppercase tracking-widest font-mono text-zinc-500 dark:text-zinc-400 mb-2">
+              3. app/models/user.rb
+            </div>
+<pre class="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded p-3 text-[12px] font-mono text-zinc-800 dark:text-zinc-200 overflow-x-auto">class User < ApplicationRecord
+  include LewsnetterRails::ActsAsSubscriber
+  acts_as_lewsnetter_subscriber mapper: "Lewsnetter::UserMapper"
+end
+
+# app/models/lewsnetter/user_mapper.rb
+class Lewsnetter::UserMapper
+  def self.call(user)
+    {
+      external_id: user.id.to_s,
+      email:       user.email,
+      name:        user.full_name,
+      subscribed:  !user.email_opt_out?,
+      attributes: {
+        # ...whatever you want to segment on
+      }
+    }
+  end
+end</pre>
+          </div>
+
+          <p class="text-xs text-zinc-500 dark:text-zinc-400 pt-2">
+            See the full gem README at
+            <a href="https://github.com/bborn/lewsnetter/tree/master/gems/lewsnetter-rails" target="_blank" rel="noopener" class="underline">github.com/bborn/lewsnetter</a>
+            for the nightly-backfill helper and other options.
+          </p>
+        </div>
+      </div>
+
+      <%# ============================================================
+          Advanced
+          ============================================================ %>
+      <details class="text-sm text-zinc-500 dark:text-zinc-400">
+        <summary class="cursor-pointer hover:text-zinc-700 dark:hover:text-zinc-200">
+          Advanced — manage OAuth applications directly
+        </summary>
+        <p class="mt-2">
+          Need fine-grained control over scopes, multiple users per app, or programmatic token rotation?
+          <%= link_to "Open the raw Platform UI", [:account, @team, :platform_applications], class: "underline" %>.
+        </p>
+      </details>
+
+    </div>
+  <% end %>
+<% end %>

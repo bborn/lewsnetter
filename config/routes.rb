@@ -213,6 +213,14 @@ Rails.application.routes.draw do
         post "email_sending/verify", to: "email_sending#verify", as: :verify_email_sending
         post "email_sending/import_identity", to: "email_sending#import_identity", as: :import_identity_email_sending
 
+        # Developers — friendly setup for the lewsnetter-rails gem (one-click
+        # API token + paste-ready initializer snippet). The raw Platform UI
+        # is still available at /account/teams/:slug/platform/applications
+        # for power users; this is the curated path.
+        get  "developers",                 to: "developers#show",        as: :developers
+        post "developers/create_sync_app", to: "developers#create_sync_app", as: :create_sync_app_developers
+        delete "developers/tokens/:id",    to: "developers#revoke_token", as: :revoke_token_developers
+
         # SES setup wizard — the guided 4-step path for getting a brand-new
         # team from "no credentials" to "first verified send". See
         # Account::EmailSendingSetupController. Reachable any time; auto-
