@@ -1,0 +1,43 @@
+<%
+  # Wizard progress bar. Each step is a labeled dot with a connector to
+  # the next. Active step uses orange accent; completed steps fill in;
+  # future steps stay muted. The current step is passed in via `step`.
+  steps = [
+    {id: :credentials,   label: "Credentials"},
+    {id: :sender,        label: "Sender"},
+    {id: :verify_sender, label: "Verify"},
+    {id: :test,          label: "Send test"}
+  ]
+  current_index = steps.index { |s| s[:id] == step } || (step == :done ? steps.length : 0)
+%>
+<div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-6">
+  <div class="text-[10px] uppercase tracking-widest font-mono text-zinc-500 dark:text-zinc-400 mb-4">
+    Email sending · setup
+  </div>
+  <ol class="flex items-center justify-between gap-2">
+    <% steps.each_with_index do |s, i| %>
+      <%
+        state = if i < current_index then "done"
+                elsif i == current_index then "active"
+                else "future"
+                end
+      %>
+      <li class="flex-1 flex items-center gap-3">
+        <div class="flex items-center gap-2 min-w-0">
+          <div class="flex items-center justify-center w-7 h-7 rounded-full text-xs font-mono shrink-0
+                      <%= {done: 'bg-orange-600 text-white',
+                           active: 'border border-orange-600 text-orange-700 bg-orange-50',
+                           future: 'border border-zinc-300 text-zinc-400 bg-white'}[state.to_sym] %>">
+            <% if state == "done" %>✓<% else %><%= i + 1 %><% end %>
+          </div>
+          <span class="text-sm <%= state == 'active' ? 'text-zinc-900 font-medium' : (state == 'done' ? 'text-zinc-700' : 'text-zinc-400') %>">
+            <%= s[:label] %>
+          </span>
+        </div>
+        <% if i < steps.length - 1 %>
+          <div class="flex-1 h-px <%= i < current_index ? 'bg-orange-600' : 'bg-zinc-200 dark:bg-zinc-700' %>"></div>
+        <% end %>
+      </li>
+    <% end %>
+  </ol>
+</div>

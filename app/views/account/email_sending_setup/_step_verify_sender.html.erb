@@ -1,0 +1,27 @@
+<div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden"
+     data-controller="ses-verify-poll"
+     data-ses-verify-poll-url-value="<%= account_team_setup_sender_status_email_sending_path(team) %>"
+     data-ses-verify-poll-reload-url-value="<%= account_team_setup_email_sending_path(team) %>">
+  <div class="p-6">
+    <h2 class="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Step 3 — Verify <code class="font-mono text-base"><%= pending_sender.email %></code></h2>
+    <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+      Amazon SES just sent a verification email to <strong><%= pending_sender.email %></strong>. Click the link in that message — we'll detect it within a few seconds.
+    </p>
+  </div>
+
+  <div class="px-6 pb-6">
+    <div class="flex items-center gap-3 p-4 rounded-md bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-amber-800 dark:text-amber-200">
+      <div class="animate-spin h-4 w-4 border-2 border-amber-700 border-t-transparent rounded-full" data-ses-verify-poll-target="spinner"></div>
+      <span data-ses-verify-poll-target="status" class="text-sm font-medium">Waiting for you to click the link in your inbox…</span>
+    </div>
+
+    <details class="mt-4 text-xs text-zinc-500 dark:text-zinc-400">
+      <summary class="cursor-pointer hover:text-zinc-700 dark:hover:text-zinc-200">Didn't get the email?</summary>
+      <ul class="mt-2 pl-5 list-disc space-y-1">
+        <li>Check spam — the verification email comes from <code>no-reply-aws@amazon.com</code>.</li>
+        <li>SES verification links expire after 24h. If yours is older, <%= link_to "start over with a fresh address", account_team_setup_email_sending_path(team), class: "underline" %>.</li>
+        <li>Or jump straight to <%= link_to "the sender addresses page", [:account, team, :sender_addresses], class: "underline" %> to manage all your verified senders.</li>
+      </ul>
+    </details>
+  </div>
+</div>

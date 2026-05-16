@@ -1,0 +1,31 @@
+<%
+  # Rendered on the team dashboard when SES setup isn't complete. Pushes
+  # the user toward the guided wizard. Disappears once a test send has
+  # gone out — `ses.last_test_sent_at.present?` is the completion signal.
+  ses = team.ses_configuration
+  return if ses&.last_test_sent_at.present?
+
+  msg, cta = if ses.nil? || !ses.configured?
+    ["Set up email sending — Lewsnetter can't ship campaigns until you connect Amazon SES (~5 min).", "Get started"]
+  elsif !ses.verified?
+    ["Your AWS credentials aren't verified yet. Finish setup to start sending.", "Continue setup"]
+  elsif team.sender_addresses.where(verified: true).none?
+    ["Add a sender address — every campaign needs a verified from-address.", "Add sender"]
+  else
+    ["Send yourself a test to confirm everything's wired up.", "Send test"]
+  end
+%>
+<div class="bg-gradient-to-br from-orange-50 to-white dark:from-orange-950/30 dark:to-zinc-900 border border-orange-200 dark:border-orange-900 rounded-lg p-5 mb-6 flex items-center justify-between gap-4 flex-wrap">
+  <div class="flex items-start gap-3 min-w-0">
+    <div class="flex items-center justify-center w-9 h-9 rounded-full bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-200 shrink-0 text-sm font-mono">
+      SES
+    </div>
+    <div class="min-w-0">
+      <div class="text-xs uppercase tracking-widest font-mono text-orange-700 dark:text-orange-300 mb-1">
+        Finish setting up email sending
+      </div>
+      <p class="text-sm text-zinc-700 dark:text-zinc-200"><%= msg %></p>
+    </div>
+  </div>
+  <%= link_to cta, account_team_setup_email_sending_path(team), class: "button shrink-0" %>
+</div>

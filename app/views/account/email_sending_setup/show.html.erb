@@ -1,0 +1,15 @@
+<%= render 'account/shared/page' do |page| %>
+  <% page.title "Set up email sending" %>
+  <% page.body do %>
+    <div class="max-w-3xl mx-auto space-y-6">
+      <%= render 'account/email_sending_setup/progress', step: @step %>
+
+      <%= render "account/email_sending_setup/step_#{@step}", team: @team, ses_configuration: @ses_configuration, pending_sender: @pending_sender %>
+
+      <div class="text-center">
+        <%= link_to "Skip for now — back to dashboard", [:account, @team],
+              class: "text-xs text-zinc-500 hover:text-zinc-700 hover:underline" %>
+      </div>
+    </div>
+  <% end %>
+<% end %>

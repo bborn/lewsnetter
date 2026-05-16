@@ -22,6 +22,7 @@ import CodeEditorController from "./code_editor_controller"
 import ClipboardController from "./clipboard_controller"
 import AgentChatController from "./agent_chat_controller"
 import SegmentsBuilderController from "./segments_builder_controller"
+import SesVerifyPollController from "./ses_verify_poll_controller"
 
 const application = Application.start()
 
@@ -56,6 +57,7 @@ application.register('code-editor', CodeEditorController)
 application.register('clipboard', ClipboardController)
 application.register('agent-chat', AgentChatController)
 application.register('segments-builder', SegmentsBuilderController)
+application.register('ses-verify-poll', SesVerifyPollController)
 
 CableReady.initialize({ consumer })
 

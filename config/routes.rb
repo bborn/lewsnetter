@@ -212,6 +212,16 @@ Rails.application.routes.draw do
         put "email_sending", to: "email_sending#update"
         post "email_sending/verify", to: "email_sending#verify", as: :verify_email_sending
         post "email_sending/import_identity", to: "email_sending#import_identity", as: :import_identity_email_sending
+
+        # SES setup wizard — the guided 4-step path for getting a brand-new
+        # team from "no credentials" to "first verified send". See
+        # Account::EmailSendingSetupController. Reachable any time; auto-
+        # advances based on current state so users can drop out + resume.
+        get   "email_sending/setup",         to: "email_sending_setup#show",         as: :setup_email_sending
+        patch "email_sending/setup",         to: "email_sending_setup#update_credentials"
+        post  "email_sending/setup/sender",  to: "email_sending_setup#select_sender", as: :setup_sender_email_sending
+        get   "email_sending/setup/sender_status", to: "email_sending_setup#sender_status", as: :setup_sender_status_email_sending
+        post  "email_sending/setup/test",    to: "email_sending_setup#send_test",     as: :setup_test_email_sending
       end
     end
   end

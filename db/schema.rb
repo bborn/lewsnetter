@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_16_125124) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_16_161956) do
   create_table "account_onboarding_invitation_lists", force: :cascade do |t|
     t.integer "team_id", null: false
     t.json "invitations"
@@ -432,6 +432,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_16_125124) do
     t.datetime "updated_at", null: false
     t.string "configuration_set_name", default: "lewsnetter-default"
     t.string "unsubscribe_host"
+    t.datetime "last_test_sent_at"
     t.index ["sns_bounce_topic_arn"], name: "index_team_ses_configurations_on_sns_bounce_topic_arn", where: "sns_bounce_topic_arn IS NOT NULL"
     t.index ["sns_complaint_topic_arn"], name: "index_team_ses_configurations_on_sns_complaint_topic_arn", where: "sns_complaint_topic_arn IS NOT NULL"
     t.index ["team_id"], name: "index_team_ses_configurations_on_team_id", unique: true

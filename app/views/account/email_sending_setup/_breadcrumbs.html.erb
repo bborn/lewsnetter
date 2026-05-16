@@ -1,0 +1,4 @@
+<% team ||= @team %>
+<%= render 'account/teams/breadcrumbs', team: team %>
+<%= render 'account/shared/breadcrumb', label: "Email sending", url: account_team_email_sending_path(team) %>
+<%= render 'account/shared/breadcrumb', label: "Setup", url: account_team_setup_email_sending_path(team) %>

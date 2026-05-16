@@ -12,6 +12,10 @@
   <% p.content_for :title, t('.header', teams_possessive: possessive_string(@team.name)) %>
 
   <% p.content_for :body do %>
+    <%# Setup banner — only renders when SES setup isn't complete. Quietly
+        disappears once a test send has gone out (last_test_sent_at). %>
+    <%= render 'account/email_sending/setup_banner', team: team %>
+
     <%# ============================================================
         KPI strip. 4 cells, hairline dividers, mono caps labels,
         tabular nums values. See DESIGN.md → "Dashboard". %>

@@ -1,0 +1,27 @@
+<div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden">
+  <div class="p-6">
+    <h2 class="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Step 4 — Send yourself a test</h2>
+    <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+      One last check — we'll ship a real "you're wired up" email through your SES to <strong><%= current_user.email %></strong>.
+    </p>
+  </div>
+
+  <div class="px-6 pb-4">
+    <ul class="text-sm text-zinc-700 dark:text-zinc-200 space-y-2">
+      <li class="flex items-start gap-2"><span class="text-emerald-600 mt-0.5">✓</span>
+        <span>Credentials verified — connected to AWS region <code><%= ses_configuration.region %></code></span></li>
+      <li class="flex items-start gap-2"><span class="text-emerald-600 mt-0.5">✓</span>
+        <span>Sender verified — <strong><%= pending_sender.email %></strong></span></li>
+      <% if ses_configuration.sandbox? %>
+        <li class="flex items-start gap-2"><span class="text-amber-600 mt-0.5">!</span>
+          <span class="text-amber-800 dark:text-amber-200">SES sandbox mode — you can only send to verified addresses for now. <a href="https://docs.aws.amazon.com/ses/latest/dg/request-production-access.html" target="_blank" rel="noopener" class="underline">Request production access</a> when you're ready.</span></li>
+      <% end %>
+    </ul>
+  </div>
+
+  <div class="p-4 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 flex items-center justify-end gap-3">
+    <%= button_to "Send test to #{current_user.email}",
+          account_team_setup_test_email_sending_path(team),
+          method: :post, class: "button" %>
+  </div>
+</div>
