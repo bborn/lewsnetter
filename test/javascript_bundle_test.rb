@@ -14,7 +14,7 @@ class JavascriptBundleTest < ActiveSupport::TestCase
   BUNDLE_PATH = Rails.root.join("app", "assets", "builds", "application.js").freeze
 
   CUSTOM_CONTROLLER_IDENTIFIERS = %w[
-    segment-translator
+    segments-builder
     markdown-editor
     ai-drafter
     campaign-preview
