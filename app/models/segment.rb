@@ -53,6 +53,33 @@ class Segment < ApplicationRecord
     end
   end
 
+  # Visual builder rule tree (parsed JSON). Empty hash → segment has no
+  # tree (was hand-edited or legacy). When set, the before_save callback
+  # compiles it to the `predicate` column for the existing send pipeline.
+  def rules
+    definition.is_a?(Hash) ? (definition["rules"] || {}) : {}
+  end
+
+  def rules=(value)
+    self.definition ||= {}
+    tree = value.is_a?(String) ? (JSON.parse(value) rescue nil) : value
+    self.definition = definition.merge("rules" => tree).compact
+    @rules_changed = true
+  end
+
+  # Compile the rule tree to a SQL predicate whenever it changes. Keeps
+  # the legacy predicate column in sync so Segment#applies_to (used by
+  # SendCampaignJob and the MCP segment tools) keeps working unchanged.
+  before_save :compile_rules_to_predicate, if: -> { @rules_changed }
+  def compile_rules_to_predicate
+    return if rules.blank?
+    sql = Segments::PredicateCompiler.new(rules, team: team).to_sql
+    self.predicate = sql
+  rescue Segments::PredicateCompiler::InvalidTree => e
+    errors.add(:base, "Segment rules are invalid: #{e.message}")
+    throw :abort
+  end
+
   # Apply this segment's predicate to an existing ActiveRecord scope and return
   # the narrowed scope. If there's no predicate the scope is returned as-is.
   # Raises Segment::InvalidPredicate if the stored predicate contains any

@@ -13,7 +13,6 @@ import consumer from '../channels/consumer'
 // any time a transitive dep failed to resolve (e.g. easymde missing from
 // node_modules), which kept shipping a JS-less app to production. Explicit
 // registrations fail loud at build time instead.
-import SegmentTranslatorController from "./segment_translator_controller"
 import MarkdownEditorController from "./markdown_editor_controller"
 import AiDrafterController from "./ai_drafter_controller"
 import CampaignPreviewController from "./campaign_preview_controller"
@@ -22,6 +21,7 @@ import VariablePickerController from "./variable_picker_controller"
 import CodeEditorController from "./code_editor_controller"
 import ClipboardController from "./clipboard_controller"
 import AgentChatController from "./agent_chat_controller"
+import SegmentsBuilderController from "./segments_builder_controller"
 
 const application = Application.start()
 
@@ -47,7 +47,6 @@ application.load(controllers)
 
 // …then register this app's controllers explicitly so any missing import
 // surfaces as a build error rather than a silent dead button.
-application.register('segment-translator', SegmentTranslatorController)
 application.register('markdown-editor', MarkdownEditorController)
 application.register('ai-drafter', AiDrafterController)
 application.register('campaign-preview', CampaignPreviewController)
@@ -56,6 +55,7 @@ application.register('variable-picker', VariablePickerController)
 application.register('code-editor', CodeEditorController)
 application.register('clipboard', ClipboardController)
 application.register('agent-chat', AgentChatController)
+application.register('segments-builder', SegmentsBuilderController)
 
 CableReady.initialize({ consumer })
 

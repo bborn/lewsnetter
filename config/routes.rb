@@ -156,7 +156,7 @@ Rails.application.routes.draw do
 
         resources :segments do
           collection do
-            post :translate, to: "segment_translations#create"
+            post :preview, to: "segments#preview"
           end
         end
         resources :email_templates do

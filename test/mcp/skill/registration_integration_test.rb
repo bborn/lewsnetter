@@ -37,14 +37,17 @@ module Mcp
 
         resources = payload.dig("result", "resources")
         refute_nil resources, "Expected result.resources in #{payload.inspect}"
-        assert_equal 6, resources.length, "Expected 6 skills, got #{resources.length}: #{resources.map { |r| r["uri"] }.inspect}"
+        assert_equal 5, resources.length, "Expected 5 skills, got #{resources.length}: #{resources.map { |r| r["uri"] }.inspect}"
 
         uris = resources.map { |r| r["uri"] }
         assert_includes uris, "skill://analyze-recent-send"
         assert_includes uris, "skill://draft-and-send-newsletter"
         assert_includes uris, "skill://import-subscribers-from-csv"
         assert_includes uris, "skill://segment-cookbook"
-        assert_includes uris, "skill://translate-question-to-segment"
+        # translate-question-to-segment was retired when the visual segment
+        # builder shipped — agents that want to build a segment can call the
+        # raw segments_* MCP tools directly + use segment-cookbook for predicate
+        # idioms.
         assert_includes uris, "skill://voice-samples"
 
         # Each entry has the expected shape

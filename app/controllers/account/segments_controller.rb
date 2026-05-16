@@ -59,6 +59,33 @@ class Account::SegmentsController < Account::ApplicationController
     end
   end
 
+  # POST /account/teams/:team_id/segments/preview
+  # Used by the visual builder — accepts an in-flight rule tree (JSON in
+  # `rules` param), compiles to SQL, returns matching count + up to 5
+  # sample subscriber rows. Doesn't persist anything.
+  def preview
+    tree = JSON.parse(params[:rules].to_s) rescue nil
+    sql = nil
+    if tree.is_a?(Hash)
+      begin
+        sql = Segments::PredicateCompiler.new(tree, team: current_team).to_sql
+      rescue Segments::PredicateCompiler::InvalidTree => e
+        return render json: {error: e.message}, status: :unprocessable_entity
+      end
+    end
+
+    scope = current_team.subscribers
+    scope = scope.joins(:company) if sql&.include?("companies.")
+    scope = scope.where(sql) if sql.present?
+
+    count = scope.count
+    sample = scope.order(:id).limit(5).map do |s|
+      {id: s.id, email: s.email, name: s.name, subscribed: s.subscribed}
+    end
+
+    render json: {count: count, sample: sample, sql: sql}
+  end
+
   private
 
   if defined?(Api::V1::ApplicationController)
