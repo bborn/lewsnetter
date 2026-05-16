@@ -200,29 +200,55 @@ export default class extends Controller {
   }
 
   renderPreview(data) {
-    const sample = (data.sample || []).map(s => `
-      <li class="py-2 flex items-center justify-between border-b border-zinc-100 last:border-0">
-        <div>
-          <div class="text-sm text-zinc-900">${this.escape(s.email)}</div>
-          ${s.name ? `<div class="text-xs text-zinc-500">${this.escape(s.name)}</div>` : ""}
-        </div>
-        <div class="text-[10px] uppercase tracking-wider font-mono ${s.subscribed ? "text-emerald-600" : "text-zinc-400"}">
-          ${s.subscribed ? "SUBSCRIBED" : "UNSUBSCRIBED"}
-        </div>
-      </li>`).join("")
+    const sample = (data.sample || []).map(s => {
+      const attrsHtml = (s.attrs || []).map(a => `
+        <div class="flex items-baseline justify-between gap-3 text-xs">
+          <span class="text-zinc-500 font-mono">${this.escape(a.label)}</span>
+          <span class="text-zinc-800 font-mono tabular-nums truncate text-right">${this.formatValue(a.value)}</span>
+        </div>`).join("")
+
+      return `
+        <li class="py-3 border-b border-zinc-100 last:border-0">
+          <div class="flex items-center justify-between gap-3 mb-1">
+            <div class="min-w-0">
+              <div class="text-sm text-zinc-900 truncate">${this.escape(s.email)}</div>
+              ${s.name ? `<div class="text-xs text-zinc-500 truncate">${this.escape(s.name)}</div>` : ""}
+            </div>
+            <div class="text-[10px] uppercase tracking-wider font-mono shrink-0 ${s.subscribed ? "text-emerald-600" : "text-zinc-400"}">
+              ${s.subscribed ? "SUBSCRIBED" : "UNSUBSCRIBED"}
+            </div>
+          </div>
+          ${attrsHtml ? `<div class="mt-2 space-y-1">${attrsHtml}</div>` : ""}
+        </li>`
+    }).join("")
 
     this.previewTarget.innerHTML = `
-      <div class="border border-zinc-200 rounded-lg p-4 bg-white">
-        <div class="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mb-2">MATCHING</div>
-        <div class="text-3xl font-semibold text-zinc-900 mb-3">${data.count.toLocaleString()}</div>
+      <div class="border border-zinc-200 rounded-lg p-5 bg-white">
+        <div class="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mb-1">MATCHING</div>
+        <div class="text-5xl font-semibold text-zinc-900 tracking-tight tabular-nums leading-none mb-1">
+          ${data.count.toLocaleString()}
+        </div>
+        <div class="text-xs text-zinc-500 font-mono mb-4">${data.count === 1 ? "subscriber" : "subscribers"}</div>
+
         ${data.count > 0 ? `
-          <div class="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mt-4 mb-1">SAMPLE</div>
+          <div class="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mt-5 mb-1">SAMPLE</div>
           <ul class="divide-y divide-zinc-100">${sample}</ul>` : ""}
+
         <details class="mt-4 text-xs text-zinc-500">
-          <summary class="cursor-pointer hover:text-zinc-700">SQL</summary>
-          <pre class="mt-2 p-2 bg-zinc-50 rounded text-zinc-700 overflow-x-auto">${this.escape(data.sql || "(none)")}</pre>
+          <summary class="cursor-pointer hover:text-zinc-700 font-mono uppercase tracking-wider">SQL</summary>
+          <pre class="mt-2 p-2 bg-zinc-50 rounded text-zinc-700 overflow-x-auto text-[11px]">${this.escape(data.sql || "(none)")}</pre>
         </details>
       </div>`
+  }
+
+  // Render a value from sample.attrs — strings get escaped, booleans get a
+  // ✓/✗ glyph, nullish renders as muted "—". Long strings truncate via the
+  // parent's `truncate` class.
+  formatValue(v) {
+    if (v === true)  return `<span class="text-emerald-600">✓ true</span>`
+    if (v === false) return `<span class="text-zinc-500">✗ false</span>`
+    if (v === null || v === undefined || v === "") return `<span class="text-zinc-300">—</span>`
+    return this.escape(String(v))
   }
 
   // ── rendering ────────────────────────────────────────────────────────────

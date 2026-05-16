@@ -51,17 +51,6 @@
       </div>
     </div>
 
-    <%# Predicate stays in the form for the rare case someone wants to %>
-    <%# author SQL directly. Compiled from the rule tree on save. %>
-    <details class="form-group">
-      <summary class="cursor-pointer text-xs text-zinc-500 hover:text-zinc-700 font-mono uppercase tracking-wider">
-        Compiled SQL predicate (advanced)
-      </summary>
-      <%= form.text_area :predicate, value: segment.predicate, rows: 3,
-            class: "w-full mt-2 p-2 border rounded-md font-mono text-xs",
-            placeholder: "Auto-filled from the rule builder above." %>
-    </details>
-
     <%# 🚅 super scaffolding will insert new fields above this line. %>
 
     <div class="buttons">

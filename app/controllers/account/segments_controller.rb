@@ -62,7 +62,9 @@ class Account::SegmentsController < Account::ApplicationController
   # POST /account/teams/:team_id/segments/preview
   # Used by the visual builder — accepts an in-flight rule tree (JSON in
   # `rules` param), compiles to SQL, returns matching count + up to 5
-  # sample subscriber rows. Doesn't persist anything.
+  # sample subscriber rows (with the rule-referenced field values surfaced
+  # so the user can verify their filter is doing what they expect).
+  # Doesn't persist anything.
   def preview
     tree = JSON.parse(params[:rules].to_s) rescue nil
     sql = nil
@@ -75,12 +77,20 @@ class Account::SegmentsController < Account::ApplicationController
     end
 
     scope = current_team.subscribers
-    scope = scope.joins(:company) if sql&.include?("companies.")
+    needs_company_join = sql&.include?("companies.") || referenced_fields(tree).any? { |k| k.start_with?("companies.", "company_attributes.") }
+    scope = scope.joins(:company) if needs_company_join
     scope = scope.where(sql) if sql.present?
 
     count = scope.count
+    field_refs = referenced_fields(tree)
     sample = scope.order(:id).limit(5).map do |s|
-      {id: s.id, email: s.email, name: s.name, subscribed: s.subscribed}
+      {
+        id: s.id,
+        email: s.email,
+        name: s.name,
+        subscribed: s.subscribed,
+        attrs: field_refs.map { |key| {label: humanize_field(key), value: extract_value(s, key)} }
+      }
     end
 
     render json: {count: count, sample: sample, sql: sql}
@@ -94,5 +104,47 @@ class Account::SegmentsController < Account::ApplicationController
 
   def process_params(strong_params)
     # 🚅 super scaffolding will insert processing for new fields above this line.
+  end
+
+  # Walk the rule tree and return the unique set of field keys it references.
+  # The visual builder uses these to surface the relevant column values on
+  # each sample row so users can debug why a row matched (or didn't).
+  def referenced_fields(tree)
+    return [] unless tree.is_a?(Hash)
+    fields = []
+    walk = ->(node) {
+      case node["type"]
+      when "group" then (node["rules"] || []).each(&walk)
+      when "rule"  then fields << node["field"] if node["field"].present?
+      end
+    }
+    walk.call(tree)
+    # De-dupe but drop noise fields the row card already shows (email/name).
+    fields.uniq - %w[subscribers.email subscribers.name]
+  end
+
+  def humanize_field(key)
+    case key
+    when /\Acustom_attributes\.(.+)\z/    then "#{$1}"
+    when /\Acompany_attributes\.(.+)\z/   then "company.#{$1}"
+    when /\Asubscribers\.(.+)\z/          then $1
+    when /\Acompanies\.(.+)\z/            then "company.#{$1}"
+    else key
+    end
+  end
+
+  def extract_value(subscriber, key)
+    case key
+    when /\Asubscribers\.(.+)\z/
+      subscriber.public_send($1)
+    when /\Acompanies\.(.+)\z/
+      subscriber.company&.public_send($1)
+    when /\Acustom_attributes\.(.+)\z/
+      (subscriber.custom_attributes || {})[$1]
+    when /\Acompany_attributes\.(.+)\z/
+      (subscriber.company&.custom_attributes || {})[$1]
+    end
+  rescue NoMethodError
+    nil
   end
 end
