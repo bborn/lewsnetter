@@ -279,15 +279,25 @@ export default class extends Controller {
   enhanceSelects() {
     const selects = this.treeTarget.querySelectorAll("select[data-segments-builder-enhance]")
     selects.forEach(el => {
-      const variant = el.dataset.segmentsBuilderEnhance  // "field" | "operator" | "boolean"
+      const variant = el.dataset.segmentsBuilderEnhance  // "field" | "operator" | "boolean" | "value"
+      const searchable = variant === "field" || variant === "value"
       const ts = new TomSelect(el, {
-        controlInput: variant === "field" ? "<input>" : null,
+        controlInput: searchable ? "<input>" : null,
         maxOptions: 500,
-        plugins: variant === "field" ? ["dropdown_input"] : [],
+        plugins: searchable ? ["dropdown_input"] : [],
         hideSelected: false,
         openOnFocus: true,
-        allowEmptyOption: false,
+        // value selects allow free-form input so the user can type a value
+        // we haven't seen in the data yet. Field/operator/boolean are
+        // strictly enumerated.
+        create: variant === "value",
+        createOnBlur: variant === "value",
+        persist: false,
+        allowEmptyOption: variant === "value",
         sortField: variant === "field" ? null : {field: "$order"},
+        // Placeholder shown when the value is empty (matches the old text
+        // input's placeholder).
+        placeholder: variant === "value" ? "value" : null,
         // Detach the dropdown from the rule's container so it can't be
         // clipped by parent overflow / overflow-hidden card chrome.
         dropdownParent: "body",
@@ -406,6 +416,23 @@ export default class extends Controller {
       }
       return `<input type="datetime-local" value="${this.escape(rule.value || "")}" ${common}>`
     }
+    // String / csv_list / array values can autocomplete from observed data.
+    // We render a TomSelect with create:true so users can also type values
+    // that aren't in the suggestions (e.g. a value the data hasn't seen yet).
+    if ((type === "string" || type === "csv_list" || type === "array") && this.samplesFor(rule.field).length > 0) {
+      const opts = this.samplesFor(rule.field)
+        .map(v => `<option value="${this.escape(v)}" ${String(rule.value) === v ? "selected" : ""}>${this.escape(v)}</option>`)
+        .join("")
+      const currentMissing = rule.value && !this.samplesFor(rule.field).includes(String(rule.value))
+        ? `<option value="${this.escape(rule.value)}" selected>${this.escape(rule.value)}</option>`
+        : ""
+      return `
+        <select ${common} data-segments-builder-enhance="value">
+          <option value=""></option>
+          ${currentMissing}
+          ${opts}
+        </select>`
+    }
     if (type === "number") {
       if (rule.operator === "between") {
         const [lo = "", hi = ""] = Array.isArray(rule.value) ? rule.value : [rule.value, ""]
@@ -445,6 +472,15 @@ export default class extends Controller {
       for (const f of fields) if (f.key === fieldKey) return f.type
     }
     return "string"  // custom_attributes fallback
+  }
+
+  // Observed-value samples for a given field key (used for value-input
+  // autocomplete). Returns [] for fields we don't have suggestions for.
+  samplesFor(fieldKey) {
+    for (const fields of Object.values(this.fieldsValue)) {
+      for (const f of fields) if (f.key === fieldKey) return f.samples || []
+    }
+    return []
   }
 
   humanizeOp(op) {

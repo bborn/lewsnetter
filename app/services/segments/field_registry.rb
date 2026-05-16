@@ -42,13 +42,13 @@ module Segments
 
     def builtin_subscriber_fields
       PredicateCompiler::FIELDS.select { |k, _| k.start_with?("subscribers.") }.map do |key, meta|
-        {key: key, label: meta[:label], type: meta[:type]}
+        {key: key, label: meta[:label], type: meta[:type], samples: []}
       end
     end
 
     def builtin_company_fields
       PredicateCompiler::FIELDS.select { |k, _| k.start_with?("companies.") }.map do |key, meta|
-        {key: key, label: meta[:label], type: meta[:type]}
+        {key: key, label: meta[:label], type: meta[:type], samples: []}
       end
     end
 
@@ -69,8 +69,36 @@ module Segments
 
       observed.keys.sort.map do |attr|
         type = infer_type(observed[attr])
-        {key: "#{key_prefix}#{attr}", label: attr, type: type}
+        {
+          key: "#{key_prefix}#{attr}",
+          label: attr,
+          type: type,
+          samples: sample_values(observed[attr], type)
+        }
       end
+    end
+
+    # Distinct value samples for the value-input autocomplete. Skip for
+    # high-cardinality / unhelpful types (datetime, number, boolean — the UI
+    # has type-appropriate inputs for those). String + csv_list + array
+    # surface the top values so picking is one click.
+    #
+    # Cardinality cap: too many distinct values means it's not categorical
+    # (think email addresses or stripe_id) — autocomplete would be noise.
+    MAX_DISTINCT_FOR_AUTOCOMPLETE = 50
+    def sample_values(values, type)
+      return [] unless %i[string csv_list array].include?(type)
+      flat = case type
+      when :array
+        values.flatten.compact.map(&:to_s)
+      when :csv_list
+        values.compact.flat_map { |v| v.to_s.split(",") }.map(&:strip)
+      else
+        values.compact.map(&:to_s)
+      end
+      distinct = flat.reject(&:empty?).uniq
+      return [] if distinct.length > MAX_DISTINCT_FOR_AUTOCOMPLETE
+      distinct.sort
     end
 
     # Best-effort: if any observed value is an array → :array (it dominates).
