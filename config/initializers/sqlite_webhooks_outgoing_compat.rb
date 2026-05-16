@@ -7,7 +7,7 @@
 # `json_each` (part of SQLite's bundled json1 extension; available in every
 # SQLite that Rails 8 ships against). This belongs in app config (not a gem
 # fork) because the swap to SQLite is our deliberate departure from Bullet
-# Train's Postgres default — see initiatives/lewsnetter-v2/PLAN.md.
+# Train's Postgres default.
 
 # ---- bullet_train-roles: with_roles --------------------------------------
 # The gem's `included` block defines `with_roles` directly on the host class.

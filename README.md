@@ -48,7 +48,7 @@ bundle exec kamal setup                      # first deploy: sets up Docker, Tra
 
 About 20 minutes later, your app is live. Visit `https://your-domain.com`, sign in as the first user (auto-promoted to admin), and send your first campaign.
 
-For production: see [`initiatives/lewsnetter-v2/DEPLOY.md`](initiatives/lewsnetter-v2/DEPLOY.md) for the Cloudflare TLS + R2 backup pattern Bruno runs in production.
+Production reference: `config/deploy.yml` is heavily commented (Litestream replication to R2, per-tenant SES, Cloudflare proxy), and `.github/workflows/deploy.yml` documents the secret matrix.
 
 ## Quick start (development)
 
@@ -105,7 +105,7 @@ If you point an agent at this repo and say "deploy this," it should be able to. 
 
 ## Status
 
-Pre-1.0 but in production. Bruno is tenant zero — InfluenceKit's brand newsletter (~10k subscribers) ships through Lewsnetter every week. The app works end-to-end; the rough edges are documented in [`initiatives/lewsnetter-v2/SESSION-HANDOFF-2026-05-14.md`](initiatives/lewsnetter-v2/SESSION-HANDOFF-2026-05-14.md).
+Pre-1.0 but in production. Bruno is tenant zero — InfluenceKit's brand newsletter (~10k subscribers) ships through Lewsnetter every week. The app works end-to-end; expect rough edges.
 
 The 2014 codebase that previously lived at this name is archived on [`legacy-2014`](https://github.com/bborn/lewsnetter/tree/legacy-2014).
 

@@ -3,10 +3,9 @@
 # and test so behavior is consistent across environments. All three live in
 # storage/ which is gitignored.
 #
-# Why SQLite here even though Bullet Train defaults to Postgres: see
-# initiatives/lewsnetter-v2/PLAN.md. Short version — Litestream-to-S3 for
-# backups, one-file deploy story for OSS self-hosters, and Rails 8's actual
-# default.
+# Why SQLite here even though Bullet Train defaults to Postgres: Litestream-
+# to-S3 for backups, one-file deploy story for OSS self-hosters, and Rails 8's
+# actual default.
 
 default: &default
   adapter: sqlite3

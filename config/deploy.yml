@@ -9,7 +9,7 @@
 # Litestream streams them to Cloudflare R2 — see litestream.yml.
 #
 # Secrets live in .kamal/secrets (not committed) and GitHub Actions secrets
-# for CI deploys. See initiatives/lewsnetter-v2/DEPLOY.md.
+# for CI deploys.
 
 service: lewsnetter
 
@@ -31,8 +31,7 @@ servers:
 # TLS at kamal-proxy using a Cloudflare Origin CA certificate (cert + key
 # stashed in .kamal/secrets as ORIGIN_CERT / ORIGIN_KEY) so the CF→origin
 # leg is also encrypted. With this in place Bruno flips CF SSL mode from
-# "Flexible" to "Full (Strict)" in the dashboard — see
-# initiatives/lewsnetter-v2/SSL_FULL_STRICT_VERIFICATION.md.
+# "Flexible" to "Full (Strict)" in the dashboard.
 #
 # Mechanism: Option A — Kamal 2's native `proxy.ssl.{certificate_pem,
 # private_key_pem}` keys (see Kamal::Configuration::Proxy#custom_ssl_certificate?

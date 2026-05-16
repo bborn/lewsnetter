@@ -24,7 +24,6 @@ The fastest way to grok the architecture: read the design spec at [`docs/superpo
 | `config/initializers/ruby_llm.rb` | LLM key + gateway URL wiring. |
 | `config/initializers/cloudflare_ai_gateway.rb` | Optional CF AI Gateway BYOK support. Self-contained — copy to support a different gateway. |
 | `config/deploy.yml` | Kamal 2 production deploy config. |
-| `initiatives/lewsnetter-v2/SESSION-HANDOFF-2026-05-14.md` | Latest "where we left off" notes. Read this if you need historical context for ongoing work. |
 | `docs/superpowers/specs/` | Design specs (the why). |
 | `docs/superpowers/plans/` | Implementation plans, phase by phase (the how). |
 
@@ -51,7 +50,6 @@ bin/rails test test/system/             # Capybara/Chrome system tests
 Pre-existing failures (don't introduce more, don't fix as part of unrelated work):
 - `test/controllers/api/v1/subscribers_controller_test.rb` — missing `:subscriber` factory
 - A handful of BulletTrain scaffolded `tangible_things` controller tests
-- See `initiatives/lewsnetter-v2/SESSION-HANDOFF-2026-05-14.md` § "Operational fragilities" for the full list.
 
 ## Conventions
 
@@ -169,5 +167,4 @@ ssh root@<server> 'docker logs lewsnetter-web 2>&1 | grep "\[mcp\]\|\[chat\]\|\[
 
 - Architecture questions: read the spec in `docs/superpowers/specs/`.
 - "Why was this built this way": check git blame and the corresponding plan doc in `docs/superpowers/plans/`.
-- Operational state: `initiatives/lewsnetter-v2/SESSION-HANDOFF-2026-05-14.md`.
 - Stuck: open an issue, ping Bruno.

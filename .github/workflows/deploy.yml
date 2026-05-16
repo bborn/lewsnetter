@@ -1,9 +1,12 @@
 # Build, push to GHCR, and Kamal-deploy Lewsnetter on push to master.
 #
-# See initiatives/lewsnetter-v2/DEPLOY.md for the secret matrix and the list
-# of repo secrets that must be configured in
-# https://github.com/bborn/lewsnetter/settings/secrets/actions before this
-# workflow can succeed.
+# Required repo secrets (configure at
+# https://github.com/bborn/lewsnetter/settings/secrets/actions):
+#   SSH_PRIVATE_KEY                     deploy key for Kamal SSH
+#   SERVER_HOST                         the production server IP/hostname
+#   RAILS_MASTER_KEY                    decrypts config/credentials.yml.enc
+#   LITESTREAM_REPLICA_ACCESS_KEY_ID    Cloudflare R2 access key
+#   LITESTREAM_REPLICA_SECRET_ACCESS_KEY  Cloudflare R2 secret
 
 name: Deploy
 

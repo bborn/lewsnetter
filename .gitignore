@@ -111,3 +111,8 @@ erd.pdf
 # Ignore key files for decrypting credentials and more.
 /config/*.key
 bun.lock
+
+# Internal planning + handoff docs. Local-only notes that don't belong in
+# the public OSS repo — Bruno's session handoffs, deploy bootstrap notes,
+# IK migration trackers, etc. Anyone forking this repo doesn't need them.
+/initiatives/
