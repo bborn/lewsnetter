@@ -1155,11 +1155,12 @@ html.dark a:hover,
     @apply flex items-center gap-2 shrink-0;
   }
 
-  /* When the sticky bar is present, suppress the default .buttons row from
-     shared/limits/form (we render our own). Defensive — if the partial
-     somehow surfaces, it stays hidden. */
-  .campaign-edit-actions ~ .buttons,
-  form.form > .buttons:last-child {
+  /* When the sticky bar is present on the campaign edit page, suppress the
+     default .buttons row from shared/limits/form (we render our own sticky
+     CTA). Scoped to the campaign-edit surface via :has() so this doesn't
+     accidentally hide save buttons on every other form in the app. */
+  form.form:has(.campaign-edit-actions) > .buttons:last-child,
+  form.form:has(.campaign-edit-actions) .buttons:last-child {
     display: none;
   }
 
