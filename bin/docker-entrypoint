@@ -42,6 +42,9 @@ if [ "${1}" = "./bin/rails" ] && [ "${2}" = "server" ]; then
   if [ "$(./bin/rails runner 'print Model.count' 2>/dev/null)" = "0" ]; then
     ./bin/rails ruby_llm:load_models
   fi
+  # Upgrade any plaintext subscriber email/name rows to encrypted storage.
+  # Idempotent — exits in <100ms when there's nothing to upgrade.
+  ./bin/rails subscribers:encrypt_at_rest
 fi
 
 # Web role: wrap the server in litestream replicate so the replicator

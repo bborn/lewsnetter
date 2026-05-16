@@ -28,11 +28,11 @@ module Segments
         "type" => "group", "combinator" => "and",
         "rules" => [
           {"type" => "rule", "field" => "subscribers.subscribed", "operator" => "equals", "value" => true},
-          {"type" => "rule", "field" => "subscribers.email", "operator" => "contains", "value" => "@example.com"}
+          {"type" => "rule", "field" => "subscribers.external_id", "operator" => "contains", "value" => "@example.com"}
         ]
       })
       assert_match(/subscribers\.subscribed = 1/, sql)
-      assert_match(/subscribers\.email LIKE '%@example\.com%'/, sql)
+      assert_match(/subscribers\.external_id LIKE '%@example\.com%'/, sql)
       assert_match(/ AND /, sql)
     end
 
@@ -41,7 +41,7 @@ module Segments
         "type" => "group", "combinator" => "or",
         "rules" => [
           {"type" => "rule", "field" => "subscribers.subscribed", "operator" => "equals", "value" => true},
-          {"type" => "rule", "field" => "subscribers.email", "operator" => "contains", "value" => "@foo.com"}
+          {"type" => "rule", "field" => "subscribers.external_id", "operator" => "contains", "value" => "@foo.com"}
         ]
       })
       assert_match(/ OR /, sql)
@@ -53,36 +53,36 @@ module Segments
         "rules" => [
           {"type" => "rule", "field" => "subscribers.subscribed", "operator" => "equals", "value" => true},
           {"type" => "group", "combinator" => "or", "rules" => [
-            {"type" => "rule", "field" => "subscribers.email", "operator" => "contains", "value" => "@a.com"},
-            {"type" => "rule", "field" => "subscribers.email", "operator" => "contains", "value" => "@b.com"}
+            {"type" => "rule", "field" => "subscribers.external_id", "operator" => "contains", "value" => "@a.com"},
+            {"type" => "rule", "field" => "subscribers.external_id", "operator" => "contains", "value" => "@b.com"}
           ]}
         ]
       })
       assert_includes sql, "subscribers.subscribed = 1"
-      assert_includes sql, "subscribers.email LIKE '%@a.com%' OR subscribers.email LIKE '%@b.com%'"
+      assert_includes sql, "subscribers.external_id LIKE '%@a.com%' OR subscribers.external_id LIKE '%@b.com%'"
       assert_match(/\(subscribers\.subscribed.*AND.*\(.*OR.*\)\)/m, sql)
     end
 
     # ── operator coverage ──────────────────────────────────────────────────
 
     test "string equals / not_equals (not_equals is NULL-permissive)" do
-      assert_equal "(subscribers.name = 'Alice')", rule("subscribers.name", "equals", "Alice")
+      assert_equal "(subscribers.external_id = 'Alice')", rule("subscribers.external_id", "equals", "Alice")
       # not_equals matches rows where the column is NULL too — consistent with
       # Intercom-style "is not Alice" semantics (a missing value trivially is
       # not Alice). Otherwise NULL rows would be silently excluded.
-      assert_equal "((subscribers.name IS NULL OR subscribers.name != 'Alice'))",
-        rule("subscribers.name", "not_equals", "Alice")
+      assert_equal "((subscribers.external_id IS NULL OR subscribers.external_id != 'Alice'))",
+        rule("subscribers.external_id", "not_equals", "Alice")
     end
 
     test "string starts_with / ends_with / contains / not_contains" do
-      assert_includes rule("subscribers.email", "starts_with", "alice"), "LIKE 'alice%'"
-      assert_includes rule("subscribers.email", "ends_with", ".com"),   "LIKE '%.com'"
-      assert_includes rule("subscribers.email", "contains", "@"),       "LIKE '%@%'"
+      assert_includes rule("subscribers.external_id", "starts_with", "alice"), "LIKE 'alice%'"
+      assert_includes rule("subscribers.external_id", "ends_with", ".com"),   "LIKE '%.com'"
+      assert_includes rule("subscribers.external_id", "contains", "@"),       "LIKE '%@%'"
       # NULL-permissive negative: row where email is NULL passes "doesn't
       # contain @" too. The user's bug on prod: tabs_enabled not_contains
       # 'brand' should include rows where tabs_enabled is missing entirely.
-      sql = rule("subscribers.email", "not_contains", "@")
-      assert_includes sql, "subscribers.email IS NULL"
+      sql = rule("subscribers.external_id", "not_contains", "@")
+      assert_includes sql, "subscribers.external_id IS NULL"
       assert_includes sql, "NOT LIKE '%@%'"
     end
 
@@ -95,13 +95,13 @@ module Segments
     end
 
     test "string is_set / is_not_set" do
-      assert_includes rule("subscribers.name", "is_set", nil),     "subscribers.name IS NOT NULL AND subscribers.name != ''"
-      assert_includes rule("subscribers.name", "is_not_set", nil), "subscribers.name IS NULL OR subscribers.name = ''"
+      assert_includes rule("subscribers.external_id", "is_set", nil),     "subscribers.external_id IS NOT NULL AND subscribers.external_id != ''"
+      assert_includes rule("subscribers.external_id", "is_not_set", nil), "subscribers.external_id IS NULL OR subscribers.external_id = ''"
     end
 
     test "string in operator with multiple values" do
-      sql = rule("subscribers.email", "in", ["a@x.com", "b@x.com", "c@x.com"])
-      assert_includes sql, "subscribers.email IN ('a@x.com','b@x.com','c@x.com')"
+      sql = rule("subscribers.external_id", "in", ["a@x.com", "b@x.com", "c@x.com"])
+      assert_includes sql, "subscribers.external_id IN ('a@x.com','b@x.com','c@x.com')"
     end
 
     test "datetime within_last_days emits a UTC bound" do
@@ -211,14 +211,14 @@ module Segments
     # ── security: injection attempts ───────────────────────────────────────
 
     test "value injection: quotes escaped in equals" do
-      sql = rule("subscribers.name", "equals", "x' OR 1=1 --")
+      sql = rule("subscribers.external_id", "equals", "x' OR 1=1 --")
       # The quote should be doubled (SQLite/AR), not naively concatenated.
       refute_includes sql, "'x' OR 1=1"
       assert_includes sql, "''"  # AR escapes ' as ''
     end
 
     test "value injection: LIKE wildcards in contains are escaped" do
-      sql = rule("subscribers.name", "contains", "100%off")
+      sql = rule("subscribers.external_id", "contains", "100%off")
       # The % should be backslash-escaped so it's matched literally.
       assert_includes sql, '\\%off'
     end

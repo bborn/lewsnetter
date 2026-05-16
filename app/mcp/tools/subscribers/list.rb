@@ -23,8 +23,16 @@ module Mcp
           scope = context.team.subscribers
           scope = scope.where(subscribed: arguments["subscribed"]) if arguments.key?("subscribed")
           if (q = arguments["query"]).present?
-            like = "%#{q}%"
-            scope = scope.where("email LIKE ? OR external_id LIKE ?", like, like)
+            # Email is encrypted-at-rest (deterministic), so `LIKE '%q%'` on
+            # the ciphertext column can't match a plaintext substring. We do
+            # two passes:
+            #   1) Exact-email match via Rails' encrypted-comparison
+            #      (deterministic encryption preserves equality lookups).
+            #   2) `LIKE` substring search on external_id, which is plaintext.
+            # Result is the union via OR.
+            exact_email_ids = scope.where(email: q).pluck(:id)
+            external_id_ids = scope.where("external_id LIKE ?", "%#{q}%").pluck(:id)
+            scope = scope.where(id: (exact_email_ids + external_id_ids).uniq)
           end
           total = scope.count
           limit = arguments["limit"] || 50

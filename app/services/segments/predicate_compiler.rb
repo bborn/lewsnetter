@@ -38,9 +38,14 @@ module Segments
 
     # Field metadata: SQL expression + value type + label (for the UI).
     # Built-in fields. Custom attributes resolved separately.
+    # `subscribers.email` and `subscribers.name` are intentionally excluded —
+    # both are encrypted at rest (ActiveRecord Encryption), so column-level
+    # SQL predicates compare against ciphertext and never match. If we ever
+    # need email-based segmentation we'll add `email` back via the
+    # deterministic-encryption transformer (Rails encrypts the input, then
+    # compares ciphertext-to-ciphertext) — for now external_id covers the
+    # "this specific person" lookup.
     FIELDS = {
-      "subscribers.email"           => {sql: "subscribers.email",           type: :string,   label: "Email"},
-      "subscribers.name"            => {sql: "subscribers.name",            type: :string,   label: "Name"},
       "subscribers.external_id"     => {sql: "subscribers.external_id",     type: :string,   label: "External ID"},
       "subscribers.subscribed"      => {sql: "subscribers.subscribed",      type: :boolean,  label: "Subscribed"},
       "subscribers.unsubscribed_at" => {sql: "subscribers.unsubscribed_at", type: :datetime, label: "Unsubscribed at"},

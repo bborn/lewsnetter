@@ -120,7 +120,8 @@ class Account::SegmentsController < Account::ApplicationController
     }
     walk.call(tree)
     # De-dupe but drop noise fields the row card already shows (email/name).
-    fields.uniq - %w[subscribers.email subscribers.name]
+    # Drop encrypted fields and the noise fields the row card already shows.
+    fields.uniq - %w[subscribers.email subscribers.name subscribers.external_id]
   end
 
   def humanize_field(key)

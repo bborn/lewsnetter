@@ -35,8 +35,11 @@ module Mcp
           assert_equal 1, result[:total]
         end
 
-        test "query matches email substring" do
-          result = List.new.invoke(arguments: {"query" => "a@"}, context: @ctx)
+        test "query matches exact email" do
+          # Email is encrypted-at-rest (deterministic), so the query is an
+          # exact-match lookup, not a substring scan. Substring search over
+          # email isn't possible without decrypting every row.
+          result = List.new.invoke(arguments: {"query" => "a@ex.com"}, context: @ctx)
           assert_equal [@s1.id], result[:subscribers].map { |h| h[:id] }
         end
 
