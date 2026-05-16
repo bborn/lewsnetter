@@ -24,6 +24,7 @@ module Mcp
         def call(arguments:, context:)
           sub = context.team.subscribers.find_by!(id: arguments["id"])
           attrs = arguments.slice("email", "name", "subscribed", "custom_attributes")
+          attrs["custom_attributes"] = ::Subscribers::AttributeNormalizer.call(attrs["custom_attributes"]) if attrs["custom_attributes"].present?
           sub.update!(attrs)
           {subscriber: serialize_subscriber(sub)}
         end

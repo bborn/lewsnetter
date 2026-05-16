@@ -74,14 +74,29 @@ module Segments
     end
 
     # Best-effort: if any observed value is an array → :array (it dominates).
-    # Then check uniform booleans / numbers; fall back to :string.
+    # Then check uniform booleans / numbers; if observed strings all look
+    # like CSVs (comma-separated, no spaces around commas, more than one
+    # segment), pick :csv_list so the UI surfaces element-wise operators
+    # that won't false-positive ("brand" matching "brand_account"). Fall
+    # back to :string.
     def infer_type(values)
       non_null = values.reject(&:nil?)
-      return :string if non_null.empty?
-      return :array  if non_null.any? { |v| v.is_a?(Array) }
+      return :string  if non_null.empty?
+      return :array   if non_null.any? { |v| v.is_a?(Array) }
       return :boolean if non_null.all? { |v| v == true || v == false }
       return :number  if non_null.all? { |v| v.is_a?(Numeric) }
+      return :csv_list if non_null.all? { |v| csv_shaped?(v) }
       :string
+    end
+
+    # A value is "CSV-shaped" if it's a string with 2+ non-empty segments
+    # split on comma, and the segments don't have surrounding whitespace
+    # (which would suggest natural language like "Hello, world").
+    def csv_shaped?(value)
+      return false unless value.is_a?(String) && value.include?(",")
+      segments = value.split(",")
+      return false if segments.length < 2
+      segments.all? { |s| s.length.positive? && s == s.strip }
     end
   end
 end

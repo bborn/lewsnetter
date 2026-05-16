@@ -75,6 +75,7 @@ if defined?(Api::V1::ApplicationController)
         begin
           row = JSON.parse(line).deep_symbolize_keys
           row[:custom_attributes] = row.delete(:attributes) if row.key?(:attributes)
+          row[:custom_attributes] = ::Subscribers::AttributeNormalizer.call(row[:custom_attributes]) if row[:custom_attributes].present?
 
           if row[:external_id].present? && (existing = @team.subscribers.find_by(external_id: row[:external_id]))
             existing.update!(row.slice(:email, :name, :subscribed, :custom_attributes))
@@ -129,6 +130,10 @@ if defined?(Api::V1::ApplicationController)
         # `attributes` as an instance method name.
         if params[:subscriber].respond_to?(:key?) && params[:subscriber].key?(:attributes)
           strong_params[:custom_attributes] = params[:subscriber][:attributes].permit!.to_h
+        end
+
+        if strong_params[:custom_attributes].present?
+          strong_params[:custom_attributes] = ::Subscribers::AttributeNormalizer.call(strong_params[:custom_attributes])
         end
 
         process_params(strong_params)

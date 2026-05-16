@@ -162,6 +162,35 @@ module Segments
       assert_includes typed_rule("custom_attributes.tabs_enabled", :array, "is_not_set", nil), "json_array_length"
     end
 
+    # ── csv_list type (anchored substring matching) ────────────────────────
+
+    test "csv_list contains uses anchored commas to prevent prefix collisions" do
+      # The exact prod-data shape: tabs_enabled = "billing,brand_account,..."
+      # Naive substring "contains brand" would match brand_account; anchored
+      # matching with surrounding commas does NOT.
+      sql = typed_rule("custom_attributes.tabs_enabled", :csv_list, "contains", "brand")
+      assert_includes sql, "',' || COALESCE(json_extract"
+      assert_includes sql, "LIKE '%,brand,%'"
+    end
+
+    test "csv_list not_contains is NULL-permissive" do
+      sql = typed_rule("custom_attributes.tabs_enabled", :csv_list, "not_contains", "brand")
+      assert_includes sql, "IS NULL"
+      assert_includes sql, "NOT LIKE '%,brand,%'"
+    end
+
+    test "csv_list end-to-end: 'contains brand' does not match brand_account" do
+      @team.subscribers.create!(email: "brand-only@example.com", external_id: "co",
+        subscribed: true, custom_attributes: {"tabs_enabled" => "brand_account,reports"})
+      @team.subscribers.create!(email: "real-brand@example.com", external_id: "rb",
+        subscribed: true, custom_attributes: {"tabs_enabled" => "brand,reports"})
+
+      sql = typed_rule("custom_attributes.tabs_enabled", :csv_list, "contains", "brand")
+      emails = @team.subscribers.where(sql).pluck(:email)
+      refute_includes emails, "brand-only@example.com"
+      assert_includes emails, "real-brand@example.com"
+    end
+
     # ── custom attributes ──────────────────────────────────────────────────
 
     test "custom_attributes resolves via json_extract" do

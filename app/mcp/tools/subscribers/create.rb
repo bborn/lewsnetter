@@ -23,6 +23,7 @@ module Mcp
 
         def call(arguments:, context:)
           attrs = arguments.slice("email", "name", "external_id", "subscribed", "custom_attributes")
+          attrs["custom_attributes"] = ::Subscribers::AttributeNormalizer.call(attrs["custom_attributes"]) if attrs["custom_attributes"].present?
           existing = if attrs["external_id"].present?
             context.team.subscribers.find_by(external_id: attrs["external_id"])
           end

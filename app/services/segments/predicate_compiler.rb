@@ -61,7 +61,11 @@ module Segments
       boolean:  %w[equals],
       datetime: %w[before after within_last_days more_than_days_ago is_set is_not_set],
       number:   %w[equals not_equals less_than greater_than less_than_or_equal greater_than_or_equal between is_set is_not_set],
-      array:    %w[contains not_contains is_set is_not_set]
+      array:    %w[contains not_contains is_set is_not_set],
+      # csv_list is for comma-separated string values like
+      # "billing,brand_account,influencer_hub". Anchored matching prevents
+      # "brand" from accidentally matching "brand_account".
+      csv_list: %w[contains not_contains is_set is_not_set]
     }.freeze
 
     SAFE_KEY = /\A[A-Za-z0-9_\-]+\z/
@@ -203,6 +207,24 @@ module Segments
         "#{field} IS NOT NULL"
       when [:number, "is_not_set"]
         "#{field} IS NULL"
+
+      # ── csv_list (anchored substring on comma-separated strings) ─────────
+      # Wraps the field in commas before matching so "brand" can't match
+      # "brand_account". NULL-permissive on not_contains.
+      when [:csv_list, "contains"]
+        sanitize(
+          "(',' || COALESCE(#{field}, '') || ',') LIKE ?",
+          "%,#{escape_like(raw_value.to_s)},%"
+        )
+      when [:csv_list, "not_contains"]
+        sanitize(
+          "(#{field} IS NULL OR (',' || #{field} || ',') NOT LIKE ?)",
+          "%,#{escape_like(raw_value.to_s)},%"
+        )
+      when [:csv_list, "is_set"]
+        "(#{field} IS NOT NULL AND #{field} != '')"
+      when [:csv_list, "is_not_set"]
+        "(#{field} IS NULL OR #{field} = '')"
 
       # ── array (element-wise via json_each) ───────────────────────────────
       when [:array, "contains"]
