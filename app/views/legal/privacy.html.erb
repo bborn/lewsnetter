@@ -1,0 +1,107 @@
+<% content_for :title, "Privacy Policy · #{@company_name}" %>
+<%= render "chrome", title: "Privacy Policy", eyebrow: "Legal" do %>
+
+<p>
+  This Privacy Policy describes what data <%= @company_name %> ("we," "us") collects when you use our email-marketing service ("Lewsnetter"), why we collect it, how it's stored, and what rights you have over it. It applies to both account holders ("you," "customers") and your end recipients ("subscribers").
+</p>
+
+<h2>1. Roles under data-protection law</h2>
+<p>
+  When you upload your subscriber list to Lewsnetter, <strong>you are the data controller</strong> and <strong>Lewsnetter is the data processor</strong> under GDPR, CCPA, and equivalent regimes. You decide who is in your audience and why; we process that data only to deliver the email service you've configured. Our processing obligations are governed by our <a href="/dpa">Data Processing Agreement</a>.
+</p>
+
+<h2>2. What we collect</h2>
+
+<h3>2.1 Account data (you, the customer)</h3>
+<ul>
+  <li>Email address, name, and password (hashed)</li>
+  <li>Team name + your role within it</li>
+  <li>Your Amazon SES credentials, encrypted at rest with Rails ActiveRecord Encryption</li>
+  <li>OAuth application credentials you create for API/MCP access</li>
+  <li>Standard request logs (IP address, user agent, timestamp) for ~30 days</li>
+</ul>
+
+<h3>2.2 Subscriber data (your audience)</h3>
+<ul>
+  <li><strong>Email address</strong> — encrypted at rest (AES-GCM via Rails ActiveRecord Encryption, deterministic mode so we can still de-duplicate)</li>
+  <li><strong>Name</strong> — encrypted at rest (non-deterministic)</li>
+  <li><strong>External ID</strong> — your source-app's identifier for the subscriber (plaintext, used for idempotent upserts)</li>
+  <li><strong>Custom attributes</strong> — whatever metadata you push (plan tier, tenant type, tags, etc.). Stored as JSON in your team's row, not encrypted at the column level so we can run segmentation queries on them. Filesystem-encrypted via Hetzner volume + Cloudflare R2 server-side encryption.</li>
+  <li>Subscription status, opt-in/opt-out timestamps, bounce/complaint timestamps</li>
+  <li>"Last contacted" and "times contacted" counters bumped on each campaign send</li>
+</ul>
+
+<h3>2.3 Campaign content</h3>
+<p>
+  Subject lines, MJML/HTML/Markdown body, attachments. Stored alongside your team's data and rendered per-recipient at send time. We do not retain a copy of the rendered message after handoff to your SES account.
+</p>
+
+<h2>3. Where data lives</h2>
+<ul>
+  <li><strong>Primary database</strong>: SQLite on a Hetzner Cloud server (CPX21 in Ashburn, VA, USA). Disk encryption at the Hetzner volume level.</li>
+  <li><strong>Backups</strong>: Litestream streams SQLite WAL segments to Cloudflare R2, encrypted in transit (TLS) and at rest (R2 server-side encryption).</li>
+  <li><strong>Outbound mail</strong>: When you configure SES credentials, the actual send happens from your own Amazon SES account in the AWS region you specify. <strong>Lewsnetter does not retain a copy of the rendered email after dispatch.</strong> AWS is your sub-processor for delivery, not ours.</li>
+</ul>
+
+<h2>4. Sub-processors</h2>
+<table>
+  <thead><tr><th>Sub-processor</th><th>Purpose</th><th>Location</th></tr></thead>
+  <tbody>
+    <tr><td>Hetzner Online GmbH</td><td>Application hosting + primary database</td><td>USA (Ashburn, VA)</td></tr>
+    <tr><td>Cloudflare, Inc.</td><td>DNS, TLS termination, R2 backup storage</td><td>Global edge</td></tr>
+    <tr><td>GitHub, Inc.</td><td>Container registry (GHCR) for deploy images</td><td>USA</td></tr>
+  </tbody>
+</table>
+<p>
+  When you configure your own AWS SES credentials, <strong>Amazon Web Services</strong> becomes your sub-processor (not ours) for the outbound email leg.
+</p>
+
+<h2>5. How long we keep data</h2>
+<ul>
+  <li>Subscribers: retained indefinitely while you keep them in your audience. Deleted permanently when you call <code>DELETE /api/v1/teams/:slug/subscribers/by_external_id/:id</code>, when you delete the team, or when you cancel your account.</li>
+  <li>Campaign records + send statistics: retained for the lifetime of your account.</li>
+  <li>Request logs: 30 days, then purged.</li>
+  <li>Backup snapshots: 7 days of WAL history on R2.</li>
+</ul>
+
+<h2>6. Your rights (and your subscribers' rights)</h2>
+<p>
+  You can:
+</p>
+<ul>
+  <li><strong>Access</strong> any subscriber's data via the API or the Account UI.</li>
+  <li><strong>Update</strong> any subscriber's record at any time.</li>
+  <li><strong>Delete</strong> any subscriber permanently via the API (GDPR right to erasure). Deletion is immediate; the row is destroyed within ~5 seconds of the API call returning 200.</li>
+  <li><strong>Export</strong> your full subscriber list via <code>GET /api/v1/teams/:slug/subscribers</code>.</li>
+</ul>
+<p>
+  Your subscribers can unsubscribe via the one-click unsubscribe link footer on every campaign (RFC 8058 compliant). Unsubscribed subscribers are not deleted; their subscription state flips to false and they're excluded from future sends.
+</p>
+
+<h2>7. Security</h2>
+<ul>
+  <li>TLS 1.2+ on every connection (Cloudflare Full Strict mode)</li>
+  <li>Subscriber email + name encrypted at rest with AES-GCM</li>
+  <li>Customer's SES credentials encrypted at rest with the same scheme</li>
+  <li>Database backups encrypted in transit + at rest</li>
+  <li>Production access limited to maintainers</li>
+  <li>Dependencies monitored via GitHub Dependabot</li>
+</ul>
+
+<h2>8. Children</h2>
+<p>
+  Lewsnetter is not directed at children under 16, and we do not knowingly collect data from them. If you believe a subscriber's data falls under children's-privacy rules in your jurisdiction, you must obtain appropriate consent before pushing it to us.
+</p>
+
+<h2>9. Changes</h2>
+<p>
+  We will update this policy if our practices change. Material changes will be announced via email to account holders + the date at the top of this page will reflect the update.
+</p>
+
+<h2>10. Contact</h2>
+<p>
+  Privacy questions, deletion requests, sub-processor concerns: <a href="mailto:<%= @contact_email %>"><%= @contact_email %></a>.<br>
+  Abuse / spam reports: <a href="mailto:<%= @abuse_email %>"><%= @abuse_email %></a>.
+</p>
+
+<% end %>

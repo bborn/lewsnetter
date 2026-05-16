@@ -1,0 +1,27 @@
+<%# Shared chrome for legal pages — narrow column, generous whitespace,
+    Geist body, Mono caps for headings/eyebrows. Yields a block for the
+    page body. %>
+<div class="min-h-screen bg-white dark:bg-zinc-950">
+  <div class="max-w-3xl mx-auto px-6 py-16">
+    <div class="text-[10px] uppercase tracking-widest font-mono text-zinc-500 dark:text-zinc-400 mb-3">
+      <%= eyebrow %>
+    </div>
+    <h1 class="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 mb-2">
+      <%= title %>
+    </h1>
+    <p class="text-xs font-mono text-zinc-500 dark:text-zinc-400 mb-10">
+      Last updated <%= @last_updated %>
+    </p>
+    <article class="prose prose-zinc dark:prose-invert max-w-none
+                    prose-h2:text-xl prose-h2:font-semibold prose-h2:tracking-tight prose-h2:mt-10
+                    prose-h3:text-base prose-h3:font-semibold prose-h3:mt-6
+                    prose-p:text-zinc-700 dark:prose-p:text-zinc-200 prose-p:leading-relaxed
+                    prose-code:bg-zinc-100 dark:prose-code:bg-zinc-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:font-mono prose-code:text-[13px] prose-code:font-normal
+                    prose-a:text-orange-700 dark:prose-a:text-orange-400 prose-a:no-underline hover:prose-a:underline">
+      <%= yield %>
+    </article>
+    <div class="mt-16 pt-6 border-t border-zinc-200 dark:border-zinc-800 text-xs text-zinc-500 dark:text-zinc-400 font-mono">
+      Questions? <a href="mailto:<%= @contact_email %>" class="text-orange-700 dark:text-orange-400 hover:underline"><%= @contact_email %></a>
+    </div>
+  </div>
+</div>

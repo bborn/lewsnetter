@@ -1,0 +1,89 @@
+<% content_for :title, "Terms of Service · #{@company_name}" %>
+<%= render "chrome", title: "Terms of Service", eyebrow: "Legal" do %>
+
+<p>
+  These Terms govern your use of Lewsnetter ("the Service"). By creating an account or using the Service you agree to them. If you don't agree, don't use the Service.
+</p>
+
+<h2>1. The Service</h2>
+<p>
+  Lewsnetter is a self-serve email marketing platform: you upload an audience, compose campaigns, and the Service renders + dispatches each message through your own Amazon SES account. You are responsible for your AWS bill, your sending reputation, and your compliance with anti-spam law.
+</p>
+
+<h2>2. Eligibility + accounts</h2>
+<ul>
+  <li>You must be 18 or older + legally able to enter contracts.</li>
+  <li>One account per person; share via team invitations, not credentials.</li>
+  <li>You're responsible for activity under your account, including misuse by anyone you share access with.</li>
+  <li>Keep your password and API tokens confidential. Revoke leaked tokens immediately via the developer settings page.</li>
+</ul>
+
+<h2>3. Acceptable use</h2>
+<p>
+  Your use must comply with our <a href="/acceptable-use">Acceptable Use Policy</a>, which is incorporated by reference. The short version: no spam, no phishing, no purchased lists, no opt-in violations, no illegal content. We may suspend or terminate accounts that violate the AUP without prior notice.
+</p>
+
+<h2>4. Your data + your subscribers' data</h2>
+<p>
+  You retain all rights to the subscriber data you push to Lewsnetter. We process it on your behalf as described in our <a href="/privacy">Privacy Policy</a> and <a href="/dpa">Data Processing Agreement</a>. You represent + warrant that you have a lawful basis to process every subscriber record you upload — including consent where required.
+</p>
+<p>
+  You can export or delete your data at any time via the API. After account closure we delete your data within 30 days; backup retention may keep encrypted copies for up to 7 additional days before they age out.
+</p>
+
+<h2>5. Fees</h2>
+<p>
+  The Service is currently offered free during a public beta period. We reserve the right to introduce paid plans in the future with at least 30 days' notice. You will never be auto-charged without explicitly opting in.
+</p>
+
+<h2>6. Service availability</h2>
+<p>
+  We make a good-faith effort to keep the Service available 24/7, but provide no uptime guarantee during the beta period. Scheduled maintenance + unexpected outages may occur. Your campaigns + data persist across outages; sends in progress at the time of an outage may be delayed or fail.
+</p>
+
+<h2>7. Sending limits + reputation</h2>
+<p>
+  Lewsnetter dispatches through your own AWS SES account, so your sending quota is controlled by AWS, not us. We may impose additional rate limits on the API or campaign-send endpoints to protect the shared infrastructure. We reserve the right to refuse a send that we believe violates the AUP or threatens our infrastructure's stability.
+</p>
+
+<h2>8. Third-party services</h2>
+<p>
+  Lewsnetter integrates with AWS SES (your account), Cloudflare (DNS + storage), and other services listed in the Privacy Policy. We're not responsible for outages, data loss, or policy changes at those providers.
+</p>
+
+<h2>9. Intellectual property</h2>
+<p>
+  Lewsnetter is open source under the MIT license — see the public repository for terms. The hosted Service, brand, and infrastructure remain the property of <%= @company_name %>.
+</p>
+
+<h2>10. Termination</h2>
+<p>
+  You can terminate by deleting your account from the team settings page. We can terminate or suspend your account for violating these Terms or the AUP. On termination, your data is deleted as described in Section 4.
+</p>
+
+<h2>11. Warranties + liability</h2>
+<p>
+  THE SERVICE IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED. To the maximum extent permitted by law, <%= @company_name %>'s aggregate liability for any claim arising from your use of the Service is limited to the fees you've paid us in the prior 12 months (i.e., zero during the free beta). We're not liable for indirect, consequential, or incidental damages including lost revenue or data.
+</p>
+
+<h2>12. Indemnification</h2>
+<p>
+  You agree to indemnify and hold <%= @company_name %> harmless from any claim arising out of (a) your violation of these Terms or the AUP, (b) your violation of any third-party right including data-protection law, or (c) content you sent via the Service.
+</p>
+
+<h2>13. Governing law + disputes</h2>
+<p>
+  These Terms are governed by the laws of the State of Minnesota, USA, without regard to conflicts-of-law principles. Any dispute will be resolved in the state or federal courts located in Hennepin County, Minnesota.
+</p>
+
+<h2>14. Changes</h2>
+<p>
+  We may update these Terms. Material changes will be emailed to account holders at least 14 days before taking effect. Continued use after that date constitutes acceptance.
+</p>
+
+<h2>15. Contact</h2>
+<p>
+  Legal: <a href="mailto:<%= @contact_email %>"><%= @contact_email %></a>.
+</p>
+
+<% end %>

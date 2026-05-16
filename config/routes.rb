@@ -23,6 +23,13 @@ Rails.application.routes.draw do
   get "/unsubscribe/:token", to: "unsubscribe#update", as: :unsubscribe
   post "/unsubscribe/:token", to: "unsubscribe#update"
 
+  # Public legal pages. Mounted at the top level so they're reachable
+  # without auth + linkable from the landing-page footer.
+  get "/privacy",        to: "legal#privacy",        as: :privacy
+  get "/terms",          to: "legal#terms",          as: :terms
+  get "/dpa",            to: "legal#dpa",            as: :dpa
+  get "/acceptable-use", to: "legal#acceptable_use", as: :acceptable_use
+
   # Public SNS webhook for SES bounce + complaint notifications. Mounted
   # BEFORE the BulletTrain engines so SNS can hit it without auth. Each
   # tenant points their SNS topic at this URL; routing back to the right

@@ -1,0 +1,105 @@
+<% content_for :title, "Data Processing Agreement · #{@company_name}" %>
+<%= render "chrome", title: "Data Processing Agreement", eyebrow: "Legal" do %>
+
+<p>
+  This Data Processing Agreement ("DPA") is part of the agreement between <%= @company_name %> ("Processor," "we") and you ("Controller," "Customer") governing your use of Lewsnetter. It describes how we process subscriber personal data on your behalf in compliance with GDPR, the UK GDPR, and equivalent regimes.
+</p>
+<p>
+  By using Lewsnetter, you accept this DPA. If your organization requires a signed copy, email <a href="mailto:<%= @contact_email %>"><%= @contact_email %></a> — we'll counter-sign your template or provide ours.
+</p>
+
+<h2>1. Roles</h2>
+<ul>
+  <li><strong>Controller</strong>: you. You determine the purpose + means of processing your subscriber data.</li>
+  <li><strong>Processor</strong>: us. We process the data solely on your instructions, as configured through the Service.</li>
+</ul>
+
+<h2>2. Subject matter + duration</h2>
+<p>
+  We process your subscriber data for the purpose of providing the email-marketing Service: storing audience records, rendering campaigns, dispatching email through your own AWS SES account, and tracking delivery + engagement metrics. Processing lasts for the duration of your account.
+</p>
+
+<h2>3. Nature + categories of data</h2>
+<ul>
+  <li><strong>Data subjects</strong>: the end recipients of your campaigns (your subscribers).</li>
+  <li><strong>Categories of personal data</strong>: email address (encrypted at rest), name (encrypted at rest), external ID, custom attributes you choose to push, subscription state, opt-in/opt-out timestamps, bounce/complaint timestamps, send + engagement counters.</li>
+  <li><strong>Special categories</strong>: none, unless you choose to push them via custom_attributes — which you should not do without explicit consent + a lawful basis.</li>
+</ul>
+
+<h2>4. Our obligations as Processor</h2>
+<p>
+  We will:
+</p>
+<ul>
+  <li>Process personal data only on your documented instructions, including transfers outside your jurisdiction.</li>
+  <li>Ensure personnel authorized to process the data are under confidentiality obligations.</li>
+  <li>Maintain the security measures listed in Section 7.</li>
+  <li>Engage sub-processors only with general authorization; notify you at least 14 days before adding a new sub-processor (you can object via email).</li>
+  <li>Assist you in responding to data-subject requests (access, deletion, etc.).</li>
+  <li>Notify you of any personal-data breach without undue delay (target: 72 hours).</li>
+  <li>Return or delete all personal data after termination of the Service, except as required by law.</li>
+  <li>Make available all information necessary to demonstrate compliance + allow audits (see Section 9).</li>
+</ul>
+
+<h2>5. Your obligations as Controller</h2>
+<ul>
+  <li>You have a lawful basis (consent, contract, legitimate interest) for every subscriber record you upload.</li>
+  <li>You provide subscribers with a privacy notice that covers Lewsnetter's role.</li>
+  <li>You respond to data-subject requests directed at you; we will assist for requests directed at us.</li>
+  <li>You configure data-deletion + retention through the API as your obligations require.</li>
+</ul>
+
+<h2>6. Sub-processors</h2>
+<table>
+  <thead><tr><th>Sub-processor</th><th>Purpose</th><th>Location</th></tr></thead>
+  <tbody>
+    <tr><td>Hetzner Online GmbH</td><td>Application hosting + primary database</td><td>USA (Ashburn, VA)</td></tr>
+    <tr><td>Cloudflare, Inc.</td><td>DNS, CDN, TLS termination, R2 backup storage</td><td>Global edge</td></tr>
+    <tr><td>GitHub, Inc.</td><td>Container registry for deployment images</td><td>USA</td></tr>
+  </tbody>
+</table>
+<p>
+  When you connect your own Amazon SES credentials, AWS becomes your sub-processor for the outbound email leg — not ours. We have no contractual relationship with AWS in that flow; you do.
+</p>
+
+<h2>7. Security measures</h2>
+<ul>
+  <li><strong>Encryption in transit</strong>: TLS 1.2+ on all connections, end-to-end via Cloudflare Full Strict mode.</li>
+  <li><strong>Encryption at rest</strong>: subscriber email + name encrypted with AES-GCM (Rails ActiveRecord Encryption); customer SES credentials encrypted with the same scheme; backups encrypted at rest in Cloudflare R2.</li>
+  <li><strong>Access control</strong>: production access limited to maintainers; SSH key-based; multi-factor on the cloud control planes.</li>
+  <li><strong>Logging</strong>: request logs retained 30 days; access logs for incident investigation.</li>
+  <li><strong>Vulnerability monitoring</strong>: GitHub Dependabot scans for known CVEs in dependencies.</li>
+  <li><strong>Backup integrity</strong>: Litestream streams the SQLite WAL to R2 continuously; on cold start the app restores from R2.</li>
+</ul>
+
+<h2>8. International transfers</h2>
+<p>
+  Primary processing happens in the USA. For Customers in the EU/UK, transfer to the USA relies on Standard Contractual Clauses, which we will execute on request.
+</p>
+
+<h2>9. Audits</h2>
+<p>
+  On reasonable notice + during business hours, you may audit our compliance with this DPA. We will respond to reasonable questionnaire requests in lieu of an on-site audit. The Customer covers audit costs unless material non-compliance is found.
+</p>
+
+<h2>10. Breach notification</h2>
+<p>
+  If we become aware of a personal-data breach affecting your data, we will notify you without undue delay (target: 72 hours) at the account holder's email. The notification will include: the nature of the breach, categories + approximate number of records affected, likely consequences, and measures taken or proposed to mitigate.
+</p>
+
+<h2>11. Liability + indemnity</h2>
+<p>
+  Liability under this DPA is governed by the Terms of Service. Nothing here creates additional liability beyond what's required by applicable data-protection law.
+</p>
+
+<h2>12. Term</h2>
+<p>
+  This DPA enters into force when you begin using the Service and continues until your account is terminated and your data is deleted in accordance with Section 4.
+</p>
+
+<h2>13. Contact</h2>
+<p>
+  Data Protection inquiries: <a href="mailto:<%= @contact_email %>"><%= @contact_email %></a>.
+</p>
+
+<% end %>

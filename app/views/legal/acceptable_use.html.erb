@@ -1,0 +1,98 @@
+<% content_for :title, "Acceptable Use · #{@company_name}" %>
+<%= render "chrome", title: "Acceptable Use Policy", eyebrow: "Legal" do %>
+
+<p>
+  This Acceptable Use Policy ("AUP") governs all sending through Lewsnetter. Violation is grounds for immediate account suspension or termination. It exists for two reasons: (1) to keep our platform off spam blocklists, and (2) because Amazon SES requires it of platforms that aggregate sender accounts.
+</p>
+
+<h2>1. You may not</h2>
+
+<h3>1.1 Send unsolicited bulk email (spam)</h3>
+<p>
+  Every recipient on your list must have explicitly opted in to receive email from you (the sender brand they recognize). Purchased lists, scraped lists, lists rented from other vendors, "list buying," append services, and "we found you on LinkedIn" are all forbidden. If you cannot point to the specific moment a person consented, you cannot send to them.
+</p>
+
+<h3>1.2 Use Lewsnetter for transactional spoofing</h3>
+<p>
+  Don't impersonate your bank, the IRS, Amazon, Microsoft, your recipient's HR department, or anyone else the recipient hasn't engaged with you as. Phishing is grounds for immediate termination + a referral to law enforcement.
+</p>
+
+<h3>1.3 Send the following content</h3>
+<ul>
+  <li>Malware, viruses, ransomware, or links to same</li>
+  <li>Content that violates intellectual-property rights you don't own</li>
+  <li>Content that's illegal in the recipient's jurisdiction</li>
+  <li>Pornography, sexually explicit content, or content soliciting same</li>
+  <li>Gambling promotions to recipients in jurisdictions where gambling is restricted</li>
+  <li>Pharmaceuticals, controlled substances, weapons, or related promotions to non-licensed parties</li>
+  <li>Multi-level marketing, "get rich quick," cryptocurrency pump-and-dump, financial scams</li>
+  <li>Harassment, threats, doxxing, hate speech, content inciting violence</li>
+  <li>Content that violates the AWS SES Acceptable Use Policy (which is binding on your SES account)</li>
+</ul>
+
+<h3>1.4 Violate anti-spam law</h3>
+<p>
+  Your sending must comply with all applicable laws including CAN-SPAM (USA), CASL (Canada), GDPR + ePrivacy (EU/UK), Australia's Spam Act, and equivalents. We don't enforce every rule for you — that's your job — but consistent violations or law-enforcement contact about your sending will result in termination.
+</p>
+
+<h3>1.5 Misuse the API or infrastructure</h3>
+<ul>
+  <li>Don't share API tokens publicly or commit them to git</li>
+  <li>Don't deliberately exceed rate limits</li>
+  <li>Don't reverse engineer, probe, or attack the Service</li>
+  <li>Don't use Lewsnetter to send for clients of yours who haven't signed our Terms (resale; talk to us first)</li>
+</ul>
+
+<h2>2. You must</h2>
+
+<h3>2.1 Honor unsubscribes immediately</h3>
+<p>
+  Every Lewsnetter campaign includes a one-click unsubscribe footer (RFC 8058 compliant). The unsubscribe action is processed in real-time; the subscriber's <code>subscribed</code> flag flips immediately and they're excluded from future sends. You cannot re-add an unsubscribed person without fresh opt-in.
+</p>
+
+<h3>2.2 Identify yourself accurately</h3>
+<p>
+  Your "From" address must represent a real sending entity, not a misleading impersonation. Your physical postal address must appear in the email body (CAN-SPAM requirement). Subject lines must accurately reflect the email's content.
+</p>
+
+<h3>2.3 Process bounces + complaints</h3>
+<p>
+  Lewsnetter receives AWS SES bounce and complaint notifications via SNS webhook + updates the subscriber's record. Don't try to re-send to addresses that have hard-bounced.
+</p>
+
+<h3>2.4 Keep your sending list current</h3>
+<p>
+  Stale lists (unmaintained for &gt;12 months) generate complaints + bounces that damage shared sending reputation. Re-engage or remove unengaged subscribers.
+</p>
+
+<h2>3. Reporting abuse</h2>
+<p>
+  If you've received spam, phishing, or other abuse through Lewsnetter, email <a href="mailto:<%= @abuse_email %>"><%= @abuse_email %></a> with the full message including headers. We investigate every report; legitimate complaints result in account suspension pending review.
+</p>
+
+<h2>4. Enforcement</h2>
+<p>
+  We may, without prior notice:
+</p>
+<ul>
+  <li>Suspend campaigns mid-send if we detect a violation</li>
+  <li>Disable your account pending investigation</li>
+  <li>Terminate your account for material or repeated violations</li>
+  <li>Cooperate with law enforcement where required</li>
+  <li>Disclose your account information to abuse complainants where required to honor unsubscribe / opt-out obligations</li>
+</ul>
+<p>
+  We give the benefit of the doubt to first-time complaints on small accounts; we move quickly on patterns suggesting deliberate abuse.
+</p>
+
+<h2>5. Disputes</h2>
+<p>
+  If you believe an enforcement action was taken in error, email <a href="mailto:<%= @contact_email %>"><%= @contact_email %></a> with your account email + a description of the situation. We aim to respond within 5 business days.
+</p>
+
+<h2>6. Changes</h2>
+<p>
+  We update this AUP as new abuse patterns emerge. The date at the top of this page reflects the most recent update.
+</p>
+
+<% end %>
