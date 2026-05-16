@@ -25,6 +25,12 @@ module Segments
   #   we never concatenate user strings into SQL directly.
   # - Operators are also enumerated; unknown ops raise.
   #
+  # NULL semantics for negative operators:
+  #   "not_contains", "not_equals", "array_not_contains" are NULL-permissive
+  #   (they include rows where the column is NULL / the JSON key is absent).
+  #   This matches Intercom / most segmentation tools: an attribute that
+  #   doesn't exist trivially "doesn't contain" or "doesn't equal" any value.
+  #
   # Returns nil when the tree compiles to no rules (so the caller can fall
   # through to "match everything" semantics or treat as empty as needed).
   class PredicateCompiler
@@ -49,9 +55,11 @@ module Segments
     # Per-type operator catalog. Each operator declares the SQL form and
     # whether it expects a value (some, like is_set, do not).
     OPERATORS = {
-      string: %w[equals not_equals contains not_contains starts_with ends_with is_set is_not_set in],
-      boolean: %w[equals],
-      datetime: %w[before after within_last_days more_than_days_ago is_set is_not_set]
+      string:   %w[equals not_equals contains not_contains starts_with ends_with is_set is_not_set in],
+      boolean:  %w[equals],
+      datetime: %w[before after within_last_days more_than_days_ago is_set is_not_set],
+      number:   %w[equals not_equals less_than greater_than less_than_or_equal greater_than_or_equal between is_set is_not_set],
+      array:    %w[contains not_contains is_set is_not_set]
     }.freeze
 
     SAFE_KEY = /\A[A-Za-z0-9_\-]+\z/
@@ -88,7 +96,7 @@ module Segments
     end
 
     def compile_rule(rule)
-      sql_field, value_type = resolve_field(rule["field"])
+      sql_field, value_type = resolve_field(rule["field"], rule["value_type"])
       operator = rule["operator"].to_s
       unless OPERATORS.fetch(value_type, []).include?(operator)
         raise InvalidTree, "operator #{operator.inspect} not allowed for #{value_type} field"
@@ -98,21 +106,29 @@ module Segments
 
     # Resolves a field key to a (sql_expression, value_type) pair.
     # Built-in fields are looked up in FIELDS. Custom-attribute keys are
-    # validated for safety and rendered via json_extract.
-    def resolve_field(key)
+    # validated for safety and rendered via json_extract. The optional
+    # `hint` arg lets the caller force a value-type for custom attributes
+    # (the UI sends this based on observed data so the same key can be
+    # filtered as :number, :array, or :string depending on what we saw).
+    def resolve_field(key, hint = nil)
       return [FIELDS[key][:sql], FIELDS[key][:type]] if FIELDS.key?(key)
 
       if (m = key.to_s.match(/\Acustom_attributes\.([\w\-]+)\z/))
         attr_key = m[1]
         raise InvalidTree, "unsafe custom attribute key" unless attr_key.match?(SAFE_KEY)
-        [%(json_extract(subscribers.custom_attributes, '$.#{attr_key}')), :string]
+        [%(json_extract(subscribers.custom_attributes, '$.#{attr_key}')), coerce_type(hint)]
       elsif (m = key.to_s.match(/\Acompany_attributes\.([\w\-]+)\z/))
         attr_key = m[1]
         raise InvalidTree, "unsafe company attribute key" unless attr_key.match?(SAFE_KEY)
-        [%(json_extract(companies.custom_attributes, '$.#{attr_key}')), :string]
+        [%(json_extract(companies.custom_attributes, '$.#{attr_key}')), coerce_type(hint)]
       else
         raise InvalidTree, "field #{key.inspect} is not whitelisted"
       end
+    end
+
+    def coerce_type(hint)
+      sym = hint.to_s.to_sym
+      OPERATORS.key?(sym) ? sym : :string
     end
 
     # rubocop:disable Metrics/CyclomaticComplexity, Metrics/MethodLength
@@ -122,11 +138,13 @@ module Segments
       when [:string, "equals"]
         sanitize("#{field} = ?", raw_value.to_s)
       when [:string, "not_equals"]
-        sanitize("#{field} != ?", raw_value.to_s)
+        # NULL-permissive: rows where the column is NULL also "don't equal" X.
+        sanitize("(#{field} IS NULL OR #{field} != ?)", raw_value.to_s)
       when [:string, "contains"]
         sanitize("#{field} LIKE ?", "%#{escape_like(raw_value.to_s)}%")
       when [:string, "not_contains"]
-        sanitize("#{field} NOT LIKE ?", "%#{escape_like(raw_value.to_s)}%")
+        # NULL-permissive — a missing JSON key trivially doesn't contain X.
+        sanitize("(#{field} IS NULL OR #{field} NOT LIKE ?)", "%#{escape_like(raw_value.to_s)}%")
       when [:string, "starts_with"]
         sanitize("#{field} LIKE ?", "#{escape_like(raw_value.to_s)}%")
       when [:string, "ends_with"]
@@ -162,6 +180,46 @@ module Segments
       when [:datetime, "is_not_set"]
         "#{field} IS NULL"
 
+      # ── number ───────────────────────────────────────────────────────────
+      when [:number, "equals"]
+        sanitize("CAST(#{field} AS REAL) = ?", parse_number(raw_value))
+      when [:number, "not_equals"]
+        sanitize("(#{field} IS NULL OR CAST(#{field} AS REAL) != ?)", parse_number(raw_value))
+      when [:number, "less_than"]
+        sanitize("CAST(#{field} AS REAL) < ?", parse_number(raw_value))
+      when [:number, "greater_than"]
+        sanitize("CAST(#{field} AS REAL) > ?", parse_number(raw_value))
+      when [:number, "less_than_or_equal"]
+        sanitize("CAST(#{field} AS REAL) <= ?", parse_number(raw_value))
+      when [:number, "greater_than_or_equal"]
+        sanitize("CAST(#{field} AS REAL) >= ?", parse_number(raw_value))
+      when [:number, "between"]
+        lo, hi = Array(raw_value).first(2).map { |v| parse_number(v) }
+        raise InvalidTree, "between needs two values" unless lo && hi
+        sanitize("CAST(#{field} AS REAL) BETWEEN ? AND ?", lo, hi)
+      when [:number, "is_set"]
+        "#{field} IS NOT NULL"
+      when [:number, "is_not_set"]
+        "#{field} IS NULL"
+
+      # ── array (element-wise via json_each) ───────────────────────────────
+      when [:array, "contains"]
+        sanitize(
+          "EXISTS (SELECT 1 FROM json_each(#{field}) WHERE value = ?)",
+          raw_value.to_s
+        )
+      when [:array, "not_contains"]
+        # NULL-permissive — a missing array trivially doesn't contain X.
+        sanitize(
+          "(#{field} IS NULL OR NOT EXISTS (SELECT 1 FROM json_each(#{field}) WHERE value = ?))",
+          raw_value.to_s
+        )
+      when [:array, "is_set"]
+        # An "empty array" counts as not set, consistent with Intercom.
+        "(#{field} IS NOT NULL AND json_array_length(#{field}) > 0)"
+      when [:array, "is_not_set"]
+        "(#{field} IS NULL OR json_array_length(#{field}) = 0)"
+
       else
         raise InvalidTree, "unhandled (#{type}, #{op}) combo"
       end
@@ -179,6 +237,12 @@ module Segments
     def parse_time(value)
       return value if value.is_a?(Time) || value.is_a?(DateTime)
       Time.zone.parse(value.to_s) || raise(InvalidTree, "bad datetime #{value.inspect}")
+    end
+
+    def parse_number(value)
+      Float(value)
+    rescue ArgumentError, TypeError
+      raise InvalidTree, "bad number #{value.inspect}"
     end
   end
 end

@@ -65,16 +65,33 @@ module Segments
 
     # ── operator coverage ──────────────────────────────────────────────────
 
-    test "string equals / not_equals" do
-      assert_equal "(subscribers.name = 'Alice')",  rule("subscribers.name", "equals", "Alice")
-      assert_equal "(subscribers.name != 'Alice')", rule("subscribers.name", "not_equals", "Alice")
+    test "string equals / not_equals (not_equals is NULL-permissive)" do
+      assert_equal "(subscribers.name = 'Alice')", rule("subscribers.name", "equals", "Alice")
+      # not_equals matches rows where the column is NULL too — consistent with
+      # Intercom-style "is not Alice" semantics (a missing value trivially is
+      # not Alice). Otherwise NULL rows would be silently excluded.
+      assert_equal "((subscribers.name IS NULL OR subscribers.name != 'Alice'))",
+        rule("subscribers.name", "not_equals", "Alice")
     end
 
     test "string starts_with / ends_with / contains / not_contains" do
       assert_includes rule("subscribers.email", "starts_with", "alice"), "LIKE 'alice%'"
       assert_includes rule("subscribers.email", "ends_with", ".com"),   "LIKE '%.com'"
       assert_includes rule("subscribers.email", "contains", "@"),       "LIKE '%@%'"
-      assert_includes rule("subscribers.email", "not_contains", "@"),   "NOT LIKE '%@%'"
+      # NULL-permissive negative: row where email is NULL passes "doesn't
+      # contain @" too. The user's bug on prod: tabs_enabled not_contains
+      # 'brand' should include rows where tabs_enabled is missing entirely.
+      sql = rule("subscribers.email", "not_contains", "@")
+      assert_includes sql, "subscribers.email IS NULL"
+      assert_includes sql, "NOT LIKE '%@%'"
+    end
+
+    test "custom_attributes not_contains is NULL-permissive (the prod bug)" do
+      # Regression: not_contains used to silently drop rows where the JSON
+      # key was absent (NULL NOT LIKE evaluates to NULL → excluded).
+      sql = rule("custom_attributes.tabs_enabled", "not_contains", "brand")
+      assert_includes sql, "json_extract(subscribers.custom_attributes, '$.tabs_enabled') IS NULL"
+      assert_includes sql, "NOT LIKE '%brand%'"
     end
 
     test "string is_set / is_not_set" do
@@ -102,6 +119,47 @@ module Segments
       assert_equal "(subscribers.subscribed = 0)", rule("subscribers.subscribed", "equals", false)
       assert_equal "(subscribers.subscribed = 1)", rule("subscribers.subscribed", "equals", "true")
       assert_equal "(subscribers.subscribed = 0)", rule("subscribers.subscribed", "equals", "false")
+    end
+
+    # ── number type (Intercom-style numeric comparisons) ───────────────────
+
+    test "number equals / not_equals / less_than / greater_than" do
+      assert_includes typed_rule("custom_attributes.score", :number, "equals", 42),       "CAST(json_extract(subscribers.custom_attributes, '$.score') AS REAL) = 42.0"
+      assert_includes typed_rule("custom_attributes.score", :number, "less_than", 10),    "< 10.0"
+      assert_includes typed_rule("custom_attributes.score", :number, "greater_than", 99), "> 99.0"
+      # not_equals is NULL-permissive (consistent with strings).
+      sql = typed_rule("custom_attributes.score", :number, "not_equals", 0)
+      assert_includes sql, "IS NULL"
+      assert_includes sql, "!= 0.0"
+    end
+
+    test "number between expects [lo, hi]" do
+      sql = typed_rule("custom_attributes.score", :number, "between", [10, 90])
+      assert_includes sql, "BETWEEN 10.0 AND 90.0"
+    end
+
+    test "number rejects non-numeric values" do
+      assert_raises(PredicateCompiler::InvalidTree) do
+        typed_rule("custom_attributes.score", :number, "equals", "not-a-number")
+      end
+    end
+
+    # ── array type (element-wise membership) ───────────────────────────────
+
+    test "array contains uses json_each for element matching" do
+      sql = typed_rule("custom_attributes.tabs_enabled", :array, "contains", "brand")
+      assert_includes sql, "EXISTS (SELECT 1 FROM json_each(json_extract(subscribers.custom_attributes, '$.tabs_enabled')) WHERE value = 'brand')"
+    end
+
+    test "array not_contains is NULL-permissive + uses NOT EXISTS" do
+      sql = typed_rule("custom_attributes.tabs_enabled", :array, "not_contains", "brand")
+      assert_includes sql, "json_extract(subscribers.custom_attributes, '$.tabs_enabled') IS NULL"
+      assert_includes sql, "NOT EXISTS"
+    end
+
+    test "array is_set treats empty array as 'not set'" do
+      assert_includes typed_rule("custom_attributes.tabs_enabled", :array, "is_set",     nil), "json_array_length"
+      assert_includes typed_rule("custom_attributes.tabs_enabled", :array, "is_not_set", nil), "json_array_length"
     end
 
     # ── custom attributes ──────────────────────────────────────────────────
@@ -210,6 +268,25 @@ module Segments
       assert_equal "a@acme.com", result.first.email
     end
 
+    # Round-trip: real subscribers, array-valued tabs_enabled,
+    # not_contains must include the row with no tabs_enabled at all.
+    test "array not_contains matches subscribers missing the key (prod bug)" do
+      @team.subscribers.create!(email: "all-tabs@example.com", external_id: "a",
+        subscribed: true, custom_attributes: {"tabs_enabled" => ["brand", "manager"]})
+      @team.subscribers.create!(email: "manager-only@example.com", external_id: "m",
+        subscribed: true, custom_attributes: {"tabs_enabled" => ["manager"]})
+      @team.subscribers.create!(email: "no-attrs@example.com", external_id: "n",
+        subscribed: true, custom_attributes: {})
+
+      sql = typed_rule("custom_attributes.tabs_enabled", :array, "not_contains", "brand")
+      emails = @team.subscribers.where(sql).pluck(:email)
+      # The "all-tabs" row must be excluded; both manager-only and no-attrs
+      # must be included.
+      refute_includes emails, "all-tabs@example.com"
+      assert_includes emails, "manager-only@example.com"
+      assert_includes emails, "no-attrs@example.com"
+    end
+
     private
 
     def compile(tree)
@@ -221,6 +298,16 @@ module Segments
       compile({
         "type" => "group", "combinator" => "and",
         "rules" => [{"type" => "rule", "field" => field, "operator" => operator, "value" => value}]
+      })
+    end
+
+    # Same as `rule`, plus a value_type hint (required for non-string custom
+    # attributes — without it the compiler defaults to :string).
+    def typed_rule(field, value_type, operator, value)
+      compile({
+        "type" => "group", "combinator" => "and",
+        "rules" => [{"type" => "rule", "field" => field, "value_type" => value_type.to_s,
+                     "operator" => operator, "value" => value}]
       })
     end
   end

@@ -67,6 +67,7 @@ export default class extends Controller {
     return {
       type: "rule",
       field: first ? first.key : "subscribers.email",
+      value_type: type,   // shipped to server; needed for custom_attributes
       operator: this.defaultOperatorFor(type),
       value: this.defaultValueFor(type)
     }
@@ -140,6 +141,7 @@ export default class extends Controller {
     // Reset operator + value when the field changes (the new field may have
     // a different value type).
     const type = this.typeForField(rule.field)
+    rule.value_type = type
     rule.operator = this.defaultOperatorFor(type)
     rule.value = this.defaultValueFor(type)
     this.commit()
@@ -390,7 +392,38 @@ export default class extends Controller {
       }
       return `<input type="datetime-local" value="${this.escape(rule.value || "")}" ${common}>`
     }
+    if (type === "number") {
+      if (rule.operator === "between") {
+        const [lo = "", hi = ""] = Array.isArray(rule.value) ? rule.value : [rule.value, ""]
+        return `
+          <input type="number" placeholder="min" value="${this.escape(lo)}"
+                 data-action="input->segments-builder#changeBetween change->segments-builder#changeBetween"
+                 data-segments-builder-path-param='${pathStr}'
+                 data-segments-builder-bound-param="lo"
+                 class="border border-zinc-200 rounded px-2 py-1 text-sm bg-white focus:border-orange-600 focus:ring-0 flex-1 min-w-[6rem]">
+          <input type="number" placeholder="max" value="${this.escape(hi)}"
+                 data-action="input->segments-builder#changeBetween change->segments-builder#changeBetween"
+                 data-segments-builder-path-param='${pathStr}'
+                 data-segments-builder-bound-param="hi"
+                 class="border border-zinc-200 rounded px-2 py-1 text-sm bg-white focus:border-orange-600 focus:ring-0 flex-1 min-w-[6rem]">`
+      }
+      return `<input type="number" value="${this.escape(rule.value ?? "")}" placeholder="number" ${common}>`
+    }
+    // :array — single value being tested for element membership. Future:
+    // could swap for a Tom Select that suggests values from observed samples.
     return `<input type="text" value="${this.escape(rule.value || "")}" placeholder="value" ${common}>`
+  }
+
+  // Two-input handler for the number `between` operator. Stores [lo, hi].
+  changeBetween(event) {
+    const path = this.parsePath(event.params.path)
+    const rule = this.nodeAt(path)
+    const bound = event.params.bound  // "lo" | "hi"
+    const current = Array.isArray(rule.value) ? [...rule.value] : [rule.value, ""]
+    if (bound === "lo") current[0] = event.target.value
+    else current[1] = event.target.value
+    rule.value = current
+    this.commit({skipRender: true})
   }
 
   typeForField(fieldKey) {

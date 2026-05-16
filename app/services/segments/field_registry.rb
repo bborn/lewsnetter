@@ -53,13 +53,35 @@ module Segments
     end
 
     # Sample up to 200 rows from the named table and surface every JSON key
-    # that's appeared at least once. Sample size is bounded so this stays
+    # that's appeared at least once. For each key, infer the best value type
+    # from observed values (array, number, boolean, or string) so the UI can
+    # show the right operator catalog. Sample size is bounded so this stays
     # cheap for large teams.
     def sample_custom_attribute_fields(table, key_prefix)
       sample = @team.send(table).where.not(custom_attributes: {}).limit(200).pluck(:custom_attributes)
-      keys = sample.flat_map { |row| row.is_a?(Hash) ? row.keys : [] }.uniq.sort
 
-      keys.map { |attr| {key: "#{key_prefix}#{attr}", label: attr, type: :string} }
+      # Bucket observed values by key → list of values seen.
+      observed = Hash.new { |h, k| h[k] = [] }
+      sample.each do |row|
+        next unless row.is_a?(Hash)
+        row.each { |k, v| observed[k] << v }
+      end
+
+      observed.keys.sort.map do |attr|
+        type = infer_type(observed[attr])
+        {key: "#{key_prefix}#{attr}", label: attr, type: type}
+      end
+    end
+
+    # Best-effort: if any observed value is an array → :array (it dominates).
+    # Then check uniform booleans / numbers; fall back to :string.
+    def infer_type(values)
+      non_null = values.reject(&:nil?)
+      return :string if non_null.empty?
+      return :array  if non_null.any? { |v| v.is_a?(Array) }
+      return :boolean if non_null.all? { |v| v == true || v == false }
+      return :number  if non_null.all? { |v| v.is_a?(Numeric) }
+      :string
     end
   end
 end
