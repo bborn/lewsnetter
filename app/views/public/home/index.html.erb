@@ -1,36 +1,192 @@
-<div class="background-fade-container">
-  <div class="background-fade large-fade"></div>
-</div>
+<% content_for :title, "Lewsnetter — AI-native email marketing" %>
+<% content_for :description, "Open-source email marketing built for agents. Visual segments, MCP-native, ships through your own SES." %>
 
-<div class="h-screen w-full flex items-center justify-center">
-  <div class="h-2/3 py-10">
-    <div data-controller="scroll-reveal">
-      <div class="grid grid-cols-1">
-        <%= link_to "https://bullettrain.co/", class: "col-span-1", target: '_blank' do %>
-          <%= image_tag image_path("logo/logo.png"), class: 'reveal reveal-from-left h-40 w-auto mx-auto', "data-scroll-reveal-target": "item" %>
-        <% end %>
+<div class="bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50">
 
-        <div class="col-span-1 reveal py-2 mt-10 mx-auto rounded-md shadow bg-base-100" data-scroll-reveal-target="item" data-delay="400ms">
-          <div class="p-2 m-3 shadow rounded-md bg-white">
-            <div class="py-2 text-center">
-              <%= link_to t('bullet_train.name'), "https://bullettrain.co/", class: 'mx-5 mt-3 text-base-800 text-4xl font-bold hover:text-primary-600 hover:no-underline', target: '_blank' %>
-              <p><%= "v#{BulletTrain::VERSION}" %></p>
-            </div>
+  <%# ============================================================
+      Top bar — minimal. Logo on the left, sign-in on the right.
+      ============================================================ %>
+  <header class="border-b border-zinc-100 dark:border-zinc-900">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-2 text-zinc-900 dark:text-zinc-50 font-semibold tracking-tight">
+        <span class="font-mono text-[15px]">Lewsnetter</span>
+        <span class="text-[10px] uppercase tracking-widest font-mono px-1.5 py-0.5 rounded bg-orange-50 text-orange-700 dark:bg-orange-950 dark:text-orange-300">Beta</span>
+      </a>
+      <nav class="flex items-center gap-5 text-sm">
+        <a href="https://github.com/bborn/lewsnetter" target="_blank" rel="noopener" class="text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-50">GitHub</a>
+        <%= link_to "Sign in", new_user_session_path, class: "text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-50" %>
+        <%= link_to "Start free", new_user_registration_path, class: "button" %>
+      </nav>
+    </div>
+  </header>
 
-            <div class="w-5/6 mx-auto">
-              <%= render 'shared/line' %>
-            </div>
-
-            <p class="text-base-600 text-lg text-left p-5">
-              Welcome to Bullet Train! Please read the <%= link_to "documentation", "/docs", target: '_blank' %> to get started.
-            </p>
-
-            <div class="py-2 text-center">
-              <%= link_to t('global.buttons.sign_in'), new_user_session_path, class: first_button_primary %>
-            </div>
-          </div>
-        </div>
+  <%# ============================================================
+      Hero — one-liner, sub, CTAs. Anti-bubble: no gradients, no
+      stock illustrations. Geist + zinc + a single orange accent.
+      ============================================================ %>
+  <section class="max-w-6xl mx-auto px-6 pt-24 pb-20">
+    <div class="max-w-3xl">
+      <div class="text-[11px] uppercase tracking-widest font-mono text-orange-700 dark:text-orange-400 mb-6">
+        Open source · Self-host or use ours
+      </div>
+      <h1 class="text-5xl md:text-6xl font-semibold tracking-[-0.02em] leading-[1.05] text-zinc-900 dark:text-zinc-50 mb-6">
+        Email marketing<br>built for agents.
+      </h1>
+      <p class="text-xl text-zinc-600 dark:text-zinc-300 leading-relaxed mb-10 max-w-2xl">
+        Lewsnetter is a newsletter platform where every action a human can take, an AI agent can take too. Visual segment builder, MCP-native, ships through your own Amazon SES.
+      </p>
+      <div class="flex items-center gap-3 flex-wrap">
+        <%= link_to "Start free — no card", new_user_registration_path, class: "button text-base px-6 py-3" %>
+        <a href="#how" class="button-secondary text-base px-6 py-3">How it works</a>
+        <span class="text-sm text-zinc-500 dark:text-zinc-400 ml-2">Free during beta · Open source</span>
       </div>
     </div>
-  </div>
+  </section>
+
+  <%# ============================================================
+      Differentiator row — three things, ordered by uniqueness.
+      Each is a card-less stack: mono eyebrow + title + body.
+      ============================================================ %>
+  <section class="border-t border-zinc-100 dark:border-zinc-900">
+    <div class="max-w-6xl mx-auto px-6 py-20 grid grid-cols-1 md:grid-cols-3 gap-12">
+
+      <div>
+        <div class="text-[11px] uppercase tracking-widest font-mono text-zinc-500 dark:text-zinc-400 mb-3">01 · Agent-native</div>
+        <h3 class="text-xl font-semibold tracking-tight mb-3">MCP server out of the box</h3>
+        <p class="text-zinc-600 dark:text-zinc-300 leading-relaxed">
+          43 tools across campaigns, subscribers, segments, sending. Connect Claude or any MCP-compatible client and your agent can draft, segment, schedule, and send — using the same APIs the UI does. No second integration to build.
+        </p>
+      </div>
+
+      <div>
+        <div class="text-[11px] uppercase tracking-widest font-mono text-zinc-500 dark:text-zinc-400 mb-3">02 · Bring your own SES</div>
+        <h3 class="text-xl font-semibold tracking-tight mb-3">Your AWS, your reputation</h3>
+        <p class="text-zinc-600 dark:text-zinc-300 leading-relaxed">
+          Plug your Amazon SES credentials in once via the guided setup wizard. Every campaign ships from your account, your sending reputation, your bill. We never see the outbound mail.
+        </p>
+      </div>
+
+      <div>
+        <div class="text-[11px] uppercase tracking-widest font-mono text-zinc-500 dark:text-zinc-400 mb-3">03 · Real segmentation</div>
+        <h3 class="text-xl font-semibold tracking-tight mb-3">Visual builder, Intercom-style</h3>
+        <p class="text-zinc-600 dark:text-zinc-300 leading-relaxed">
+          Nested AND/OR groups, type-aware operators, live match count + sample rows as you build. Sync subscribers from your Rails app with the
+          <code class="bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-[13px] font-mono">lewsnetter-rails</code>
+          gem and segment on anything you push.
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+  <%# ============================================================
+      How it works — three steps, numbered. No screenshots yet (we'll
+      add them as we capture good ones). For now: descriptive copy
+      that orients the reader.
+      ============================================================ %>
+  <section id="how" class="border-t border-zinc-100 dark:border-zinc-900 bg-zinc-50 dark:bg-zinc-900">
+    <div class="max-w-6xl mx-auto px-6 py-20">
+      <div class="max-w-2xl mb-12">
+        <div class="text-[11px] uppercase tracking-widest font-mono text-zinc-500 dark:text-zinc-400 mb-3">How it works</div>
+        <h2 class="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 mb-3">From zero to first send in 5 minutes.</h2>
+        <p class="text-zinc-600 dark:text-zinc-300 leading-relaxed">
+          The guided setup wizard walks you through AWS SES credentials, sender verification, and a test send — so you know everything works before you ever queue a campaign.
+        </p>
+      </div>
+
+      <ol class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <li class="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg p-6">
+          <div class="flex items-center justify-center w-8 h-8 rounded-full bg-orange-600 text-white font-mono text-sm mb-4">1</div>
+          <h3 class="font-semibold text-zinc-900 dark:text-zinc-50 mb-2">Sign up + connect SES</h3>
+          <p class="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
+            Paste your AWS access keys. We verify them with SES, list your verified identities, and you import one as a sender — one click.
+          </p>
+        </li>
+        <li class="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg p-6">
+          <div class="flex items-center justify-center w-8 h-8 rounded-full bg-orange-600 text-white font-mono text-sm mb-4">2</div>
+          <h3 class="font-semibold text-zinc-900 dark:text-zinc-50 mb-2">Sync your audience</h3>
+          <p class="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
+            CSV upload, JSON API, or the
+            <code class="bg-zinc-100 dark:bg-zinc-800 px-1 py-0.5 rounded text-[12px] font-mono">lewsnetter-rails</code>
+            gem for live sync from your app. Subscribers come in with whatever attributes you want to segment on.
+          </p>
+        </li>
+        <li class="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg p-6">
+          <div class="flex items-center justify-center w-8 h-8 rounded-full bg-orange-600 text-white font-mono text-sm mb-4">3</div>
+          <h3 class="font-semibold text-zinc-900 dark:text-zinc-50 mb-2">Compose + ship</h3>
+          <p class="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
+            MJML templates, Markdown body, Liquid for personalization. Or hand the whole thing to an agent over MCP. Bounce + complaint tracking works automatically.
+          </p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <%# ============================================================
+      Tech + transparency strip — for the developers + privacy-aware
+      audience this product attracts. Honest about what's there.
+      ============================================================ %>
+  <section class="border-t border-zinc-100 dark:border-zinc-900">
+    <div class="max-w-6xl mx-auto px-6 py-20 grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
+      <div>
+        <div class="text-[11px] uppercase tracking-widest font-mono text-zinc-500 dark:text-zinc-400 mb-3">For developers</div>
+        <h2 class="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 mb-4">
+          Open source.<br>Self-host if you want.
+        </h2>
+        <p class="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-6">
+          MIT-licensed. Rails 8 + SQLite + Litestream + Kamal. One-box deploy. Use the hosted version if you don't want to operate it; clone the repo if you do.
+        </p>
+        <div class="flex items-center gap-3">
+          <a href="https://github.com/bborn/lewsnetter" target="_blank" rel="noopener" class="button-secondary">View on GitHub →</a>
+          <a href="https://github.com/bborn/lewsnetter/tree/master/gems/lewsnetter-rails" target="_blank" rel="noopener" class="button-secondary">Rails gem</a>
+        </div>
+      </div>
+
+      <div>
+        <div class="text-[11px] uppercase tracking-widest font-mono text-zinc-500 dark:text-zinc-400 mb-3">What's actually under the hood</div>
+        <dl class="space-y-3 text-sm">
+          <div class="flex justify-between border-b border-zinc-100 dark:border-zinc-900 pb-2">
+            <dt class="text-zinc-500 dark:text-zinc-400">Framework</dt>
+            <dd class="text-zinc-900 dark:text-zinc-100 font-mono text-xs">Rails 8 + Bullet Train</dd>
+          </div>
+          <div class="flex justify-between border-b border-zinc-100 dark:border-zinc-900 pb-2">
+            <dt class="text-zinc-500 dark:text-zinc-400">Database</dt>
+            <dd class="text-zinc-900 dark:text-zinc-100 font-mono text-xs">SQLite + Litestream → R2</dd>
+          </div>
+          <div class="flex justify-between border-b border-zinc-100 dark:border-zinc-900 pb-2">
+            <dt class="text-zinc-500 dark:text-zinc-400">Sending</dt>
+            <dd class="text-zinc-900 dark:text-zinc-100 font-mono text-xs">Your Amazon SES</dd>
+          </div>
+          <div class="flex justify-between border-b border-zinc-100 dark:border-zinc-900 pb-2">
+            <dt class="text-zinc-500 dark:text-zinc-400">Agent layer</dt>
+            <dd class="text-zinc-900 dark:text-zinc-100 font-mono text-xs">MCP + ruby_llm</dd>
+          </div>
+          <div class="flex justify-between border-b border-zinc-100 dark:border-zinc-900 pb-2">
+            <dt class="text-zinc-500 dark:text-zinc-400">PII at rest</dt>
+            <dd class="text-zinc-900 dark:text-zinc-100 font-mono text-xs">AES-GCM encrypted</dd>
+          </div>
+          <div class="flex justify-between pb-2">
+            <dt class="text-zinc-500 dark:text-zinc-400">Pricing</dt>
+            <dd class="text-zinc-900 dark:text-zinc-100 font-mono text-xs">Free during beta</dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <%# ============================================================
+      Closing CTA — keep simple. One ask.
+      ============================================================ %>
+  <section class="border-t border-zinc-100 dark:border-zinc-900 bg-zinc-50 dark:bg-zinc-900">
+    <div class="max-w-3xl mx-auto px-6 py-24 text-center">
+      <h2 class="text-3xl md:text-4xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 mb-4">
+        Ship your first campaign tonight.
+      </h2>
+      <p class="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-8">
+        Sign up, connect SES, send yourself a test — about 5 minutes. Then queue something real.
+      </p>
+      <%= link_to "Start free", new_user_registration_path, class: "button text-base px-6 py-3" %>
+    </div>
+  </section>
+
 </div>

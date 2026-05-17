@@ -1,11 +1,30 @@
-<%# Local override of bullet_train's public layout. Adds the shared
-    legal footer so anything mounted under Public::ApplicationController
-    (root home + the legal pages at /privacy /terms /dpa /acceptable-use)
-    gets the same compliance links. %>
+<%# Local override of bullet_train's public layout. Adds:
+    - Open Graph + Twitter Card meta (page-specific via content_for) so
+      tweet previews render a real card instead of a bare URL.
+    - The shared legal footer so /privacy /terms /dpa /acceptable-use
+      and the landing page all get the compliance links. %>
 <!DOCTYPE html>
 <html class="theme-<%= BulletTrain::Themes::Light.color %> <%= "theme-secondary-#{BulletTrain::Themes::Light.secondary_color}" if BulletTrain::Themes::Light.secondary_color %>" lang="<%= I18n.locale %>">
   <head>
     <%= render 'shared/layouts/head' %>
+
+    <%# Open Graph + Twitter Card meta. Defaults below match the landing
+        page; pages can override per-content_for if they want. %>
+    <% og_title = content_for?(:og_title) ? yield(:og_title) : "Lewsnetter — AI-native email marketing" %>
+    <% og_description = content_for?(:og_description) ? yield(:og_description) : (content_for?(:description) ? yield(:description) : "Open-source email marketing built for agents. Visual segments, MCP-native, ships through your own SES.") %>
+    <% og_image = content_for?(:og_image) ? yield(:og_image) : "#{request.base_url}/og-default.png" %>
+
+    <meta property="og:type"        content="website">
+    <meta property="og:title"       content="<%= og_title %>">
+    <meta property="og:description" content="<%= og_description %>">
+    <meta property="og:url"         content="<%= request.original_url %>">
+    <meta property="og:image"       content="<%= og_image %>">
+    <meta property="og:site_name"   content="Lewsnetter">
+
+    <meta name="twitter:card"        content="summary_large_image">
+    <meta name="twitter:title"       content="<%= og_title %>">
+    <meta name="twitter:description" content="<%= og_description %>">
+    <meta name="twitter:image"       content="<%= og_image %>">
   </head>
 
   <body class="min-h-screen flex flex-col <%= BulletTrain::Themes::Light.background %> text-base-700 text-sm font-normal dark:text-base-300">

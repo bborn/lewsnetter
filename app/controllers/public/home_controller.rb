@@ -1,7 +1,13 @@
 class Public::HomeController < Public::ApplicationController
-  # Redirect `/` to either `ENV["MARKETING_SITE_URL"]` or the sign-in page.
-  # If you'd like to customize the action for `/`, you can remove this and define `def index ... end ` below.
-  include RootRedirect
+  # Public landing page at `/`. Logged-in users skip the marketing page +
+  # land directly on their team dashboard so we don't make them re-navigate.
+  def index
+    if user_signed_in?
+      redirect_to account_root_path
+    else
+      render :index
+    end
+  end
 
   # Allow your application to disable public sign-ups and be invitation only.
   include InviteOnlySupport
