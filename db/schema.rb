@@ -81,6 +81,43 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_16_164311) do
     t.index ["addressable_type", "addressable_id"], name: "index_addresses_on_addressable"
   end
 
+  create_table "billing_external_subscriptions", force: :cascade do |t|
+    t.integer "team_id", null: false
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["team_id"], name: "index_billing_external_subscriptions_on_team_id"
+  end
+
+  create_table "billing_stripe_subscriptions", force: :cascade do |t|
+    t.integer "team_id", null: false
+    t.string "stripe_subscription_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["team_id"], name: "index_billing_stripe_subscriptions_on_team_id"
+  end
+
+  create_table "billing_subscriptions", force: :cascade do |t|
+    t.integer "team_id", null: false
+    t.string "provider_subscription_type", null: false
+    t.integer "provider_subscription_id", null: false
+    t.datetime "cycle_ends_at", precision: nil
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "status", default: "initiated"
+    t.index ["provider_subscription_type", "provider_subscription_id"], name: "index_billing_subscriptions_on_provider_subscription"
+    t.index ["team_id"], name: "index_billing_subscriptions_on_team_id"
+  end
+
+  create_table "billing_subscriptions_included_prices", force: :cascade do |t|
+    t.integer "subscription_id", null: false
+    t.string "price_id"
+    t.integer "quantity"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["subscription_id"], name: "index_billing_subscriptions_included_prices_on_subscription_id"
+  end
+
   create_table "campaigns", force: :cascade do |t|
     t.integer "team_id", null: false
     t.integer "email_template_id"
@@ -446,6 +483,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_16_164311) do
     t.boolean "being_destroyed"
     t.string "time_zone"
     t.string "locale"
+    t.string "stripe_customer_id"
   end
 
   create_table "tool_calls", force: :cascade do |t|
@@ -519,6 +557,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_16_164311) do
     t.index ["oauth_stripe_account_id"], name: "index_stripe_webhooks_on_stripe_account_id"
   end
 
+  create_table "webhooks_incoming_stripe_webhooks", force: :cascade do |t|
+    t.json "data"
+    t.datetime "processed_at", precision: nil
+    t.datetime "verified_at", precision: nil
+    t.datetime "created_at", precision: nil, null: false
+    t.datetime "updated_at", precision: nil, null: false
+  end
+
   create_table "webhooks_outgoing_deliveries", force: :cascade do |t|
     t.integer "endpoint_id"
     t.integer "event_id"
@@ -576,6 +622,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_16_164311) do
   add_foreign_key "account_onboarding_invitation_lists", "teams"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "billing_external_subscriptions", "teams"
+  add_foreign_key "billing_stripe_subscriptions", "teams"
+  add_foreign_key "billing_subscriptions", "teams"
+  add_foreign_key "billing_subscriptions_included_prices", "billing_subscriptions", column: "subscription_id"
   add_foreign_key "campaigns", "email_templates"
   add_foreign_key "campaigns", "segments"
   add_foreign_key "campaigns", "sender_addresses"

@@ -1,59 +1,20 @@
+# Lewsnetter billing plans — one paid tier, $10/mo per team.
+# `amount` is in the smallest currency unit (cents for USD).
+#
+# Run `rake billing:stripe:populate_products_in_stripe` after deploying
+# any change here to sync the product + price into Stripe. The rake task
+# outputs the STRIPE_PRICE_* env-var names to copy into deploy config.
 free:
-  limits:
-    memberships:
-      have:
-        count: 3
-        enforcement: hard
-    scaffolding/absolutely_abstract/creative_concepts:
-      have:
-        count: 25
-        enforcement: hard
-basic:
-  price: basic_2022
-  image: "sparkles.png"
-  limits:
-    memberships:
-      have:
-        count: null
-    scaffolding/absolutely_abstract/creative_concepts:
-      have:
-        count: 50
-        enforcement: soft
-  prices:
-    basic_monthly_2022:
-      amount: 1000
-      currency: USD
-      duration: 1
-      interval: month
-      quantity: memberships
-      highlight: true
-      trial_days: 7
-    basic_annual_2022:
-      amount: 10000
-      currency: USD
-      duration: 1
-      interval: year
-      quantity: memberships
-      highlight: true
+  # Implicit free tier — every team starts here. No price, no limits
+  # while in beta; we can layer caps in later if abuse becomes an issue.
+  # Empty `prices` (not a missing key) so BT's YAML loader sees a hash.
+  prices: {}
+
 pro:
-  price: pro_2022
-  image: "rocket.png"
-  limits:
-    memberships:
-      have:
-        count: 10
-        enforcement: soft
-    scaffolding/absolutely_abstract/creative_concepts:
-      have:
-        count: null
+  price: pro_monthly_2026
   prices:
-    pro_monthly_2022:
-      amount: 10000
+    pro_monthly_2026:
+      amount: 1000        # $10.00 in cents
       currency: USD
       duration: 1
       interval: month
-    pro_annual_2022:
-      amount: 100000
-      currency: USD
-      duration: 1
-      interval: year

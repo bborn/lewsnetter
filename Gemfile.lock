@@ -1,3 +1,19 @@
+GIT
+  remote: https://github.com/bullet-train-pro/bullet_train-billing-stripe.git
+  revision: bd85712f3e3e310f38fb2bd54474fd249334c871
+  specs:
+    bullet_train-billing-stripe (1.0.6)
+      bullet_train-billing
+      rails (>= 6.0.0)
+
+GIT
+  remote: https://github.com/bullet-train-pro/bullet_train-billing.git
+  revision: dd05d76b5fcda844ad0db1eabfb6a87f1492127c
+  specs:
+    bullet_train-billing (1.0.12)
+      bullet_train
+      rails (>= 6.0)
+
 GEM
   remote: https://rubygems.org/
   specs:
@@ -851,6 +867,8 @@ DEPENDENCIES
   bootsnap
   bullet_train (= 1.45.1)
   bullet_train-api (= 1.45.1)
+  bullet_train-billing!
+  bullet_train-billing-stripe!
   bullet_train-fields (= 1.45.1)
   bullet_train-has_uuid (= 1.45.1)
   bullet_train-incoming_webhooks (= 1.45.1)

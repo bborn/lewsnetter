@@ -98,10 +98,16 @@ env:
     LITESTREAM_REPLICA_BUCKET: lewsnetter-litestream
     LITESTREAM_REPLICA_ENDPOINT: https://407493dfba8306ff79bb5cd68f609eb0.r2.cloudflarestorage.com
     LITESTREAM_REPLICA_REGION: auto
+    # Stripe price IDs aren't sensitive (they're public refs to your
+    # pricing config). The secret keys live in env.secret below.
+    STRIPE_PRODUCT_PRO_MONTHLY_2026_PRICE_ID: price_1TYAdlJJh96TtdCTYtJWSXJl
   secret:
     - RAILS_MASTER_KEY
     - LITESTREAM_REPLICA_ACCESS_KEY_ID
     - LITESTREAM_REPLICA_SECRET_ACCESS_KEY
+    - STRIPE_PUBLISHABLE_KEY
+    - STRIPE_SECRET_KEY
+    - STRIPE_WEBHOOKS_ENDPOINT_SECRET
     # Note: ORIGIN_CERT / ORIGIN_KEY are NOT exposed to the app containers.
     # They're consumed by the proxy block above via Kamal's native
     # `proxy.ssl.{certificate_pem,private_key_pem}` mechanism, which reads

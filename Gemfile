@@ -142,6 +142,12 @@ gem "bullet_train-themes-light", BULLET_TRAIN_VERSION
 gem "bullet_train-integrations", BULLET_TRAIN_VERSION
 gem "bullet_train-integrations-stripe", BULLET_TRAIN_VERSION
 
+# Billing — drop-in subscription support via Stripe. Open-source as of
+# 2026; lives on GitHub (not RubyGems). See:
+#   https://bullettrain.co/docs/billing/stripe
+gem "bullet_train-billing",        git: "https://github.com/bullet-train-pro/bullet_train-billing.git"
+gem "bullet_train-billing-stripe", git: "https://github.com/bullet-train-pro/bullet_train-billing-stripe.git"
+
 # Optional support packages.
 gem "bullet_train-sortable", BULLET_TRAIN_VERSION
 gem "bullet_train-obfuscates_id", BULLET_TRAIN_VERSION
