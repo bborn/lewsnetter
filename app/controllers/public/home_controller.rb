@@ -7,12 +7,13 @@ class Public::HomeController < Public::ApplicationController
   def index
     if user_signed_in?
       # Signed in? Send to dashboard on the app subdomain (or current host
-      # if we're already on the app surface, e.g. local dev).
-      redirect_to dashboard_url_for(request)
+      # in dev). Cross-host redirects need allow_other_host since Rails 7.
+      redirect_to dashboard_url_for(request), allow_other_host: true
     elsif on_app_subdomain?(request)
-      # Anonymous visitor hit app.lewsnetter.dev/ — bounce them to the
-      # marketing apex so the landing renders there.
-      redirect_to marketing_root_url(request), status: :moved_permanently
+      # Anonymous visitor hit app.lewsnetter.dev/ — bounce to marketing apex
+      # so the landing renders at its canonical host.
+      redirect_to marketing_root_url(request),
+        status: :moved_permanently, allow_other_host: true
     else
       render :index
     end
