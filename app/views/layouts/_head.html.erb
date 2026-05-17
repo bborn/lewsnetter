@@ -1,8 +1,5 @@
-<%# content_for :title should be set as a bare string (e.g.
-    `<% content_for :title, "Privacy Policy" %>`); we wrap it in <title>
-    here so callsites don't have to. Falls back to @title (if set by
-    controller) or the app name. Previously the bare string leaked into
-    the page body + the browser fell back to the URL for the tab title. %>
+<%# content_for(:title) callers set a bare string; we wrap it in
+    <title> here so the bare string doesn't leak into the page body. %>
 <% if content_for? :title %>
   <title><%= yield :title %></title>
 <% elsif @title.present? %>
