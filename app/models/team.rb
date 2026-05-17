@@ -26,9 +26,17 @@ class Team < ApplicationRecord
 
   # 🚅 add validations above.
 
+  # Seed every brand-new team with sample subscribers + a draft campaign
+  # so the first thing a user sees isn't an empty dashboard. Idempotent;
+  # globally skippable via LEWSNETTER_SKIP_SEEDING for the test suite +
+  # programmatic team-creation paths (e.g. seed scripts, factories).
+  after_create_commit :seed_sample_data
   # 🚅 add callbacks above.
 
   # 🚅 add delegations above.
 
+  def seed_sample_data
+    Teams::SampleDataSeeder.call(self)
+  end
   # 🚅 add methods above.
 end

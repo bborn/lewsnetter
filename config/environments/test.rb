@@ -3,6 +3,11 @@
 # your test database is "scratch space" for the test suite and is wiped
 # and recreated between test runs. Don't rely on the data there!
 
+# Skip the new-team sample-data seeder in tests so every `create(:team)`
+# factory call doesn't spawn 5 subscribers + a campaign and pollute the
+# fixtures. Production + dev still auto-seed.
+ENV["LEWSNETTER_SKIP_SEEDING"] ||= "true"
+
 Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
 
