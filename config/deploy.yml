@@ -104,6 +104,9 @@ env:
     # Comma-separated list of operator email addresses that bypass the SES
     # connection paywall. Anything else in the app is free for everyone.
     BILLING_EXEMPT_EMAILS: "bruno@influencekit.com"
+    # Open public signups now that billing is wired (gate lives in
+    # config/routes.rb). Flip to "false" to disable signups again.
+    LEWSNETTER_PUBLIC_SIGNUPS: "true"
   secret:
     - RAILS_MASTER_KEY
     - LITESTREAM_REPLICA_ACCESS_KEY_ID
