@@ -38,5 +38,15 @@ class Team < ApplicationRecord
   def seed_sample_data
     Teams::SampleDataSeeder.call(self)
   end
+
+  # The only paywalled action is connecting SES (saving AWS credentials).
+  # Everything else in the app is free. A team passes the gate if it has
+  # an active billing subscription, or if any of its members is on the
+  # comma-separated BILLING_EXEMPT_EMAILS allowlist (operator accounts).
+  def billing_exempt?
+    emails = ENV.fetch("BILLING_EXEMPT_EMAILS", "").split(",").map { |e| e.strip.downcase }.reject(&:blank?)
+    return false if emails.empty?
+    users.where("LOWER(email) IN (?)", emails).exists?
+  end
   # 🚅 add methods above.
 end

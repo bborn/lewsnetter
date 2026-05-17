@@ -9,6 +9,8 @@
 # Team::SesConfiguration exists via the has_one association and authorize
 # the requested action against it.
 class Account::EmailSendingController < Account::ApplicationController
+  include Billing::RequiresSubscriptionForSes
+  before_action :require_active_subscription_for_ses_if_credentials_present, only: :update
   # CanCanCan loads @team from `params[:team_id]` and authorizes the current
   # user can :read it. Then `load_ses_configuration` materializes the
   # singleton-per-team Team::SesConfiguration record and we authorize the

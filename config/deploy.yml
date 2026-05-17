@@ -101,6 +101,9 @@ env:
     # Stripe price IDs aren't sensitive (they're public refs to your
     # pricing config). The secret keys live in env.secret below.
     STRIPE_PRODUCT_PRO_MONTHLY_2026_PRICE_ID: price_1TYDKzJJh96TtdCTaNDgbtqa
+    # Comma-separated list of operator email addresses that bypass the SES
+    # connection paywall. Anything else in the app is free for everyone.
+    BILLING_EXEMPT_EMAILS: "bruno@influencekit.com"
   secret:
     - RAILS_MASTER_KEY
     - LITESTREAM_REPLICA_ACCESS_KEY_ID
