@@ -131,6 +131,9 @@ jobs:
           LITESTREAM_REPLICA_SECRET_ACCESS_KEY: ${{ secrets.LITESTREAM_REPLICA_SECRET_ACCESS_KEY }}
           ORIGIN_CERT: ${{ secrets.ORIGIN_CERT }}
           ORIGIN_KEY: ${{ secrets.ORIGIN_KEY }}
+          STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOKS_ENDPOINT_SECRET: ${{ secrets.STRIPE_WEBHOOKS_ENDPOINT_SECRET }}
         run: |
           mkdir -p .kamal
           umask 077
@@ -139,6 +142,9 @@ jobs:
             printf 'RAILS_MASTER_KEY=%s\n'         "$RAILS_MASTER_KEY"
             printf 'LITESTREAM_REPLICA_ACCESS_KEY_ID=%s\n'     "$LITESTREAM_REPLICA_ACCESS_KEY_ID"
             printf 'LITESTREAM_REPLICA_SECRET_ACCESS_KEY=%s\n' "$LITESTREAM_REPLICA_SECRET_ACCESS_KEY"
+            printf 'STRIPE_PUBLISHABLE_KEY=%s\n'           "$STRIPE_PUBLISHABLE_KEY"
+            printf 'STRIPE_SECRET_KEY=%s\n'                "$STRIPE_SECRET_KEY"
+            printf 'STRIPE_WEBHOOKS_ENDPOINT_SECRET=%s\n'  "$STRIPE_WEBHOOKS_ENDPOINT_SECRET"
             # Dotenv multi-line: KEY="line1\nline2\n..." with real newlines
             # inside the double quotes.
             printf 'ORIGIN_CERT="%s"\n' "$ORIGIN_CERT"
