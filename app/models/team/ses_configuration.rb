@@ -50,7 +50,7 @@ class Team::SesConfiguration < ApplicationRecord
   # Returns this team's configured unsubscribe_host if present, otherwise the
   # caller-supplied default. Callers (ApplicationMailer, CampaignRenderer,
   # UnsubscribeUrlHelper) pass in the app-wide default rather than us
-  # hard-coding "lewsnetter.whinynil.co" in the model.
+  # hard-coding "lewsnetter.dev" in the model.
   def resolved_unsubscribe_host(default:)
     unsubscribe_host.presence || default
   end
