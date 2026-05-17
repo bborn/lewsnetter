@@ -12,9 +12,16 @@ free:
 
 pro:
   price: pro_monthly_2026
+  # `image` is used by BT's default pricing table partial.
+  # Source: app/assets/images/products/rocket.png (ships with the app).
+  image: "rocket.png"
   prices:
     pro_monthly_2026:
       amount: 1000        # $10.00 in cents
       currency: USD
       duration: 1
       interval: month
+      # Marks the plan as "featured" in BT's pricing table partial
+      # (`price.highlight?`). With only one paid plan, highlighting it
+      # is harmless and avoids a NameError in the view.
+      highlight: true
