@@ -148,6 +148,52 @@ class Account::EmailSendingControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "update redirects to billing plan picker when team is not exempt and has no subscription" do
+    # Temporarily flip the exempt list to something that won't match the
+    # factory user's @example.com email — simulates a real paying customer
+    # who hasn't subscribed yet.
+    original = ENV["BILLING_EXEMPT_EMAILS"]
+    ENV["BILLING_EXEMPT_EMAILS"] = "nobody@nowhere.invalid"
+    begin
+      patch account_team_email_sending_path(@team), params: {
+        team_ses_configuration: {
+          encrypted_access_key_id: "AKIANEW",
+          encrypted_secret_access_key: "secretnew",
+          region: "us-west-2"
+        }
+      }
+      assert_redirected_to account_team_billing_subscriptions_path(@team)
+      assert_match(/Pro subscription/i, flash[:alert])
+      # And nothing was written.
+      assert_nil @team.reload.ses_configuration
+    ensure
+      ENV["BILLING_EXEMPT_EMAILS"] = original
+    end
+  end
+
+  test "update of non-credential fields is allowed without subscription" do
+    @team.create_ses_configuration!(
+      region: "us-east-1",
+      encrypted_access_key_id: "AKIA",
+      encrypted_secret_access_key: "s",
+      status: "verified"
+    )
+    original = ENV["BILLING_EXEMPT_EMAILS"]
+    ENV["BILLING_EXEMPT_EMAILS"] = "nobody@nowhere.invalid"
+    begin
+      patch account_team_email_sending_path(@team), params: {
+        team_ses_configuration: {
+          # No encrypted_* fields — just an unsubscribe_host change.
+          unsubscribe_host: "email.example.com"
+        }
+      }
+      assert_redirected_to account_team_email_sending_path(@team)
+      assert_equal "email.example.com", @team.reload.ses_configuration.unsubscribe_host
+    ensure
+      ENV["BILLING_EXEMPT_EMAILS"] = original
+    end
+  end
+
   teardown do
     # Restore the original Verifier#call if a test stubbed it.
     if Ses::Verifier.method_defined?(:_orig_call)

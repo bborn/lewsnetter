@@ -10,7 +10,6 @@
 # the requested action against it.
 class Account::EmailSendingController < Account::ApplicationController
   include Billing::RequiresSubscriptionForSes
-  before_action :require_active_subscription_for_ses_if_credentials_present, only: :update
   # CanCanCan loads @team from `params[:team_id]` and authorizes the current
   # user can :read it. Then `load_ses_configuration` materializes the
   # singleton-per-team Team::SesConfiguration record and we authorize the
@@ -20,6 +19,8 @@ class Account::EmailSendingController < Account::ApplicationController
     id_param: :team_id
 
   before_action :load_ses_configuration
+  # Paywall must run AFTER load_and_authorize_resource so @team is set.
+  before_action :require_active_subscription_for_ses_if_credentials_present, only: :update
 
   # GET /account/teams/:team_id/email_sending
   def show

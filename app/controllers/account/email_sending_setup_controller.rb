@@ -14,10 +14,11 @@
 # any mutation and the view branches off it.
 class Account::EmailSendingSetupController < Account::ApplicationController
   include Billing::RequiresSubscriptionForSes
-  before_action :require_active_subscription_for_ses, only: :update_credentials
   load_and_authorize_resource :team, class: "Team", parent: false, id_param: :team_id
 
   before_action :load_ses_configuration
+  # Paywall must run AFTER load_and_authorize_resource so @team is set.
+  before_action :require_active_subscription_for_ses, only: :update_credentials
 
   STEPS = %i[credentials sender verify_sender test done].freeze
 

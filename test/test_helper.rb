@@ -10,6 +10,10 @@ SimpleCov.start "rails" do
 end
 
 ENV["RAILS_ENV"] ||= "test"
+# Exempt factory-created users (all @example.com) from the SES paywall so
+# controller tests can save AWS credentials without provisioning a Stripe
+# subscription fixture. See Team#billing_exempt?.
+ENV["BILLING_EXEMPT_EMAILS"] ||= "@example.com"
 require_relative "../config/environment"
 require "rails/test_help"
 
