@@ -1,0 +1,36 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1440px; height: 900px; background: #fafafa; font-family: 'Geist', system-ui, sans-serif; color: #18181b; -webkit-font-smoothing: antialiased; overflow: hidden; }
+  .stage { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; padding: 0 120px; position: relative; }
+  .eyebrow { font-family: 'Geist Mono', monospace; font-size: 14px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: #c2410c; margin-bottom: 40px; opacity: 0; animation: fadeUp 0.6s 0.1s forwards; }
+  .pill { display: inline-block; background: #ffedd5; color: #c2410c; padding: 4px 10px; border-radius: 4px; font-size: 11px; margin-left: 8px; vertical-align: 3px; }
+  h1 { font-family: 'Geist', sans-serif; font-size: 96px; font-weight: 600; letter-spacing: -0.025em; line-height: 1.02; margin-bottom: 32px; opacity: 0; animation: fadeUp 0.7s 0.35s forwards; }
+  h1 .accent { color: #ea580c; }
+  .sub { font-size: 28px; color: #52525b; line-height: 1.4; max-width: 900px; opacity: 0; animation: fadeUp 0.7s 0.7s forwards; }
+  .footer { position: absolute; bottom: 60px; left: 120px; right: 120px; display: flex; justify-content: space-between; align-items: baseline; font-family: 'Geist Mono', monospace; font-size: 13px; color: #71717a; letter-spacing: 0.06em; opacity: 0; animation: fadeUp 0.6s 1.0s forwards; }
+  .footer .left { text-transform: uppercase; }
+  .footer .url { color: #18181b; font-weight: 500; }
+  /* Subtle background accent */
+  .accent-bar { position: absolute; top: 0; right: 0; width: 6px; height: 100%; background: #ea580c; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="accent-bar"></div>
+    <div class="eyebrow">Lewsnetter <span class="pill">BETA</span></div>
+    <h1>Email marketing<br>built for <span class="accent">agents.</span></h1>
+    <p class="sub">Visual segment builder, MCP-native, ships through your own Amazon SES.</p>
+    <div class="footer">
+      <div class="left">Open source · Self-host or use ours</div>
+      <div class="url">lewsnetter.dev</div>
+    </div>
+  </div>
+</body>
+</html>

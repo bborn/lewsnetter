@@ -1,0 +1,99 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1440px; height: 900px; background: #0a0a0b; font-family: 'Geist', system-ui, sans-serif; color: #fafafa; -webkit-font-smoothing: antialiased; overflow: hidden; }
+  .stage { width: 100%; height: 100%; padding: 60px 120px; display: flex; flex-direction: column; }
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; }
+  .eyebrow { font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: #fb923c; opacity: 0; animation: fadeUp 0.6s 0.1s forwards; }
+  .tag { font-family: 'Geist Mono', monospace; font-size: 12px; color: #71717a; padding: 4px 10px; border: 1px solid #27272a; border-radius: 4px; opacity: 0; animation: fadeUp 0.6s 0.2s forwards; }
+  h1 { font-family: 'Geist', sans-serif; font-size: 36px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.15; margin-bottom: 8px; opacity: 0; animation: fadeUp 0.7s 0.25s forwards; }
+  .sub { font-size: 16px; color: #71717a; margin-bottom: 40px; opacity: 0; animation: fadeUp 0.7s 0.4s forwards; }
+  .chat { flex: 1; display: flex; flex-direction: column; gap: 14px; max-width: 1000px; }
+  .msg { opacity: 0; transform: translateY(8px); animation: fadeUp 0.5s forwards; }
+  .user { align-self: flex-end; max-width: 80%; background: #18181b; color: #fafafa; padding: 14px 18px; border-radius: 12px; border: 1px solid #27272a; font-size: 16px; line-height: 1.5; }
+  .assistant { align-self: flex-start; max-width: 80%; color: #d4d4d8; padding: 8px 0; font-size: 16px; line-height: 1.5; }
+  .tool { display: flex; align-items: center; gap: 10px; align-self: flex-start; font-family: 'Geist Mono', monospace; font-size: 13px; color: #a1a1aa; padding-left: 4px; }
+  .tool .arrow { color: #fb923c; font-size: 14px; }
+  .tool .name { color: #f4f4f5; }
+  .tool .args { color: #71717a; }
+  .result { display: flex; align-items: center; gap: 10px; align-self: flex-start; font-family: 'Geist Mono', monospace; font-size: 13px; color: #71717a; padding-left: 4px; }
+  .result .arrow { color: #10b981; font-size: 14px; }
+  .result .ok { color: #d4d4d8; }
+  .footer { position: absolute; bottom: 56px; left: 120px; right: 120px; display: flex; justify-content: space-between; align-items: baseline; font-family: 'Geist Mono', monospace; font-size: 13px; color: #71717a; letter-spacing: 0.06em; opacity: 0; animation: fadeUp 0.6s 4.5s forwards; }
+  .footer .right { color: #d4d4d8; }
+  .accent-bar { position: absolute; top: 0; right: 0; width: 6px; height: 100%; background: #ea580c; }
+
+  /* Stagger appearances */
+  .msg:nth-child(1) { animation-delay: 0.6s; }
+  .msg:nth-child(2) { animation-delay: 1.2s; }
+  .msg:nth-child(3) { animation-delay: 1.7s; }
+  .msg:nth-child(4) { animation-delay: 2.2s; }
+  .msg:nth-child(5) { animation-delay: 2.8s; }
+  .msg:nth-child(6) { animation-delay: 3.3s; }
+  .msg:nth-child(7) { animation-delay: 3.8s; }
+  .msg:nth-child(8) { animation-delay: 4.3s; }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="accent-bar"></div>
+    <div class="header">
+      <div>
+        <div class="eyebrow">Agent-native</div>
+        <h1>Same product. Talk to it.</h1>
+        <p class="sub">MCP server out of the box — every action a human can take, an agent can take too.</p>
+      </div>
+      <div class="tag">claude · MCP</div>
+    </div>
+
+    <div class="chat">
+      <div class="msg user">
+        Create a segment called "US paid customers" — anyone with mrr&gt;0 and country = US.
+        Then draft a campaign to them with subject "A heads-up about pricing".
+      </div>
+
+      <div class="msg assistant">Creating the segment first.</div>
+
+      <div class="msg tool">
+        <span class="arrow">→</span>
+        <span class="name">segments_create_with_rules</span>
+        <span class="args">{ name: "US paid customers", rules: { mrr: ">0", country: "US" } }</span>
+      </div>
+
+      <div class="msg result">
+        <span class="arrow">←</span>
+        <span class="ok">segment #42 created · 12 matching subscribers</span>
+      </div>
+
+      <div class="msg assistant">Now drafting the campaign for that segment.</div>
+
+      <div class="msg tool">
+        <span class="arrow">→</span>
+        <span class="name">campaigns_create</span>
+        <span class="args">{ subject: "A heads-up about pricing", segment_id: 42 }</span>
+      </div>
+
+      <div class="msg result">
+        <span class="arrow">←</span>
+        <span class="ok">campaign #17 created · draft</span>
+      </div>
+
+      <div class="msg assistant">
+        Done. The draft is at /account/campaigns/17 — ready to review and send.
+      </div>
+    </div>
+
+    <div class="footer">
+      <div>43 MCP tools across campaigns, subscribers, segments, sending</div>
+      <div class="right">lewsnetter.dev</div>
+    </div>
+  </div>
+</body>
+</html>

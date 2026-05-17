@@ -1,0 +1,100 @@
+<!doctype html>
+<!--
+  Overlay frame — rendered with transparent background by Playwright
+  (page.screenshot({omitBackground: true})), then composited over the
+  screencast by ffmpeg. Reads scene config from URL query params:
+    ?n=02&label=SEGMENT+BUILDER&headline=Build+segments&sub=…&pos=bl
+  pos: tl/tr/bl/br (top-left / -right / bottom-left / -right)
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1440px; height: 900px; background: transparent !important; font-family: 'Geist', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+
+  .panel {
+    position: absolute;
+    max-width: 540px;
+    background: rgba(15, 15, 17, 0.94);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 22px 26px;
+    color: #fafafa;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.4);
+    /* Orange accent bar on the left */
+    border-left: 3px solid #ea580c;
+  }
+  /* Positions */
+  .pos-tl { top: 50px; left: 50px; }
+  .pos-tr { top: 50px; right: 50px; }
+  .pos-bl { bottom: 80px; left: 50px; }
+  .pos-br { bottom: 80px; right: 50px; }
+
+  .label {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #fb923c;
+    margin-bottom: 14px;
+  }
+  .label .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px; height: 26px;
+    background: #ea580c;
+    color: #fff;
+    border-radius: 6px;
+    font-size: 12px;
+    letter-spacing: 0;
+    font-weight: 600;
+  }
+  .label .dot { width: 4px; height: 4px; background: #71717a; border-radius: 50%; }
+
+  .headline {
+    font-size: 30px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.15;
+    margin-bottom: 10px;
+    color: #fafafa;
+  }
+  .headline .accent { color: #fb923c; }
+  .sub {
+    font-size: 15px;
+    line-height: 1.5;
+    color: #a1a1aa;
+  }
+</style>
+</head>
+<body>
+  <div id="root"></div>
+  <script>
+    const p = new URLSearchParams(location.search)
+    const num = p.get('n') || '01'
+    const label = p.get('label') || 'INTRO'
+    const headline = (p.get('headline') || 'Headline').replace(/\*(.+?)\*/g, '<span class="accent">$1</span>')
+    const sub = p.get('sub') || ''
+    const pos = p.get('pos') || 'bl'
+    document.getElementById('root').innerHTML = `
+      <div class="panel pos-${pos}">
+        <div class="label">
+          <span class="num">${num}</span>
+          <span>${label}</span>
+        </div>
+        <div class="headline">${headline}</div>
+        ${sub ? `<div class="sub">${sub}</div>` : ''}
+      </div>
+    `
+  </script>
+</body>
+</html>

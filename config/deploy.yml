@@ -66,8 +66,9 @@ proxy:
   # Long-term we'd want this to be data-driven, but for MVP a static list
   # is fine while we have one tenant.
   hosts:
-    - lewsnetter.dev
-    - email.influencekit.com
+    - lewsnetter.dev       # marketing — landing + legal pages
+    - app.lewsnetter.dev   # the product — sign-in, /account, /api, /mcp, /oauth, /developers
+    - email.influencekit.com  # tenant-branded unsubscribe (CF Flexible — separate zone)
   forward_headers: true
   app_port: 3000
   healthcheck:
@@ -86,7 +87,10 @@ env:
   clear:
     RAILS_LOG_TO_STDOUT: "true"
     RAILS_SERVE_STATIC_FILES: "true"
-    BASE_URL: "https://lewsnetter.dev"
+    # The Rails-side BASE_URL is the app surface (used for OAuth callbacks,
+    # unsubscribe links in emails, MCP metadata, API docs). The marketing
+    # surface lives at the apex (lewsnetter.dev) and doesn't need an env var.
+    BASE_URL: "https://app.lewsnetter.dev"
     HIDE_THINGS: "true"
     HIDE_EXAMPLES: "true"
     # Litestream → Cloudflare R2. Bucket `lewsnetter-litestream` was

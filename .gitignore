@@ -116,3 +116,17 @@ bun.lock
 # the public OSS repo — Bruno's session handoffs, deploy bootstrap notes,
 # IK migration trackers, etc. Anyone forking this repo doesn't need them.
 /initiatives/
+
+# Marketing video build artifacts — sources are tracked (cards/, src/,
+# *.mjs, package.json) but rendered outputs + raw intermediates + node
+# modules are reproducible from source and shouldn't bloat the repo.
+/marketing/video/node_modules/
+/marketing/video/remotion/node_modules/
+/marketing/video/remotion/out/
+/marketing/video/raw/
+/marketing/video/*.mp4
+/marketing/video/*.mov
+/marketing/video/concat.txt
+/marketing/video/music.mp3
+/marketing/video/music_seed.mp3
+/marketing/video/music_seed.wav

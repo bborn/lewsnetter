@@ -14,8 +14,8 @@
       </a>
       <nav class="flex items-center gap-5 text-sm">
         <a href="https://github.com/bborn/lewsnetter" target="_blank" rel="noopener" class="text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-50">GitHub</a>
-        <%= link_to "Sign in", new_user_session_path, class: "text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-50" %>
-        <%= link_to "Start free", new_user_registration_path, class: "button" %>
+        <%= link_to "Sign in", app_sign_in_url, class: "text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-50" %>
+        <%= link_to "Start free", app_sign_up_url, class: "button" %>
       </nav>
     </div>
   </header>
@@ -36,7 +36,7 @@
         Lewsnetter is a newsletter platform where every action a human can take, an AI agent can take too. Visual segment builder, MCP-native, ships through your own Amazon SES.
       </p>
       <div class="flex items-center gap-3 flex-wrap">
-        <%= link_to "Start free — no card", new_user_registration_path, class: "button text-base px-6 py-3" %>
+        <%= link_to "Start free — no card", app_sign_up_url, class: "button text-base px-6 py-3" %>
         <a href="#how" class="button-secondary text-base px-6 py-3">How it works</a>
         <span class="text-sm text-zinc-500 dark:text-zinc-400 ml-2">Free during beta · Open source</span>
       </div>
@@ -185,7 +185,7 @@
       <p class="text-zinc-600 dark:text-zinc-300 leading-relaxed mb-8">
         Sign up, connect SES, send yourself a test — about 5 minutes. Then queue something real.
       </p>
-      <%= link_to "Start free", new_user_registration_path, class: "button text-base px-6 py-3" %>
+      <%= link_to "Start free", app_sign_up_url, class: "button text-base px-6 py-3" %>
     </div>
   </section>
 
