@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Lewsnetter">
+  <!-- Orange rounded square. Color matches design-system accent (#EA580C / orange-600). -->
+  <rect width="512" height="512" rx="96" ry="96" fill="#EA580C"/>
+  <!-- "L" in Geist Semibold — stroke-and-fill drawn as paths so the icon
+       doesn't depend on the Geist webfont being available (favicons are
+       often rendered before fonts load). 280pt-equivalent, optical-center
+       weighted toward the bottom-left so the negative space reads. -->
+  <path
+    d="M 184 124 L 184 388 L 372 388"
+    fill="none"
+    stroke="#FFFFFF"
+    stroke-width="56"
+    stroke-linecap="round"
+    stroke-linejoin="round"/>
+</svg>

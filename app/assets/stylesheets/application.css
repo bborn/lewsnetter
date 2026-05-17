@@ -164,7 +164,9 @@ html.dark a:hover,
     @apply hover:text-zinc-900 dark:hover:text-zinc-50 hover:bg-zinc-50 dark:hover:bg-zinc-800;
     @apply hover:border-zinc-400 dark:hover:border-zinc-600 hover:no-underline;
     font-family: 'Geist', ui-sans-serif, system-ui, sans-serif;
-    padding: 8px 14px;
+    /* Match .button padding so primary + secondary buttons sit at the
+       same height when they're side-by-side in an actions row. */
+    padding: 9px 16px;
     font-size: 14px;
     line-height: 1.2;
     border-radius: 6px;

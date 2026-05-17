@@ -75,7 +75,7 @@ en:
       contexts:
         team:
           header: Subscribers
-          description: Your team's full audience — everyone %{team_name} can email. Lewsnetter has one audience per team; use Segments below to filter it for a specific campaign.
+          description: Your team's full audience — everyone %{team_name} can email. Lewsnetter has one audience per team; use Segments to filter it for a specific campaign.
           description_empty: "Add your audience. Manually add subscribers one at a time, or import an existing list from CSV. There's one audience per team; you can target subsets with Segments later."
       fields: *fields
       buttons: *buttons
