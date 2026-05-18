@@ -37,20 +37,14 @@ Sentry.init do |config|
   #    context via Sentry.set_user / set_extra in code if needed.
   config.send_default_pii = false
 
-  # 2. Extend Sentry's built-in field scrubber with the
-  #    Lewsnetter-specific PII surface. Sentry scrubs values whose KEY
-  #    matches anything in this list, regardless of where in the payload
-  #    they appear (params, extras, breadcrumbs, etc.).
-  config.sanitize_fields = %w[
-    email name phone address
-    encrypted_access_key_id encrypted_secret_access_key
-    access_key_id secret_access_key
-    stripe_customer_id card cvc
-    password password_confirmation current_password
-    authorization api_key token access_token refresh_token bearer
-    rails_master_key secret_key_base
-    dkim_tokens
-  ]
+  # 2. Rails request data is auto-scrubbed via the existing
+  #    Rails.application.config.filter_parameters list (sentry-rails 5.x+
+  #    honors it without explicit config). The list is set in
+  #    config/initializers/filter_parameter_logging.rb — keep that
+  #    canonical and PII surfaces flow through automatically.
+  #    Note: sentry-ruby 6.x removed the explicit `sanitize_fields=`
+  #    setter, so explicit per-field scrub is now done via before_send
+  #    if we need it beyond filter_parameters coverage.
 
   # 3. before_send hook — last-chance filter. Drop health-check routing
   #    noise so the inbox stays signal. Must return either the (possibly
