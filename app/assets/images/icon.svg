@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Lewsnetter icon mark — used for favicons, app icons, and any context
+  where the full wordmark won't read (32x32 and below).
+
+  Design: lowercase "l" + the brand orange dot. Echoes the wordmark's
+  terminal "Lewsnetter•" mark but compresses to a 32px-readable glyph.
+  The "l" is drawn as a rounded vertical stroke (cap-height = 320,
+  stroke-width = 80, 8px stroke-cap radius) to read as a stylized Geist
+  letterform without depending on the font being installed.
+
+  Geometry uses a 512x512 viewBox. Safe area is the central 384x384 so
+  the iOS rounded-square mask never clips the mark. The favicon variants
+  use this same SVG; the apple-touch-icon variant adds a white rounded
+  background (generated separately, see icon-apple.svg).
+
+  Per DESIGN.md → Color → Accent: light-mode orange is #EA580C (orange-600).
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Lewsnetter">
+  <title>Lewsnetter</title>
+  <!-- Lowercase "l" stem. Rounded caps + the geometry of Geist's lowercase l:
+       single vertical stroke, full ascender height. -->
+  <rect x="176" y="96" width="80" height="320" rx="40" ry="40" fill="#09090B"/>
+  <!-- Brand accent dot, sitting on the x-height row to the right of the stem,
+       mirroring the relationship in the wordmark. -->
+  <circle cx="368" cy="376" r="40" fill="#EA580C"/>
+</svg>

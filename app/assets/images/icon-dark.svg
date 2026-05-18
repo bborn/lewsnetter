@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Lewsnetter icon mark — dark backgrounds (browser tab in dark mode, etc).
+  Identical geometry to icon.svg with the stem flipped to zinc-50 for contrast.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Lewsnetter">
+  <title>Lewsnetter</title>
+  <rect x="176" y="96" width="80" height="320" rx="40" ry="40" fill="#FAFAFA"/>
+  <circle cx="368" cy="376" r="40" fill="#FB923C"/>
+</svg>

@@ -1,0 +1,62 @@
+<%# Global Cmd+K (Ctrl+K) command palette. Rendered once at the bottom of
+    the signed-in layout. Hidden until the user hits the shortcut or clicks
+    the ⌘K chip in the top nav.
+
+    Implementation notes:
+    - Uses a native <dialog> so we get free backdrop, ESC handling, focus
+      trap, and inert behind. The Stimulus controller still owns open/close
+      so we can wire the global keybinding and the search XHR. See
+      app/javascript/controllers/search_palette_controller.js.
+    - Search endpoint is scoped to current_team; the URL is baked in once
+      via data attribute so the controller doesn't need to know about
+      Rails routing.
+    - Results render as <ul> with grouped <li> headers + selectable rows.
+      Keyboard navigation (↑/↓/Enter/Esc) is owned by the controller. %>
+<% return unless user_signed_in? && current_team %>
+
+<dialog id="search-palette"
+        class="search-palette"
+        data-controller="search-palette"
+        data-search-palette-url-value="<%= account_team_search_path(current_team) %>"
+        aria-label="Search">
+  <div class="search-palette__panel"
+       data-search-palette-target="panel"
+       data-action="click->search-palette#stopPropagation">
+    <div class="search-palette__input-row">
+      <input type="text"
+             class="search-palette__input"
+             data-search-palette-target="input"
+             data-action="input->search-palette#onInput keydown->search-palette#onKeydown"
+             placeholder="Search subscribers, campaigns, segments, templates…"
+             autocomplete="off"
+             spellcheck="false"
+             aria-label="Search query"
+             aria-autocomplete="list"
+             aria-controls="search-palette-results">
+      <kbd class="search-palette__esc">ESC</kbd>
+    </div>
+
+    <div id="search-palette-results"
+         class="search-palette__results"
+         data-search-palette-target="results"
+         role="listbox">
+      <%# Stimulus renders rows in here. Default empty-state copy below
+          stays visible until the controller first paints. %>
+      <div class="search-palette__empty" data-search-palette-target="empty">
+        <span class="search-palette__empty-text">Type to search, or use <kbd>↑</kbd> <kbd>↓</kbd> to browse recent items.</span>
+      </div>
+    </div>
+
+    <div class="search-palette__footer">
+      <span class="search-palette__hint">
+        <kbd>↑</kbd><kbd>↓</kbd> navigate
+      </span>
+      <span class="search-palette__hint">
+        <kbd>↵</kbd> open
+      </span>
+      <span class="search-palette__hint">
+        <kbd>esc</kbd> close
+      </span>
+    </div>
+  </div>
+</dialog>

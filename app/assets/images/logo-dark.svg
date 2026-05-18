@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Lewsnetter primary wordmark — dark backgrounds.
+
+  Identical geometry to logo.svg; wordmark flips to zinc-50 for contrast on
+  dark surfaces. Dot stays the same brand orange (still readable on dark per
+  DESIGN.md — but if a future surface needs higher contrast, swap to
+  #FB923C / orange-400 which is the documented dark-mode accent).
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 64" role="img" aria-label="Lewsnetter">
+  <title>Lewsnetter</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Geist:wght@600&display=swap');
+    .wordmark {
+      font-family: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      font-weight: 600;
+      font-size: 40px;
+      letter-spacing: -0.02em;
+      fill: #FAFAFA; /* zinc-50 */
+    }
+  </style>
+  <text class="wordmark" x="0" y="46">Lewsnetter</text>
+  <circle cx="270" cy="42" r="6" fill="#FB923C"/>
+</svg>
