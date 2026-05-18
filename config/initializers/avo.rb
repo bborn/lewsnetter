@@ -5,8 +5,12 @@ Avo.configure do |config|
   # used only when you have custom `map` configuration in your config.ru
   # config.prefix_path = "/internal"
 
-  # Where should the user be redirected when visting the `/avo` url
-  # config.home_path = nil
+  # Land admins on the Lewsnetter operator dashboard (Avo::ToolsController#home,
+  # see app/controllers/avo/tools_controller.rb and the route added in
+  # config/routes/avo.rb) instead of the default resource picker. We use a
+  # plain Rails controller because Avo's BaseDashboard / MetricCard /
+  # PartialCard live in the licensed `avo-advanced` add-on, not the OSS gem.
+  config.home_path = "/admin/avo/home"
 
   ## == Licensing ==
   # config.license_key = ENV['AVO_LICENSE_KEY']
@@ -18,8 +22,11 @@ Avo.configure do |config|
 
   ## == Authentication ==
   config.current_user_method = :current_user
-  # config.authenticate_with do
-  # end
+  # The engine is mounted inside an
+  # `authenticate :user, ->(u) { u.developer? }` Devise constraint in
+  # config/routes/avo.rb — non-developers 404 at the router. No additional
+  # authenticate_with hook needed here. (BulletTrain's `developer?` reads
+  # the comma-separated `DEVELOPER_EMAILS` env var.)
 
   ## == Authorization ==
   # config.authorization_methods = {

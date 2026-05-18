@@ -114,6 +114,11 @@ env:
     # Open public signups now that billing is wired (gate lives in
     # config/routes.rb). Flip to "false" to disable signups again.
     LEWSNETTER_PUBLIC_SIGNUPS: "true"
+    # Operator emails (comma-separated) granted access to the /admin/avo
+    # console + /sidekiq dashboard via BulletTrain's User#developer? helper.
+    # Same env var also gates app/models/ability.rb's elevated CanCan
+    # abilities. Self-hosters: override this with your own admin emails.
+    DEVELOPER_EMAILS: "bruno@influencekit.com"
   secret:
     - RAILS_MASTER_KEY
     - LITESTREAM_REPLICA_ACCESS_KEY_ID
