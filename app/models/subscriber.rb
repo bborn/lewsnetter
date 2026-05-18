@@ -28,6 +28,10 @@ class Subscriber < ApplicationRecord
   # 🚅 add belongs_to associations above.
 
   has_many :events, dependent: :destroy
+  # Per-campaign delivery rows for this subscriber. Lets us answer "what
+  # have we sent this person, and how did it land?" — and they cascade so
+  # GDPR-style subscriber deletes don't leave orphan delivery rows.
+  has_many :deliveries, dependent: :destroy
   # 🚅 add has_many associations above.
 
   # 🚅 add has_one associations above.

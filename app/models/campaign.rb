@@ -21,6 +21,12 @@ class Campaign < ApplicationRecord
   # validation strategy, 5 MB cap).
   has_many_attached :assets
 
+  # Per-recipient delivery rows. Source of truth for engagement aggregations
+  # (sent / delivered / bounced / complained / failed; opens + clicks land in
+  # Phase 2). Destroyed with the campaign so postmortem data dies with it —
+  # we don't keep an audit trail of deleted campaigns by design.
+  has_many :deliveries, dependent: :destroy
+
   # 🚅 add has_many associations above.
 
   # 🚅 add has_one associations above.

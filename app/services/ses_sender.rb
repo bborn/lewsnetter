@@ -11,15 +11,21 @@
 # the pipeline (job, stats, status transitions) runs end-to-end. The
 # `Rails.application.config.ses_client = :stub` override is also honored for
 # tests that want to force stub behavior even when a config exists.
+#
+# Delivery records: every per-recipient attempt — success, failure, or stub —
+# writes a `Delivery` row. The row's `ses_message_id` is the join key SNS
+# event-publishing webhooks use to update the row with bounce/complaint/
+# delivered events. Failed sends still get a row (status="failed") so the
+# postmortem aggregations match the audience size.
 class SesSender
-  Result = Struct.new(:message_ids, :failed, keyword_init: true)
+  Result = Struct.new(:message_ids, :failed, :delivery_write_errors, keyword_init: true)
 
   class << self
     # campaign: Campaign with a sender_address + body
     # subscribers: enumerable of Subscriber records
     def send_bulk(campaign:, subscribers:)
       subscribers = Array(subscribers)
-      return Result.new(message_ids: [], failed: []) if subscribers.empty?
+      return Result.new(message_ids: [], failed: [], delivery_write_errors: 0) if subscribers.empty?
 
       team = campaign.team
       client, stub_mode = resolve_client(team)
@@ -28,6 +34,7 @@ class SesSender
 
       message_ids = []
       failed = []
+      delivery_write_errors = 0
 
       subscribers.each do |subscriber|
         rendered =
@@ -39,6 +46,12 @@ class SesSender
               "campaign=#{campaign.id}: #{e.class}: #{e.message}"
             )
             failed << {subscriber: subscriber, error: "render_failed: #{e.message}"}
+            delivery_write_errors += 1 unless record_delivery(
+              campaign: campaign,
+              subscriber: subscriber,
+              status: "failed",
+              error_message: "render_failed: #{e.message}"
+            )
             next
           end
 
@@ -47,7 +60,15 @@ class SesSender
             %([SES STUB] to=#{subscriber.email} subject=#{rendered.subject.inspect} ) +
               %(html_preview=#{rendered.html.to_s[0, 200].inspect})
           )
-          message_ids << "stub-#{SecureRandom.hex(8)}"
+          stub_id = "stub-#{SecureRandom.hex(8)}"
+          message_ids << stub_id
+          delivery_write_errors += 1 unless record_delivery(
+            campaign: campaign,
+            subscriber: subscriber,
+            status: "sent",
+            ses_message_id: stub_id,
+            sent_at: Time.current
+          )
           next
         end
 
@@ -71,19 +92,54 @@ class SesSender
           send_args[:configuration_set_name] = configuration_set_name if configuration_set_name.present?
           response = client.send_email(**send_args)
           message_ids << response.message_id
+          delivery_write_errors += 1 unless record_delivery(
+            campaign: campaign,
+            subscriber: subscriber,
+            status: "sent",
+            ses_message_id: response.message_id,
+            sent_at: Time.current
+          )
         rescue => e
           Rails.logger.warn(
             "[SesSender] SES send failed for subscriber=#{subscriber.id} " \
             "campaign=#{campaign.id}: #{e.class}: #{e.message}"
           )
           failed << {subscriber: subscriber, error: e.message}
+          delivery_write_errors += 1 unless record_delivery(
+            campaign: campaign,
+            subscriber: subscriber,
+            status: "failed",
+            error_message: e.message
+          )
         end
       end
 
-      Result.new(message_ids: message_ids, failed: failed)
+      Result.new(message_ids: message_ids, failed: failed, delivery_write_errors: delivery_write_errors)
     end
 
     private
+
+    # Persist a Delivery row. Wrapped in rescue so a single bad insert (FK
+    # gone, validation drift, unique-constraint race) can't crash the entire
+    # batch send — we log + count it and keep going. Returns true on success,
+    # false on failure (so the caller can bump a counter).
+    def record_delivery(campaign:, subscriber:, status:, ses_message_id: nil, sent_at: nil, error_message: nil)
+      Delivery.create!(
+        campaign: campaign,
+        subscriber: subscriber,
+        status: status,
+        ses_message_id: ses_message_id,
+        sent_at: sent_at,
+        error_message: error_message
+      )
+      true
+    rescue => e
+      Rails.logger.warn(
+        "[SesSender] failed to record Delivery for subscriber=#{subscriber.id} " \
+        "campaign=#{campaign.id} status=#{status}: #{e.class}: #{e.message}"
+      )
+      false
+    end
 
     # Returns [client_or_nil, stub_mode_bool]. We're in stub mode when either:
     #   1. The global override `Rails.application.config.ses_client = :stub`

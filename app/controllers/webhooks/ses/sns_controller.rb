@@ -8,6 +8,12 @@
 # Mounted outside the Account:: namespace so it's reachable without auth
 # (SNS does its own signing; for MVP we accept TopicArn match as proof and
 # rely on routing isolation. Signature verification is a follow-up.)
+#
+# In addition to flipping subscriber flags (used by segment filters), we now
+# update the matching `Delivery` row by `ses_message_id` so per-campaign
+# postmortems show real bounce/complaint/delivered counts. If no delivery
+# row matches (event from before this rollout, or a different system), we
+# still update the subscriber and log a miss.
 class Webhooks::Ses::SnsController < ApplicationController
   skip_before_action :verify_authenticity_token
   skip_before_action :authenticate_user!, raise: false
@@ -75,21 +81,29 @@ class Webhooks::Ses::SnsController < ApplicationController
     #   2. "SES Event Publishing" (configuration set → SNS destination, what we use): uses `eventType`.
     # We accept either key so the handler works for both wirings.
     event_type = message["eventType"] || message["notificationType"]
-    Rails.logger.info("[SNS] received event_type=#{event_type.inspect} team=#{team.id} topic=#{topic_arn}")
+    mail = message["mail"] || {}
+    message_id = mail["messageId"]
+    Rails.logger.info("[SNS] received event_type=#{event_type.inspect} team=#{team.id} topic=#{topic_arn} message_id=#{message_id.inspect}")
 
     case event_type
     when "Bounce"
-      handle_bounce(team, message["bounce"] || {})
+      handle_bounce(team, message["bounce"] || {}, message_id)
     when "Complaint"
-      handle_complaint(team, message["complaint"] || {})
+      handle_complaint(team, message["complaint"] || {}, message_id)
     when "Reject"
-      handle_reject(team, message["reject"] || {}, message["mail"] || {})
+      handle_reject(team, message["reject"] || {}, mail, message_id)
     when "Delivery"
-      # We don't track per-recipient delivery yet — log and move on.
-      Rails.logger.info("[SNS:delivery] team=#{team.id}")
-    when "RenderingFailure", "Send", "Open", "Click"
-      # Either not actionable (Send/Open/Click are positive signal we don't
-      # store yet) or a code bug to surface elsewhere (RenderingFailure).
+      handle_delivery(team, message_id)
+    when "Send"
+      # Positive confirmation SES accepted the message for delivery. We
+      # already wrote a `sent` Delivery row when calling SES; the row exists
+      # before this event arrives. No-op aside from logging.
+      Rails.logger.info("[SNS:send] team=#{team.id} message_id=#{message_id.inspect}")
+    when "RenderingFailure", "Open", "Click"
+      # RenderingFailure is a code bug to surface elsewhere. Open + Click
+      # arrive only when SES-side tracking is enabled on the configuration
+      # set; we use client-side tracking instead (Phase 2) so this is dead
+      # code today — but we still log so we'd notice if it started firing.
       Rails.logger.info("[SNS:#{event_type.to_s.downcase}] team=#{team.id}")
     end
   end
@@ -103,9 +117,20 @@ class Webhooks::Ses::SnsController < ApplicationController
 
   # Permanent bounces auto-unsubscribe the recipient. Soft bounces (transient)
   # are left alone — SES will retry; if it gives up it'll send a permanent
-  # bounce later.
-  def handle_bounce(team, bounce)
-    return unless bounce["bounceType"] == "Permanent"
+  # bounce later. The Delivery row is updated for *any* bounce, hard or
+  # soft, so the postmortem reflects all observed bounce events.
+  def handle_bounce(team, bounce, message_id)
+    bounce_type = bounce["bounceType"]
+
+    update_delivery_for(message_id) do |delivery|
+      delivery.update!(
+        status: "bounced",
+        bounced_at: Time.current,
+        bounce_subtype: bounce_type
+      )
+    end
+
+    return unless bounce_type == "Permanent"
 
     Array(bounce["bouncedRecipients"]).each do |recipient|
       email = recipient["emailAddress"].to_s.downcase
@@ -122,8 +147,16 @@ class Webhooks::Ses::SnsController < ApplicationController
   # virus, or content was flagged). The destination list lives on the
   # `mail` envelope. We treat the recipient as bounced — the message
   # never made it out and won't on a resend either.
-  def handle_reject(team, reject, mail)
+  def handle_reject(team, reject, mail, message_id)
     reason = reject["reason"]
+
+    update_delivery_for(message_id) do |delivery|
+      delivery.update!(
+        status: "failed",
+        error_message: "rejected: #{reason}"
+      )
+    end
+
     Array(mail["destination"]).each do |raw_email|
       email = raw_email.to_s.downcase
       next if email.blank?
@@ -138,7 +171,11 @@ class Webhooks::Ses::SnsController < ApplicationController
   # Any complaint auto-unsubscribes (and we record `complained_at`). The
   # underlying email provider will already have raised our complaint
   # rate — we just want to make sure we never send to this address again.
-  def handle_complaint(team, complaint)
+  def handle_complaint(team, complaint, message_id)
+    update_delivery_for(message_id) do |delivery|
+      delivery.update!(status: "complained", complained_at: Time.current)
+    end
+
     Array(complaint["complainedRecipients"]).each do |recipient|
       email = recipient["emailAddress"].to_s.downcase
       next if email.blank?
@@ -148,5 +185,37 @@ class Webhooks::Ses::SnsController < ApplicationController
       subscriber.update!(subscribed: false, complained_at: Time.current)
       Rails.logger.info("[SNS:complaint] team=#{team.id} email=#{email} unsubscribed (complaint)")
     end
+  end
+
+  # Delivery events confirm SES handed the message off to the receiving MTA.
+  # No subscriber-side action; this exists purely to stamp the Delivery row
+  # so the postmortem can show a delivered count.
+  def handle_delivery(team, message_id)
+    update_delivery_for(message_id) do |delivery|
+      # If the row was already marked bounced/complained by an out-of-order
+      # event, keep that terminal status — `delivered` shouldn't undo it.
+      attrs = {delivered_at: Time.current}
+      attrs[:status] = "delivered" if delivery.status == "sent"
+      delivery.update!(attrs)
+    end
+    Rails.logger.info("[SNS:delivery] team=#{team.id} message_id=#{message_id.inspect}")
+  end
+
+  # Find the Delivery row by SES MessageId and yield it for in-place update.
+  # If we have no message_id, or no row matches it (event from before this
+  # rollout, or from a parallel system), log + skip — the subscriber-flag
+  # updates still happen in the caller.
+  def update_delivery_for(message_id)
+    return if message_id.blank?
+    delivery = Delivery.find_by(ses_message_id: message_id)
+    if delivery.nil?
+      Rails.logger.info("[SNS] no Delivery match for message_id=#{message_id.inspect}")
+      return
+    end
+    yield delivery
+  rescue => e
+    # Don't let a delivery update error fail the webhook — SNS will retry
+    # the whole notification and we'd then double-apply the subscriber flag.
+    Rails.logger.warn("[SNS] failed to update Delivery message_id=#{message_id.inspect}: #{e.class}: #{e.message}")
   end
 end

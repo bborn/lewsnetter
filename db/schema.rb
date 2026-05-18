@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_17_100100) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_18_120000) do
   create_table "account_onboarding_invitation_lists", force: :cascade do |t|
     t.integer "team_id", null: false
     t.json "invitations"
@@ -166,6 +166,29 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_17_100100) do
     t.index ["team_id", "external_id"], name: "index_companies_on_team_id_and_external_id", unique: true, where: "external_id IS NOT NULL"
     t.index ["team_id", "intercom_id"], name: "index_companies_on_team_id_and_intercom_id", unique: true, where: "intercom_id IS NOT NULL"
     t.index ["team_id"], name: "index_companies_on_team_id"
+  end
+
+  create_table "deliveries", force: :cascade do |t|
+    t.integer "campaign_id", null: false
+    t.integer "subscriber_id", null: false
+    t.string "ses_message_id"
+    t.string "status", default: "sent", null: false
+    t.datetime "sent_at"
+    t.datetime "delivered_at"
+    t.datetime "bounced_at"
+    t.datetime "complained_at"
+    t.datetime "opened_at"
+    t.datetime "clicked_at"
+    t.datetime "unsubscribed_at"
+    t.integer "click_count", default: 0, null: false
+    t.string "bounce_subtype"
+    t.text "error_message"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["campaign_id", "status"], name: "index_deliveries_on_campaign_id_and_status"
+    t.index ["campaign_id"], name: "index_deliveries_on_campaign_id"
+    t.index ["ses_message_id"], name: "index_deliveries_on_ses_message_id", unique: true
+    t.index ["subscriber_id"], name: "index_deliveries_on_subscriber_id"
   end
 
   create_table "email_templates", force: :cascade do |t|
@@ -651,6 +674,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_17_100100) do
   add_foreign_key "chats", "teams"
   add_foreign_key "chats", "users"
   add_foreign_key "companies", "teams"
+  add_foreign_key "deliveries", "campaigns"
+  add_foreign_key "deliveries", "subscribers"
   add_foreign_key "email_templates", "teams"
   add_foreign_key "events", "subscribers"
   add_foreign_key "events", "teams"
