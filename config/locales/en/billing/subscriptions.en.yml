@@ -1,0 +1,8 @@
+en:
+  account:
+    billing:
+      subscriptions:
+        new:
+          pricing:
+            header: "Subscribe to Lewsnetter"
+            description: "One plan, no tiers, no caps. Cancel from your account anytime."
