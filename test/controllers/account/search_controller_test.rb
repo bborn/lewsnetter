@@ -158,4 +158,35 @@ class Account::SearchControllerTest < ActionDispatch::IntegrationTest
     # Both are acceptable signals — they mean we didn't leak data.
     refute_equal 200, response.status
   end
+
+  test "empty query returns an Actions group with create + navigate rows" do
+    get account_team_search_url(@team, format: :json)
+    assert_response :success
+    body = JSON.parse(response.body)
+    actions = body["groups"].find { |g| g["label"] == "Actions" }
+    assert actions, "expected Actions group in groups"
+    titles = actions["items"].map { |i| i["title"] }
+    assert_includes titles, "Create new campaign"
+    assert_includes titles, "Subscribers"
+    actions["items"].each do |i|
+      assert_equal "action", i["type"]
+      assert i["url"].to_s.start_with?("/"), "action url should be a path: #{i.inspect}"
+    end
+  end
+
+  test "actions are filtered by case-insensitive substring on title or subtitle" do
+    get account_team_search_url(@team, q: "campaign", format: :json)
+    assert_response :success
+    actions = JSON.parse(response.body)["groups"].find { |g| g["label"] == "Actions" }
+    titles = actions["items"].map { |i| i["title"] }
+    assert_includes titles, "Create new campaign"
+    assert_includes titles, "Campaigns"
+    refute_includes titles, "Team settings"
+  end
+
+  test "actions group is the first group so it surfaces above search hits" do
+    get account_team_search_url(@team, format: :json)
+    assert_response :success
+    assert_equal "Actions", JSON.parse(response.body)["groups"].first["label"]
+  end
 end

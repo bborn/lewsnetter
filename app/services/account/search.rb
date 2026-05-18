@@ -35,6 +35,7 @@ module Account
 
     def groups
       [
+        {label: "Actions", type: "action", items: actions},
         {label: "Subscribers", type: "subscriber", items: subscribers},
         {label: "Companies", type: "company", items: companies},
         {label: "Segments", type: "segment", items: segments},
@@ -42,6 +43,57 @@ module Account
         {label: "Email Templates", type: "email_template", items: email_templates},
         {label: "Sender Addresses", type: "sender_address", items: sender_addresses}
       ]
+    end
+
+    # ----- Actions ----------------------------------------------------------
+    #
+    # Static palette of "do something" and "go somewhere" rows — the main
+    # navigation surface for power users. Filtered by case-insensitive
+    # substring on title or subtitle. When the query is blank we keep the
+    # top 8 most-used (Create + primary nav) so the palette opens with
+    # something useful instead of "type to search."
+    def actions
+      filtered = all_actions.select { |a| action_matches?(a) }
+      query.blank? ? filtered.first(8) : filtered
+    end
+
+    def action_matches?(action)
+      return true if query.blank?
+      needle = query.downcase
+      action[:title].downcase.include?(needle) ||
+        action[:subtitle].to_s.downcase.include?(needle)
+    end
+
+    # Order matters: empty-query view shows the first N. Lead with the
+    # things power users do most (create, then navigate to the dense
+    # working surfaces).
+    def all_actions
+      [
+        # Create
+        action_row("Create new campaign",          "Create",   h.new_account_team_campaign_path(team)),
+        action_row("Add subscriber",               "Create",   h.new_account_team_subscriber_path(team)),
+        action_row("Import subscribers from CSV",  "Create",   h.new_account_team_subscribers_import_path(team)),
+        action_row("Create new segment",           "Create",   h.new_account_team_segment_path(team)),
+        action_row("Create new email template",    "Create",   h.new_account_team_email_template_path(team)),
+        action_row("Add new sender address",       "Create",   h.new_account_team_sender_address_path(team)),
+
+        # Navigate
+        action_row("Go to dashboard",              "Navigate", h.account_dashboard_path),
+        action_row("Subscribers",                  "Navigate", h.account_team_subscribers_path(team)),
+        action_row("Segments",                     "Navigate", h.account_team_segments_path(team)),
+        action_row("Campaigns",                    "Navigate", h.account_team_campaigns_path(team)),
+        action_row("Email templates",              "Navigate", h.account_team_email_templates_path(team)),
+        action_row("Senders",                      "Navigate", h.account_team_sender_addresses_path(team)),
+        action_row("Email sending settings",       "Navigate", h.account_team_email_sending_path(team)),
+        action_row("SES setup wizard",             "Navigate", h.account_team_email_sending_setup_path(team)),
+        action_row("Developers / API tokens",      "Navigate", h.account_team_developers_path(team)),
+        action_row("Billing & subscription",       "Navigate", h.account_team_billing_subscriptions_path(team)),
+        action_row("Team settings",                "Navigate", h.edit_account_team_path(team))
+      ]
+    end
+
+    def action_row(title, group, url)
+      {title: title, subtitle: group, url: url, type: "action"}
     end
 
     # ----- Subscribers -----------------------------------------------------
