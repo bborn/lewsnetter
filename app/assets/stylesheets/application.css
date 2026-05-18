@@ -1503,4 +1503,190 @@ html.dark a:hover,
     font-weight: 500;
     cursor: pointer;
   }
+
+  /* ============================================================
+     Search palette (Cmd+K / Ctrl+K command palette)
+     See DESIGN.md → Aesthetic direction. Zinc surface, hairline
+     border, no shadow flourishes, Geist Mono for keycaps + group
+     labels, accent orange only on the active row.
+     ============================================================ */
+  .search-palette-chip {
+    @apply inline-flex items-center gap-2 px-2 py-1 border border-zinc-200 dark:border-zinc-800 rounded-md bg-white dark:bg-zinc-900 hover:border-zinc-300 dark:hover:border-zinc-700 cursor-pointer;
+    font-family: 'Geist', ui-sans-serif, system-ui, sans-serif;
+    font-size: 11px;
+    color: #71717A; /* zinc-500 */
+    line-height: 1;
+    transition: border-color 100ms ease-out, color 100ms ease-out;
+  }
+  .search-palette-chip:hover {
+    @apply text-zinc-700 dark:text-zinc-300;
+  }
+  .search-palette-chip__label {
+    @apply text-zinc-500 dark:text-zinc-400;
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .search-palette-chip__kbd {
+    @apply text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded px-1.5 py-0.5;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 10px;
+    font-weight: 500;
+    line-height: 1;
+  }
+
+  /* Dialog reset — <dialog> has heavy UA defaults that fight Tailwind. */
+  .search-palette {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    max-width: none;
+    max-height: none;
+  }
+  .search-palette::backdrop {
+    background: rgb(9 9 11 / 0.45); /* zinc-950 @ 45% */
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+  .search-palette[open] {
+    /* Center the panel ourselves; some browsers position dialogs
+       slightly off-center by default. */
+    position: fixed;
+    inset: 0;
+    margin: 0;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 12vh;
+  }
+
+  .search-palette__panel {
+    @apply bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800;
+    width: min(640px, calc(100vw - 32px));
+    border-radius: 8px;
+    box-shadow: 0 12px 32px rgb(0 0 0 / 0.12), 0 2px 6px rgb(0 0 0 / 0.06);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    max-height: 70vh;
+    animation: search-palette-pop 150ms ease-out;
+  }
+  @keyframes search-palette-pop {
+    from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .search-palette__input-row {
+    @apply flex items-center gap-2 px-4 border-b border-zinc-200 dark:border-zinc-800;
+    height: 52px;
+  }
+  .search-palette__input {
+    @apply flex-1 bg-transparent border-0 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500;
+    font-family: 'Geist', ui-sans-serif, system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.4;
+    padding: 0;
+    outline: none;
+  }
+  .search-palette__input:focus {
+    outline: none;
+    box-shadow: none;
+  }
+  .search-palette__esc {
+    @apply text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded px-1.5 py-0.5;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 10px;
+    line-height: 1;
+    font-weight: 500;
+  }
+
+  .search-palette__results {
+    overflow-y: auto;
+    flex: 1;
+    padding: 4px 0;
+  }
+  .search-palette__group-label {
+    @apply text-zinc-500 dark:text-zinc-400;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 10px 16px 6px;
+  }
+  .search-palette__group {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 4px;
+  }
+  .search-palette__row {
+    @apply text-zinc-900 dark:text-zinc-100;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-family: 'Geist', ui-sans-serif, system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.4;
+    min-width: 0;
+  }
+  .search-palette__row.is-active {
+    @apply bg-orange-50 dark:bg-orange-950/40;
+    /* Accent border on the inside-left edge, matching active-nav treatment. */
+    box-shadow: inset 2px 0 0 #EA580C;
+  }
+  .search-palette__title {
+    @apply text-zinc-900 dark:text-zinc-100;
+    font-weight: 500;
+    flex-shrink: 0;
+    max-width: 60%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .search-palette__row.is-active .search-palette__title {
+    @apply text-orange-900 dark:text-orange-100;
+  }
+  .search-palette__subtitle {
+    @apply text-zinc-500 dark:text-zinc-400;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .search-palette__empty {
+    @apply text-zinc-500 dark:text-zinc-400;
+    padding: 20px 16px;
+    text-align: center;
+    font-size: 13px;
+  }
+  .search-palette__empty-text kbd {
+    @apply text-zinc-600 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded px-1 py-0.5 mx-0.5;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 10px;
+    font-weight: 500;
+  }
+
+  .search-palette__footer {
+    @apply border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-500 dark:text-zinc-400;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 8px 16px;
+    font-family: 'Geist', ui-sans-serif, system-ui, sans-serif;
+    font-size: 11px;
+  }
+  .search-palette__hint kbd {
+    @apply text-zinc-500 dark:text-zinc-400 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded px-1 py-0.5 mr-1;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 10px;
+    font-weight: 500;
+  }
 }

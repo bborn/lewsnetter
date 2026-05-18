@@ -63,7 +63,11 @@ jobs:
         run: npm install -g mjml@5.2.1
 
       - name: Prepare test database
-        run: bundle exec rails db:test:prepare
+        # Run migrations (not just `db:test:prepare`) so data-only migrations
+        # that don't touch schema still land their row in schema_migrations.
+        # Otherwise the test boot's Migration.check_pending! barfs even
+        # though the schema dumper considers the DB up-to-date.
+        run: bundle exec rails db:migrate RAILS_ENV=test
 
       # Scope the smoke suite to the directories we own. The wider Bullet Train
       # scaffolded suite has pre-existing failures unrelated to Lewsnetter v2

@@ -39,10 +39,24 @@
           <div class="flex flex-row items-center border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 electron-draggable">
             <%= render "account/shared/menu/open" %>
 
-            <nav class="flex overflow-auto mx-auto w-full max-w-[1120px] px-8 py-3 select-none" aria-label="Breadcrumb">
+            <nav class="flex items-center overflow-auto mx-auto w-full max-w-[1120px] px-8 py-3 select-none" aria-label="Breadcrumb">
               <ol class="breadcrumb whitespace-nowrap flex items-center space-x-2 font-mono text-[11px] uppercase tracking-wider text-zinc-500">
                 <%= render('breadcrumbs').strip.html_safe %>
               </ol>
+              <% if user_signed_in? && current_team %>
+                <%# Subtle hint that the Cmd+K palette exists. Clicking dispatches
+                    a document-level event the search-palette controller listens
+                    for. Uses platform-appropriate keycap label (⌘ on mac, Ctrl
+                    elsewhere) detected client-side so we don't depend on UA
+                    sniffing in the layout. %>
+                <button type="button"
+                        class="search-palette-chip ml-auto"
+                        onclick="document.dispatchEvent(new CustomEvent('search-palette:open'))"
+                        aria-label="Open search palette (Cmd or Ctrl K)">
+                  <span class="search-palette-chip__label">Search</span>
+                  <kbd class="search-palette-chip__kbd" data-search-palette-keycap>⌘K</kbd>
+                </button>
+              <% end %>
             </nav>
           </div>
 
@@ -65,6 +79,11 @@
         </div>
       </form>
     </dialog>
+
+    <%# Global Cmd+K command palette. Mounted once at layout level so it
+        responds to the keyboard shortcut anywhere in the signed-in app.
+        Renders nothing when there's no current_team (e.g. mid-onboarding). %>
+    <%= render "account/shared/search_palette" %>
 
     <%# Agent chat panel — fixed bottom-right, always available while signed in. %>
     <%# Lazy-creates a Chat per user so the Cable subscription always has an %>

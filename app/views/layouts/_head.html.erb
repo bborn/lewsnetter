@@ -16,6 +16,21 @@
 
 <meta name="mobile-web-app-capable" content="yes" />
 
+<%# Brand marks — SVG primary, ICO fallback, apple-touch + PWA sizes. The
+    SVG favicon includes a prefers-color-scheme media query internally so
+    one file handles both light and dark tab backgrounds. The .ico exists
+    only for legacy browsers / clients that ignore SVG icons (Safari < 17,
+    Outlook desktop, etc.). theme-color matches the brand orange so mobile
+    Safari and Android Chrome tint the address bar to brand. %>
+<link rel="icon" type="image/svg+xml" href="/icon.svg" />
+<link rel="icon" type="image/png" sizes="32x32" href="<%= image_path('logo/favicon.png') %>" />
+<link rel="icon" type="image/png" sizes="192x192" href="/icon.png" />
+<link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
+<link rel="shortcut icon" href="/favicon.ico" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+<meta name="theme-color" content="#EA580C" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#FB923C" media="(prefers-color-scheme: dark)" />
+
 <%= csrf_meta_tags %>
 
 <meta name="turbo-cache-control" content="no-cache">

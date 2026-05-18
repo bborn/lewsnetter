@@ -1,3 +1,23 @@
-<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="256" cy="256" r="256" fill="red"/>
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Lewsnetter SVG favicon. Served from /icon.svg and referenced from the
+  application <head> via <link rel="icon" type="image/svg+xml" href="/icon.svg">.
+
+  Uses a CSS media query so the stem flips to zinc-50 on tabs that have
+  dark backgrounds. The orange accent dot stays consistent.
+
+  Path-only — no font dependencies, rasterizes identically everywhere.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Lewsnetter">
+  <title>Lewsnetter</title>
+  <style>
+    .stem { fill: #09090B; }
+    .dot  { fill: #EA580C; }
+    @media (prefers-color-scheme: dark) {
+      .stem { fill: #FAFAFA; }
+      .dot  { fill: #FB923C; }
+    }
+  </style>
+  <rect class="stem" x="176" y="96" width="80" height="320" rx="40" ry="40"/>
+  <circle class="dot" cx="368" cy="376" r="40"/>
 </svg>

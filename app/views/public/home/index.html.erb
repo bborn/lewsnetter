@@ -8,8 +8,15 @@
       ============================================================ %>
   <header class="border-b border-zinc-100 dark:border-zinc-900">
     <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-      <a href="/" class="flex items-center gap-2 text-zinc-900 dark:text-zinc-50 font-semibold tracking-tight">
-        <span class="font-mono text-[15px]">Lewsnetter</span>
+      <%# Wordmark + accent dot. Mirrors the in-app top-nav logo in
+          app/views/themes/light/menu/_logo.html.erb so the marketing site
+          and the signed-in product feel like one brand. The Beta pill stays
+          to flag we're pre-1.0. %>
+      <a href="/" class="flex items-center gap-3 group">
+        <span class="flex items-center">
+          <span class="font-sans font-semibold tracking-tight text-[17px] text-zinc-900 dark:text-zinc-50">Lewsnetter</span>
+          <span aria-hidden="true" class="ml-1.5 w-1.5 h-1.5 rounded-full bg-orange-600 group-hover:bg-orange-500 transition-colors"></span>
+        </span>
         <span class="text-[10px] uppercase tracking-widest font-mono px-1.5 py-0.5 rounded bg-orange-50 text-orange-700 dark:bg-orange-950 dark:text-orange-300">Beta</span>
       </a>
       <nav class="flex items-center gap-5 text-sm">

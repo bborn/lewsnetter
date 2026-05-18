@@ -7,7 +7,7 @@ module Mcp
         include Mcp::Tools::Serializers
 
         tool_name "subscribers_list"
-        description "Lists subscribers on the calling team. Supports limit, offset, subscribed filter, and a query that matches email or external_id."
+        description "Lists subscribers on the calling team. Supports limit, offset, subscribed filter, and a query that matches email (exact), name (substring), or external_id (substring)."
         arguments_schema(
           type: "object",
           additionalProperties: false,
@@ -23,16 +23,14 @@ module Mcp
           scope = context.team.subscribers
           scope = scope.where(subscribed: arguments["subscribed"]) if arguments.key?("subscribed")
           if (q = arguments["query"]).present?
-            # Email is encrypted-at-rest (deterministic), so `LIKE '%q%'` on
-            # the ciphertext column can't match a plaintext substring. We do
-            # two passes:
-            #   1) Exact-email match via Rails' encrypted-comparison
-            #      (deterministic encryption preserves equality lookups).
-            #   2) `LIKE` substring search on external_id, which is plaintext.
-            # Result is the union via OR.
+            # Email is deterministic-encrypted, so we can only do exact-match
+            # on it (LIKE against ciphertext is meaningless). Name and
+            # external_id are plaintext, so substring LIKE works.
+            like = "%#{ActiveRecord::Base.sanitize_sql_like(q)}%"
             exact_email_ids = scope.where(email: q).pluck(:id)
-            external_id_ids = scope.where("external_id LIKE ?", "%#{q}%").pluck(:id)
-            scope = scope.where(id: (exact_email_ids + external_id_ids).uniq)
+            name_ids        = scope.where("name LIKE ?", like).pluck(:id)
+            external_id_ids = scope.where("external_id LIKE ?", like).pluck(:id)
+            scope = scope.where(id: (exact_email_ids + name_ids + external_id_ids).uniq)
           end
           total = scope.count
           limit = arguments["limit"] || 50

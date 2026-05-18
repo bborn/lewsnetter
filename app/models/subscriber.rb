@@ -3,23 +3,22 @@ class Subscriber < ApplicationRecord
   has_subscriptions
   # 🚅 add concerns above.
 
-  # PII at rest — encrypted via Rails 8 ActiveRecord Encryption with keys
-  # stored in config/credentials.yml.enc. Email is :deterministic so we can
-  # still `find_by(email:)` + idempotent upsert by email (LewsnetterRails
-  # gem depends on this). Name is non-deterministic — we never query by it.
+  # PII at rest — only `email` is encrypted (deterministic so find_by + the
+  # lewsnetter-rails upsert path still work). `name` is plaintext: it's
+  # low-stakes PII (LinkedIn, bylines, business cards) and non-deterministic
+  # encryption made search/LIKE impossible, breaking subscriber search,
+  # cmd-K, and any segment filtering on name. The DecryptSubscriberNames
+  # migration (2026-05-18) backfilled all existing rows to plaintext.
   #
-  # `custom_attributes` is intentionally NOT encrypted: the segment compiler
+  # `custom_attributes` is also intentionally plaintext: the segment compiler
   # runs json_extract() at the SQL layer, which would return ciphertext junk
   # if the column were encrypted. The tradeoff is documented in /privacy:
-  # email + name are encrypted; segmentation metadata is filesystem-encrypted
-  # only (Hetzner volume + Cloudflare R2 server-side encryption).
+  # email is encrypted; everything else is filesystem-encrypted only
+  # (Hetzner volume + Cloudflare R2 server-side encryption).
   #
-  # support_unencrypted_data: true keeps reads working during the rollout —
-  # existing plaintext rows are returned as-is; new writes are encrypted; a
-  # backfill task (see db/seeds + ops doc) re-saves every row to upgrade
-  # them in place.
+  # support_unencrypted_data on email keeps reads working for any legacy
+  # plaintext rows from before the email encryption rollout.
   encrypts :email, deterministic: true, support_unencrypted_data: true
-  encrypts :name,  support_unencrypted_data: true
 
   # 🚅 add attribute accessors above.
 

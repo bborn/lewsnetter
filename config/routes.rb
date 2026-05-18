@@ -155,6 +155,12 @@ Rails.application.routes.draw do
         # the campaign edit form.
         get :variables, to: "team_variables#index", as: :variables
 
+        # Global Cmd+K command palette search. Returns grouped JSON across
+        # subscribers / companies / segments / campaigns / email templates /
+        # sender addresses. See Account::SearchController +
+        # Account::Search service.
+        get :search, to: "search#index", as: :search
+
         resources :subscribers do
           collection do
             # Typeahead JSON for the "Preview as" autocomplete on the campaign

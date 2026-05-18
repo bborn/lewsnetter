@@ -4,8 +4,15 @@
     not navigation. %>
 <footer class="border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 mt-16">
   <div class="max-w-5xl mx-auto px-6 py-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-    <div class="font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
-      Lewsnetter · AI-native email marketing
+    <%# Quiet brand line. Wordmark in sans + accent dot, then a mono
+        tagline for the "this is a tech product" feel. Echoes the top-nav
+        mark so brand is consistent across surfaces. %>
+    <div class="flex items-center gap-3 text-zinc-500 dark:text-zinc-400">
+      <span class="flex items-center">
+        <span class="font-sans font-semibold tracking-tight text-[13px] text-zinc-700 dark:text-zinc-300">Lewsnetter</span>
+        <span aria-hidden="true" class="ml-1 w-1 h-1 rounded-full bg-orange-600"></span>
+      </span>
+      <span class="font-mono text-[11px] uppercase tracking-widest">AI-native email marketing</span>
     </div>
     <nav class="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
       <a href="/privacy"        class="text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100">Privacy</a>
