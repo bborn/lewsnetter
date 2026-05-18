@@ -126,6 +126,89 @@
       <% end %>
 
       <%# ============================================================
+          Engagement stats — only after first send
+          ============================================================ %>
+      <% if @campaign.sent? %>
+        <% stats = @campaign.delivery_stats
+           attempts = stats[:sent] + stats[:failed]
+           pct = ->(n, base) { (base.to_i > 0) ? "#{((n.to_f / base) * 100).round(1)}%" : "—" } %>
+        <section class="campaign-show-stats" aria-label="Campaign engagement stats">
+          <header class="campaign-show-stats__header">
+            <h3 class="campaign-show-stats__title">Engagement</h3>
+            <span class="campaign-show-stats__hint">
+              Updated live as SES events arrive.
+            </span>
+          </header>
+          <% if attempts.zero? %>
+            <p class="campaign-show-stats__empty">
+              No deliveries recorded yet. If this campaign just sent, stats may take a moment to populate.
+            </p>
+          <% else %>
+            <dl class="campaign-show-stats__grid">
+              <div class="campaign-show-stats__cell">
+                <dt>Sent</dt>
+                <dd class="campaign-show-stats__num"><%= stats[:sent] %></dd>
+                <% if stats[:failed] > 0 %>
+                  <p class="campaign-show-stats__sub">of <%= attempts %> attempted</p>
+                <% else %>
+                  <p class="campaign-show-stats__sub">all attempts</p>
+                <% end %>
+              </div>
+
+              <div class="campaign-show-stats__cell">
+                <dt>Delivered</dt>
+                <dd class="campaign-show-stats__num"><%= stats[:delivered] %></dd>
+                <p class="campaign-show-stats__sub"><%= pct.call(stats[:delivered], stats[:sent]) %> of sent</p>
+              </div>
+
+              <div class="campaign-show-stats__cell">
+                <dt>Opened</dt>
+                <dd class="campaign-show-stats__num"><%= stats[:opened] %></dd>
+                <p class="campaign-show-stats__sub">
+                  <%= pct.call(stats[:opened], stats[:delivered]) %> · unique opens
+                </p>
+              </div>
+
+              <div class="campaign-show-stats__cell">
+                <dt>Clicked</dt>
+                <dd class="campaign-show-stats__num"><%= stats[:clicked] %></dd>
+                <p class="campaign-show-stats__sub">
+                  <%= pct.call(stats[:clicked], stats[:delivered]) %>
+                  <% if stats[:click_total].to_i > stats[:clicked] %>
+                    · <%= stats[:click_total] %> total
+                  <% end %>
+                </p>
+              </div>
+
+              <div class="campaign-show-stats__cell campaign-show-stats__cell--warn">
+                <dt>Bounced</dt>
+                <dd class="campaign-show-stats__num"><%= stats[:bounced] %></dd>
+                <p class="campaign-show-stats__sub"><%= pct.call(stats[:bounced], stats[:sent]) %></p>
+              </div>
+
+              <div class="campaign-show-stats__cell campaign-show-stats__cell--warn">
+                <dt>Complained</dt>
+                <dd class="campaign-show-stats__num"><%= stats[:complained] %></dd>
+                <p class="campaign-show-stats__sub"><%= pct.call(stats[:complained], stats[:sent]) %></p>
+              </div>
+
+              <div class="campaign-show-stats__cell">
+                <dt>Unsubscribed</dt>
+                <dd class="campaign-show-stats__num"><%= stats[:unsubscribed] %></dd>
+                <p class="campaign-show-stats__sub"><%= pct.call(stats[:unsubscribed], stats[:delivered]) %></p>
+              </div>
+            </dl>
+          <% end %>
+        </section>
+      <% else %>
+        <section class="campaign-show-stats campaign-show-stats--empty" aria-label="Campaign engagement stats">
+          <p class="campaign-show-stats__empty">
+            No stats yet — this campaign hasn't been sent.
+          </p>
+        </section>
+      <% end %>
+
+      <%# ============================================================
           Details — metadata, not a form dump
           ============================================================ %>
       <section class="campaign-show-meta">

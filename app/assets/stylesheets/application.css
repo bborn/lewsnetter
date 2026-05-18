@@ -560,6 +560,126 @@ html.dark a:hover,
     }
   }
 
+  /* Engagement stats card — horizontal cells, mono eyebrow + big number.
+     One card per surface, lives between the meta card and the preview frame.
+     The grid collapses to a 2-column layout on narrow screens. */
+  .campaign-show-stats {
+    @apply bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800;
+    border-radius: 8px;
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+  .campaign-show-stats__header {
+    @apply flex items-baseline justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800;
+    padding: 16px 24px;
+  }
+  .campaign-show-stats__title {
+    @apply text-zinc-900 dark:text-zinc-100 font-semibold;
+    font-size: 18px;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  .campaign-show-stats__hint {
+    @apply text-zinc-500 dark:text-zinc-400;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .campaign-show-stats__grid {
+    @apply grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 0;
+  }
+  .campaign-show-stats__cell {
+    @apply flex flex-col;
+    padding: 18px 20px;
+    border-left: 1px solid rgb(228 228 231 / 1);
+  }
+  .dark .campaign-show-stats__cell,
+  [data-theme="dark"] .campaign-show-stats__cell {
+    border-left-color: rgb(39 39 42 / 1);
+  }
+  .campaign-show-stats__cell:first-child {
+    border-left: 0;
+  }
+  .campaign-show-stats__cell dt {
+    @apply text-zinc-500 dark:text-zinc-400;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin: 0 0 6px 0;
+  }
+  .campaign-show-stats__num {
+    @apply text-zinc-900 dark:text-zinc-100;
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    margin: 0;
+  }
+  .campaign-show-stats__sub {
+    @apply text-zinc-500 dark:text-zinc-400;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    margin: 4px 0 0 0;
+    line-height: 1.3;
+  }
+  .campaign-show-stats__cell--warn .campaign-show-stats__num {
+    @apply text-amber-700 dark:text-amber-400;
+  }
+  .campaign-show-stats__empty {
+    @apply text-zinc-500 dark:text-zinc-400;
+    font-size: 14px;
+    padding: 20px 24px;
+    margin: 0;
+  }
+  .campaign-show-stats--empty {
+    border-style: dashed;
+  }
+  @media (max-width: 1024px) {
+    .campaign-show-stats__grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    .campaign-show-stats__cell:nth-child(4n + 1) {
+      border-left: 0;
+    }
+    .campaign-show-stats__cell:nth-child(n + 5) {
+      border-top: 1px solid rgb(228 228 231 / 1);
+    }
+    .dark .campaign-show-stats__cell:nth-child(n + 5),
+    [data-theme="dark"] .campaign-show-stats__cell:nth-child(n + 5) {
+      border-top-color: rgb(39 39 42 / 1);
+    }
+  }
+  @media (max-width: 640px) {
+    .campaign-show-stats__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .campaign-show-stats__cell {
+      border-left: 0;
+      border-top: 1px solid rgb(228 228 231 / 1);
+    }
+    .dark .campaign-show-stats__cell,
+    [data-theme="dark"] .campaign-show-stats__cell {
+      border-top-color: rgb(39 39 42 / 1);
+    }
+    .campaign-show-stats__cell:nth-child(-n + 2) {
+      border-top: 0;
+    }
+    .campaign-show-stats__cell:nth-child(2n) {
+      border-left: 1px solid rgb(228 228 231 / 1);
+    }
+    .dark .campaign-show-stats__cell:nth-child(2n),
+    [data-theme="dark"] .campaign-show-stats__cell:nth-child(2n) {
+      border-left-color: rgb(39 39 42 / 1);
+    }
+  }
+
   /* Preview pane — framed as an artifact */
   .campaign-show-preview {
     @apply bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800;

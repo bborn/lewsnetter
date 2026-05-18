@@ -32,6 +32,7 @@
   <% page.title @segment.name %>
   <% page.body do %>
     <%= cable_ready_updates_for @segment do %>
+    <div class="space-y-6">
 
       <%# Header card: name + description %>
       <%= render 'account/shared/box', divider: true do |box| %>
@@ -89,15 +90,14 @@
         <% end %>
       <% end %>
 
-      <%# Audience card: count + sample matching subscribers %>
-      <%= render 'account/shared/box', divider: true do |box| %>
-        <% box.title "Audience" %>
-        <% box.description do %>
-          Subscribers matching this segment right now.
-        <% end %>
-
-        <% box.body do %>
-          <% if match_count.nil? %>
+      <%# Audience: match count + paginated browseable table — same
+          partial the team-wide Subscribers index uses, scoped to the
+          segment's matching set so users can validate the predicate by
+          inspecting actual rows. %>
+      <% if match_count.nil? %>
+        <%= render 'account/shared/box', divider: true do |box| %>
+          <% box.title "Audience" %>
+          <% box.body do %>
             <div class="rounded-md border border-rose-200 dark:border-rose-900/60 bg-rose-50 dark:bg-rose-950/30 px-4 py-3">
               <div class="font-mono text-[11px] uppercase tracking-widest text-rose-700 dark:text-rose-400 mb-1">Predicate error</div>
               <p class="text-sm text-rose-700 dark:text-rose-300">
@@ -105,33 +105,45 @@
                 columns. Edit the segment to fix it.
               </p>
             </div>
-          <% else %>
-            <p class="mb-4 text-zinc-700 dark:text-zinc-300 segment-show-audience-count"><strong><%= number_with_delimiter(match_count) %></strong> <%= "subscriber".pluralize(match_count) %> match right now.</p>
-
-            <% if sample_subscribers.any? %>
-              <table class="w-full text-sm">
-                <thead>
-                  <tr class="font-mono text-[11px] uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
-                    <th class="text-left font-medium py-2 pr-3">Name</th>
-                    <th class="text-left font-medium py-2">Email</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <% sample_subscribers.each do |s| %>
-                    <tr class="border-t border-zinc-200 dark:border-zinc-800">
-                      <td class="py-2 pr-3 text-zinc-900 dark:text-zinc-100"><%= s.name.presence || "—" %></td>
-                      <td class="py-2 font-mono text-[13px] text-zinc-700 dark:text-zinc-300"><%= s.email %></td>
-                    </tr>
-                  <% end %>
-                </tbody>
-              </table>
-            <% end %>
           <% end %>
         <% end %>
+      <% else %>
+        <%# Sort dropdown on top of the table — re-renders the page with
+            the chosen ordering. Defaults to most-recently-added first so
+            new subscribers are easy to spot. %>
+        <%
+          sort_options = {
+            "created_at desc" => "Newest first",
+            "created_at asc"  => "Oldest first",
+            "external_id asc" => "External ID (A→Z)",
+            "external_id desc"=> "External ID (Z→A)"
+          }
+          current_sort = sort_options.key?(params[:sort]) ? params[:sort] : "created_at desc"
+          sort_col, sort_dir = current_sort.split(" ", 2)
+          sorted_scope = matching_scope.reorder("#{sort_col} #{sort_dir}, id #{sort_dir}")
+        %>
 
-        <% box.actions do %>
-          <%= link_to "Refresh", [:account, @segment], class: "button-secondary" %>
-        <% end %>
+        <div class="px-1 -mb-2 flex items-center justify-between gap-3">
+          <p class="text-sm text-zinc-700 dark:text-zinc-300 segment-show-audience-count">
+            <strong><%= number_with_delimiter(match_count) %></strong>
+            <%= "subscriber".pluralize(match_count) %> match this segment.
+          </p>
+          <form method="get" action="<%= url_for([:account, @segment]) %>" class="flex items-center gap-2 text-sm">
+            <label for="segment-sort" class="text-zinc-500 dark:text-zinc-400 font-mono text-[11px] uppercase tracking-widest">Sort</label>
+            <select id="segment-sort" name="sort" onchange="this.form.submit()"
+                    class="rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm py-1.5 px-2">
+              <% sort_options.each do |value, label| %>
+                <option value="<%= value %>" <%= "selected" if value == current_sort %>><%= label %></option>
+              <% end %>
+            </select>
+          </form>
+        </div>
+
+        <%= render 'account/subscribers/index',
+              context: @segment,
+              subscribers: sorted_scope,
+              hide_actions: true,
+              hide_back: true %>
       <% end %>
 
       <%# Used-in-campaigns card: only render if Campaign belongs_to segment %>
@@ -167,6 +179,7 @@
         <% end %>
       </p>
 
+    </div>
     <% end %>
 
     <%# 🚅 super scaffolding will insert new children above this line. %>

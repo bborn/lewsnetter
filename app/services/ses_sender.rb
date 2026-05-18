@@ -37,21 +37,27 @@ class SesSender
       delivery_write_errors = 0
 
       subscribers.each do |subscriber|
+        # Phase 2: create the Delivery row BEFORE rendering so the renderer
+        # can embed the row's tracking_token in the open pixel + click URLs.
+        # The row starts with status="sent", ses_message_id=nil, sent_at=nil;
+        # we backfill ses_message_id + sent_at after SES returns successfully,
+        # or flip to status="failed" if anything in this loop iteration blows
+        # up. If we can't even create the row (validation drift, DB hiccup),
+        # we still attempt the render+send so the recipient gets the email —
+        # we just don't get tracking on that one delivery.
+        delivery = build_delivery(campaign: campaign, subscriber: subscriber)
+        delivery_write_errors += 1 if delivery.nil?
+
         rendered =
           begin
-            CampaignRenderer.new(campaign: campaign, subscriber: subscriber).call
+            CampaignRenderer.new(campaign: campaign, subscriber: subscriber, delivery: delivery).call
           rescue => e
             Rails.logger.warn(
               "[SesSender] render failed for subscriber=#{subscriber.id} " \
               "campaign=#{campaign.id}: #{e.class}: #{e.message}"
             )
             failed << {subscriber: subscriber, error: "render_failed: #{e.message}"}
-            delivery_write_errors += 1 unless record_delivery(
-              campaign: campaign,
-              subscriber: subscriber,
-              status: "failed",
-              error_message: "render_failed: #{e.message}"
-            )
+            mark_delivery_failed(delivery, "render_failed: #{e.message}")
             next
           end
 
@@ -62,13 +68,7 @@ class SesSender
           )
           stub_id = "stub-#{SecureRandom.hex(8)}"
           message_ids << stub_id
-          delivery_write_errors += 1 unless record_delivery(
-            campaign: campaign,
-            subscriber: subscriber,
-            status: "sent",
-            ses_message_id: stub_id,
-            sent_at: Time.current
-          )
+          finalize_sent_delivery(delivery, ses_message_id: stub_id)
           next
         end
 
@@ -92,25 +92,14 @@ class SesSender
           send_args[:configuration_set_name] = configuration_set_name if configuration_set_name.present?
           response = client.send_email(**send_args)
           message_ids << response.message_id
-          delivery_write_errors += 1 unless record_delivery(
-            campaign: campaign,
-            subscriber: subscriber,
-            status: "sent",
-            ses_message_id: response.message_id,
-            sent_at: Time.current
-          )
+          finalize_sent_delivery(delivery, ses_message_id: response.message_id)
         rescue => e
           Rails.logger.warn(
             "[SesSender] SES send failed for subscriber=#{subscriber.id} " \
             "campaign=#{campaign.id}: #{e.class}: #{e.message}"
           )
           failed << {subscriber: subscriber, error: e.message}
-          delivery_write_errors += 1 unless record_delivery(
-            campaign: campaign,
-            subscriber: subscriber,
-            status: "failed",
-            error_message: e.message
-          )
+          mark_delivery_failed(delivery, e.message)
         end
       end
 
@@ -119,26 +108,59 @@ class SesSender
 
     private
 
-    # Persist a Delivery row. Wrapped in rescue so a single bad insert (FK
-    # gone, validation drift, unique-constraint race) can't crash the entire
-    # batch send — we log + count it and keep going. Returns true on success,
-    # false on failure (so the caller can bump a counter).
-    def record_delivery(campaign:, subscriber:, status:, ses_message_id: nil, sent_at: nil, error_message: nil)
+    # Phase 2: split row creation from row finalization so the renderer can
+    # see the persisted Delivery (and use its id in the tracking token) BEFORE
+    # we hand off to SES. The row starts in a "claimed but not sent" state —
+    # status="sent" by default but with ses_message_id+sent_at still nil —
+    # and is then promoted to a real sent/failed row by the helpers below.
+    #
+    # Wrapped in rescue so a single bad insert (FK gone, validation drift)
+    # can't crash the entire batch send. Returns the saved record on success,
+    # nil on failure (so the caller can bump a counter + skip tracking).
+    def build_delivery(campaign:, subscriber:)
       Delivery.create!(
         campaign: campaign,
         subscriber: subscriber,
-        status: status,
-        ses_message_id: ses_message_id,
-        sent_at: sent_at,
-        error_message: error_message
+        status: "sent",
+        ses_message_id: nil,
+        sent_at: nil
       )
-      true
     rescue => e
       Rails.logger.warn(
-        "[SesSender] failed to record Delivery for subscriber=#{subscriber.id} " \
-        "campaign=#{campaign.id} status=#{status}: #{e.class}: #{e.message}"
+        "[SesSender] failed to create Delivery for subscriber=#{subscriber.id} " \
+        "campaign=#{campaign.id}: #{e.class}: #{e.message}"
       )
-      false
+      nil
+    end
+
+    # Stamp the row as sent + tag with the SES (or stub) message id. Uses
+    # update_columns to skip validations/callbacks — we already validated on
+    # create and don't want to re-fire any per-save side effects.
+    def finalize_sent_delivery(delivery, ses_message_id:)
+      return if delivery.nil?
+      delivery.update_columns(
+        ses_message_id: ses_message_id,
+        sent_at: Time.current,
+        status: "sent",
+        updated_at: Time.current
+      )
+    rescue => e
+      Rails.logger.warn(
+        "[SesSender] failed to finalize sent Delivery id=#{delivery.id}: #{e.class}: #{e.message}"
+      )
+    end
+
+    def mark_delivery_failed(delivery, error_message)
+      return if delivery.nil?
+      delivery.update_columns(
+        status: "failed",
+        error_message: error_message,
+        updated_at: Time.current
+      )
+    rescue => e
+      Rails.logger.warn(
+        "[SesSender] failed to mark Delivery id=#{delivery.id} failed: #{e.class}: #{e.message}"
+      )
     end
 
     # Returns [client_or_nil, stub_mode_bool]. We're in stub mode when either:

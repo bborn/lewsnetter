@@ -123,6 +123,36 @@ Yes. Lewsnetter stores credentials per-team, so you can paste keys from an exist
 **What happens to bounces and complaints?**
 Lewsnetter currently relies on AWS's default suppression list (SES auto-suppresses hard bounces and complaints account-wide). Per-team SNS webhook routing is on the roadmap but not yet shipped — you can configure SNS topics manually in your AWS account if you want bounce events delivered elsewhere.
 
+## Step 5 — Wire SNS event publishing (Bounce + Complaint + Delivery)
+
+For richer per-campaign stats (delivered counts, not just bounce/complaint), have SES publish events to an SNS topic that Lewsnetter subscribes to. Two equivalent wirings work — pick one:
+
+### Option A — Configuration Set Event Destinations (recommended)
+
+Cleanest. One SNS topic receives everything for all sends from this configuration set.
+
+1. In SES → **Configuration sets**, open `lewsnetter-default` (created automatically the first time you connect; you can rename it in the Email Sending settings).
+2. Add an **Event destination** of type **SNS**.
+3. Pick (or create) an SNS topic — e.g. `lewsnetter-ses-events`.
+4. Check the events you care about. For Lewsnetter, enable at minimum:
+   - **Send** (acknowledgment SES accepted the message — optional, useful for debugging)
+   - **Delivery** (SES handed off to the receiving MTA — drives the "Delivered" stat)
+   - **Bounce**
+   - **Complaint**
+   - **Reject** (when SES refuses content — virus, blocked address, etc.)
+5. **Leave the "Open" and "Click" event types unchecked.** Lewsnetter does open + click tracking *client-side* (injects its own pixel and rewrites links to a per-campaign redirect endpoint). If you also enable SES-side tracking, you'll double-count opens and SES will rewrite link domains under `r.us-east-1.awstrack.me` — which weakens deliverability for branded links *and* gives you two parallel sets of click stats that disagree.
+6. Subscribe your Lewsnetter webhook to the topic:
+   - Protocol: **HTTPS**
+   - Endpoint: `https://<your-lewsnetter-host>/webhooks/ses/sns`
+   - SNS will POST a `SubscriptionConfirmation` to that URL; Lewsnetter auto-confirms it.
+7. Paste the topic ARN into both the **Bounce topic ARN** and **Complaint topic ARN** fields on the Email Sending settings page (same ARN for both — the controller dispatches by event type, not topic). The single-topic shape works because routing back to the right tenant is keyed on the ARN.
+
+### Option B — Legacy "SES Notifications" per identity
+
+Older approach. SNS topic per identity (`yourdomain.com`), per event type — so usually two topics minimum (Bounce + Complaint). Set these up under SES → **Verified identities → your domain → Notifications**. Subscribe Lewsnetter to each topic individually and paste each ARN into its matching field on the Email Sending settings page.
+
+Either wiring works. Lewsnetter's SNS webhook (`app/controllers/webhooks/ses/sns_controller.rb`) parses both shapes — the legacy form uses `notificationType` and the event-publishing form uses `eventType`.
+
 **Can I send from multiple domains?**
 Not from a single team — Lewsnetter's UI assumes one verified domain per team. You can work around this by creating multiple teams, each with its own SES configuration. Multi-domain-per-team is a known gap.
 

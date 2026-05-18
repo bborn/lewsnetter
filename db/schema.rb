@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_18_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_18_130000) do
   create_table "account_onboarding_invitation_lists", force: :cascade do |t|
     t.integer "team_id", null: false
     t.json "invitations"
@@ -185,6 +185,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_18_120000) do
     t.text "error_message"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "last_clicked_url"
     t.index ["campaign_id", "status"], name: "index_deliveries_on_campaign_id_and_status"
     t.index ["campaign_id"], name: "index_deliveries_on_campaign_id"
     t.index ["ses_message_id"], name: "index_deliveries_on_ses_message_id", unique: true

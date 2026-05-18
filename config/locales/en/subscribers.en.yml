@@ -77,6 +77,10 @@ en:
           header: Subscribers
           description: Your team's full audience — everyone %{team_name} can email. Lewsnetter has one audience per team; use Segments to filter it for a specific campaign.
           description_empty: "Add your audience. Manually add subscribers one at a time, or import an existing list from CSV. There's one audience per team; you can target subsets with Segments later."
+        segment:
+          header: Matching subscribers
+          description: Everyone in your audience that matches this segment's predicate right now. Spot-check the list to confirm the segment selects who you mean it to.
+          description_empty: "Nobody matches this segment right now. Edit the predicate, or add subscribers whose attributes fit."
       fields: *fields
       buttons: *buttons
     show:

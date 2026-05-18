@@ -36,6 +36,16 @@ Rails.application.routes.draw do
   # team happens via Team::SesConfiguration topic ARN lookup.
   post "/webhooks/ses/sns", to: "webhooks/ses/sns#create"
 
+  # Public email-tracking endpoints. Open pixel and click redirect — no auth,
+  # token-signed. These live OUTSIDE the Account:: namespace so emails sent
+  # into the wild can hit them from any client without a session. See
+  # Tracking::OpensController + Tracking::ClicksController for the contract.
+  # The `.gif` suffix on the open route follows the standard pixel filename
+  # convention (some image-blocking heuristics + MTAs treat a `.gif` URL
+  # differently from an extension-less endpoint).
+  get "/track/o/:token.gif", to: "tracking/opens#show", as: :tracking_open, format: false, constraints: {token: /[^\/]+/}
+  get "/track/c/:token", to: "tracking/clicks#show", as: :tracking_click, constraints: {token: /[^\/]+/}
+
   # OAuth 2.1 discovery + RFC 7591 dynamic client registration for MCP.
   # Mounted BEFORE the BulletTrain engines so they're publicly readable
   # (no Devise auth required to fetch the metadata or register a client).

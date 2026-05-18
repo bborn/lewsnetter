@@ -96,4 +96,65 @@ class CampaignTest < ActiveSupport::TestCase
     assert(@campaign.errors[:assets].any? { |m| m =~ /smaller|MB|size/i },
       "expected a size error, got #{@campaign.errors[:assets].inspect}")
   end
+
+  test "delivery_stats returns zero counts when there are no deliveries" do
+    stats = @campaign.delivery_stats
+    %i[sent delivered opened clicked bounced complained unsubscribed failed click_total].each do |k|
+      assert_equal 0, stats[k], "expected #{k} = 0"
+    end
+  end
+
+  test "delivery_stats aggregates across the delivery scopes" do
+    subs = 6.times.map do |i|
+      @team.subscribers.create!(email: "ds#{i}@example.com", external_id: "ds-#{i}", subscribed: true)
+    end
+
+    # Plain sent (delivered to MTA, opened, clicked twice).
+    Delivery.create!(
+      campaign: @campaign, subscriber: subs[0],
+      ses_message_id: "ds-1", sent_at: 1.hour.ago,
+      delivered_at: 50.minutes.ago, opened_at: 40.minutes.ago,
+      clicked_at: 30.minutes.ago, click_count: 2
+    )
+    # Sent + delivered only.
+    Delivery.create!(
+      campaign: @campaign, subscriber: subs[1],
+      ses_message_id: "ds-2", sent_at: 1.hour.ago,
+      delivered_at: 50.minutes.ago, status: "delivered"
+    )
+    # Bounced (has ses_message_id, so still counts as sent).
+    Delivery.create!(
+      campaign: @campaign, subscriber: subs[2],
+      ses_message_id: "ds-3", sent_at: 1.hour.ago,
+      bounced_at: 20.minutes.ago, status: "bounced"
+    )
+    # Complained.
+    Delivery.create!(
+      campaign: @campaign, subscriber: subs[3],
+      ses_message_id: "ds-4", sent_at: 1.hour.ago,
+      complained_at: 10.minutes.ago, status: "complained"
+    )
+    # Unsubscribed via in-email link.
+    Delivery.create!(
+      campaign: @campaign, subscriber: subs[4],
+      ses_message_id: "ds-5", sent_at: 1.hour.ago,
+      delivered_at: 50.minutes.ago, unsubscribed_at: 5.minutes.ago
+    )
+    # Failed (no message id).
+    Delivery.create!(
+      campaign: @campaign, subscriber: subs[5],
+      status: "failed", error_message: "boom"
+    )
+
+    stats = @campaign.delivery_stats
+    assert_equal 5, stats[:sent]         # rows with ses_message_id
+    assert_equal 3, stats[:delivered]    # rows with delivered_at
+    assert_equal 1, stats[:opened]
+    assert_equal 1, stats[:clicked]
+    assert_equal 2, stats[:click_total]
+    assert_equal 1, stats[:bounced]
+    assert_equal 1, stats[:complained]
+    assert_equal 1, stats[:unsubscribed]
+    assert_equal 1, stats[:failed]
+  end
 end

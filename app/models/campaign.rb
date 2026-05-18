@@ -111,6 +111,32 @@ class Campaign < ApplicationRecord
   def markdown_body?
     body_markdown.present?
   end
+
+  # Aggregated per-recipient stats sourced from the Delivery table. This is
+  # what the campaign show page renders into its stats card and what an
+  # external dashboard or webhook payload should reach for. The previous
+  # `Campaign#stats` JSON column tracks JOB progress (how many rows the
+  # background send loop got through), not engagement — keep them separate.
+  #
+  # - `sent`: deliveries with a SES message id assigned (covers stub, real,
+  #   delivered, bounced, complained — anything that left the queue with an id).
+  # - `failed`: deliveries that never got a message id (render error / SES
+  #   reject), distinct from `sent` so attempts add up to `sent + failed`.
+  # - The remaining counts are simple presence-of-timestamp scopes.
+  def delivery_stats
+    rel = deliveries
+    {
+      sent: rel.sent.count,
+      delivered: rel.delivered.count,
+      opened: rel.opened.count,
+      clicked: rel.clicked.count,
+      bounced: rel.bounced.count,
+      complained: rel.complained.count,
+      unsubscribed: rel.where.not(unsubscribed_at: nil).count,
+      failed: rel.failed.count,
+      click_total: rel.sum(:click_count)
+    }
+  end
   # 🚅 add methods above.
 
   private

@@ -314,4 +314,118 @@ class CampaignRendererTest < ActiveSupport::TestCase
     result = CampaignRenderer.new(campaign: @campaign, subscriber: @subscriber).call
     assert_equal "Broken {% if missing_endif", result.subject
   end
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Phase 2: open-pixel + click-tracking injection
+  # ──────────────────────────────────────────────────────────────────────
+
+  test "renders without tracking markup when no delivery is supplied" do
+    result = CampaignRenderer.new(campaign: @campaign, subscriber: @subscriber).call
+    refute_includes result.html, "/track/o/"
+    refute_includes result.html, "/track/c/"
+  end
+
+  test "injects an open-tracking pixel just before </body> when delivery is supplied" do
+    delivery = Delivery.create!(
+      campaign: @campaign, subscriber: @subscriber, ses_message_id: "track-open-1", sent_at: Time.current
+    )
+
+    result = CampaignRenderer.new(campaign: @campaign, subscriber: @subscriber, delivery: delivery).call
+
+    # Pixel src points at the tracking_open route with this delivery's token.
+    expected_url_fragment = "/track/o/#{delivery.tracking_token}.gif"
+    assert_includes result.html, expected_url_fragment,
+      "expected the open pixel to point at the per-delivery URL"
+    # 1x1 hidden img, not a visible asset.
+    assert_match(/<img[^>]+src="[^"]+\/track\/o\/[^"]+\.gif"[^>]+width="1"[^>]+height="1"/, result.html)
+  end
+
+  test "rewrites <a href> links to go through the click tracker" do
+    @campaign.update!(body_mjml: <<~MJML)
+      <mjml>
+        <mj-body>
+          <mj-section>
+            <mj-column>
+              <mj-text>
+                Click <a href="https://example.com/landing">here</a>
+                or <a href="https://other.example.org/page?utm=1">there</a>.
+              </mj-text>
+            </mj-column>
+          </mj-section>
+        </mj-body>
+      </mjml>
+    MJML
+    delivery = Delivery.create!(
+      campaign: @campaign, subscriber: @subscriber, ses_message_id: "track-click-1", sent_at: Time.current
+    )
+
+    result = CampaignRenderer.new(campaign: @campaign, subscriber: @subscriber, delivery: delivery).call
+
+    # Both original URLs are GONE; both replaced with /track/c/ URLs.
+    refute_includes result.html, %(href="https://example.com/landing")
+    refute_includes result.html, %(href="https://other.example.org/page?utm=1")
+    assert result.html.scan(%r{/track/c/[^"\s]+}).size >= 2,
+      "expected at least two /track/c/ URLs in #{result.html.scan(%r{href=\"[^\"]+\"}).inspect}"
+  end
+
+  test "preserves the unsubscribe link without rewriting it" do
+    @campaign.update!(body_mjml: <<~MJML)
+      <mjml>
+        <mj-body>
+          <mj-section>
+            <mj-column>
+              <mj-text>
+                <a href="https://example.com/promo">Promo</a>
+                <a href="{{unsubscribe_url}}">unsubscribe</a>
+              </mj-text>
+            </mj-column>
+          </mj-section>
+        </mj-body>
+      </mjml>
+    MJML
+    delivery = Delivery.create!(
+      campaign: @campaign, subscriber: @subscriber, ses_message_id: "track-unsub-1", sent_at: Time.current
+    )
+
+    result = CampaignRenderer.new(campaign: @campaign, subscriber: @subscriber, delivery: delivery).call
+
+    # Unsubscribe link should still resolve to /unsubscribe/<sgid>, NOT through /track/c/.
+    unsub_match = result.html.match(%r{href="(https?://[^"]*?/unsubscribe/[^"]+)"})
+    assert unsub_match, "expected the unsubscribe link to be preserved"
+    refute_includes unsub_match[1], "/track/c/", "unsubscribe link must NOT be wrapped in click tracker"
+
+    # And the regular promo link IS rewritten.
+    assert_match(%r{/track/c/[^"]+}, result.html)
+  end
+
+  test "leaves mailto: tel: and fragment links alone" do
+    @campaign.update!(body_mjml: <<~MJML)
+      <mjml>
+        <mj-body>
+          <mj-section>
+            <mj-column>
+              <mj-text>
+                <a href="mailto:hi@example.com">email</a>
+                <a href="tel:+15551234567">call</a>
+                <a href="#top">top</a>
+                <a href="https://example.com/real">real</a>
+              </mj-text>
+            </mj-column>
+          </mj-section>
+        </mj-body>
+      </mjml>
+    MJML
+    delivery = Delivery.create!(
+      campaign: @campaign, subscriber: @subscriber, ses_message_id: "track-skip-1", sent_at: Time.current
+    )
+
+    result = CampaignRenderer.new(campaign: @campaign, subscriber: @subscriber, delivery: delivery).call
+
+    assert_includes result.html, %(href="mailto:hi@example.com")
+    assert_includes result.html, %(href="tel:+15551234567")
+    assert_includes result.html, %(href="#top")
+    # The real http link IS rewritten.
+    refute_includes result.html, %(href="https://example.com/real")
+    assert_match(%r{/track/c/[^"]+}, result.html)
+  end
 end

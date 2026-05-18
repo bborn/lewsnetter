@@ -65,5 +65,37 @@ class Delivery < ApplicationRecord
   def failed?
     status == "failed"
   end
+
+  # Signed token used by the open-pixel + click-redirect routes to look this
+  # delivery row up without exposing the integer primary key. The payload is
+  # just `id` for the open pixel; for clicks we sign a hash with both the
+  # delivery id and the destination URL via `.signed_click_token`.
+  #
+  # Both purposes use Rails' MessageVerifier rather than a SGID because:
+  #   - we want a tight, opaque-looking URL component (SGIDs encode the model
+  #     name + signs it, longer)
+  #   - we don't need GlobalID-style polymorphic lookup; this is delivery-only
+  def tracking_token
+    Rails.application.message_verifier(:delivery_open).generate(id)
+  end
+
+  def self.find_by_tracking_token(token, purpose: :delivery_open)
+    id = Rails.application.message_verifier(purpose).verify(token)
+    find_by(id: id)
+  rescue ActiveSupport::MessageVerifier::InvalidSignature
+    nil
+  end
+
+  # Builds a click-tracking token that round-trips the destination URL. The
+  # URL is signed alongside the delivery id so the click redirect controller
+  # can trust the URL without consulting a database lookup table — this also
+  # closes the open-redirect hole (an attacker would need our signing secret
+  # to redirect to an arbitrary URL).
+  def signed_click_token(url:)
+    Rails.application.message_verifier(:delivery_click).generate({
+      delivery_id: id,
+      url: url
+    })
+  end
   # 🚅 add methods above.
 end

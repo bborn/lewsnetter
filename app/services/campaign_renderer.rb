@@ -29,13 +29,20 @@ class CampaignRenderer
 
   BODY_PLACEHOLDER = "{{body}}".freeze
 
-  def initialize(campaign:, subscriber:)
+  # Optional `delivery:` arg enables open-pixel injection + click rewriting.
+  # When nil (preview / test-render paths), the email is returned without
+  # tracking markup so previews don't pollute stats and don't crash on the
+  # in-memory placeholder subscriber. SesSender always passes a real Delivery
+  # for production sends.
+  def initialize(campaign:, subscriber:, delivery: nil)
     @campaign = campaign
     @subscriber = subscriber
+    @delivery = delivery
   end
 
   def call
     html = render_html
+    html = inject_tracking(html) if @delivery
     Result.new(
       html: html,
       text: strip_to_text(html),
@@ -56,6 +63,85 @@ class CampaignRenderer
         warn_level: Premailer::Warnings::SAFE
       ).to_inline_css
     end
+  end
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Tracking injection (Phase 2)
+  # ──────────────────────────────────────────────────────────────────────
+  # Walks the final HTML, rewrites every trackable <a href> to go through
+  # the click redirect controller, and appends a 1x1 open pixel just before
+  # </body>. We parse with Nokogiri rather than regexing the HTML because
+  # MJML's output has nested anchors inside table cells and a regex would
+  # mis-handle attributes that contain '>'.
+  def inject_tracking(html)
+    doc = Nokogiri::HTML5(html)
+    rewrite_links(doc)
+    append_pixel(doc)
+    # `to_html` re-serializes back to a full document; for email we want a
+    # well-formed <html><body>… same as Premailer produced, so this is fine.
+    doc.to_html
+  rescue => e
+    # Never let tracking injection break a send. Log + return the original
+    # HTML so the recipient gets the email (just without analytics).
+    Rails.logger.warn(
+      "[CampaignRenderer] tracking injection failed for delivery=#{@delivery&.id}: " \
+      "#{e.class}: #{e.message}"
+    )
+    html
+  end
+
+  def rewrite_links(doc)
+    doc.css("a[href]").each do |a|
+      href = a["href"].to_s
+      next unless trackable_link?(href)
+      a["href"] = click_tracking_url_for(href)
+    end
+  end
+
+  def append_pixel(doc)
+    body = doc.at_css("body") || doc.root
+    return unless body
+
+    img = Nokogiri::XML::Node.new("img", doc)
+    img["src"] = open_tracking_url
+    img["width"] = "1"
+    img["height"] = "1"
+    img["alt"] = ""
+    img["style"] = "display:none;border:0;height:1px;width:1px"
+    body.add_child(img)
+  end
+
+  # Skip:
+  # - mailto: / tel: / sms: (no click to track)
+  # - fragment-only links (#section) — they don't leave the email
+  # - absolute unsubscribe URLs (we don't want a tracking hop on the
+  #   List-Unsubscribe link; that path needs to stay exactly what we put in
+  #   the List-Unsubscribe header)
+  # - empty hrefs
+  def trackable_link?(href)
+    return false if href.blank?
+    return false if href.start_with?("#")
+    return false if href =~ /\A(mailto|tel|sms):/i
+    return false if href.include?("/unsubscribe/")
+    true
+  end
+
+  def click_tracking_url_for(original_url)
+    token = @delivery.signed_click_token(url: original_url)
+    Rails.application.routes.url_helpers.tracking_click_url(token, **default_url_options)
+  end
+
+  def open_tracking_url
+    Rails.application.routes.url_helpers.tracking_open_url(@delivery.tracking_token, **default_url_options)
+  end
+
+  # The host config_action_mailer sets is the source of truth for absolute
+  # URLs in outbound mail — both unsubscribe + tracking pixels share it.
+  def default_url_options
+    opts = Rails.application.config.action_mailer.default_url_options || {host: "localhost"}
+    # Hard-default protocol so URLs include https:// in environments where
+    # default_url_options doesn't carry a protocol (test, sometimes dev).
+    {protocol: "https"}.merge(opts)
   end
 
   # Resolves the final MJML source to compile.

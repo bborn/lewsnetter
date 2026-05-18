@@ -130,4 +130,39 @@ class DeliveryTest < ActiveSupport::TestCase
       @subscriber.destroy!
     end
   end
+
+  test "tracking_token round-trips through find_by_tracking_token" do
+    d = Delivery.create!(campaign: @campaign, subscriber: @subscriber, ses_message_id: "rt-1", sent_at: Time.current)
+    token = d.tracking_token
+    assert token.present?
+
+    found = Delivery.find_by_tracking_token(token, purpose: :delivery_open)
+    assert_equal d, found
+  end
+
+  test "find_by_tracking_token returns nil for a bogus token" do
+    assert_nil Delivery.find_by_tracking_token("garbage", purpose: :delivery_open)
+    assert_nil Delivery.find_by_tracking_token("", purpose: :delivery_open)
+  end
+
+  test "find_by_tracking_token rejects a token signed for a different purpose" do
+    d = Delivery.create!(campaign: @campaign, subscriber: @subscriber, ses_message_id: "rt-2", sent_at: Time.current)
+    other_purpose_token = Rails.application.message_verifier(:something_else).generate(d.id)
+    assert_nil Delivery.find_by_tracking_token(other_purpose_token, purpose: :delivery_open)
+  end
+
+  test "find_by_tracking_token returns nil if the row was deleted after the token was minted" do
+    d = Delivery.create!(campaign: @campaign, subscriber: @subscriber, ses_message_id: "rt-3", sent_at: Time.current)
+    token = d.tracking_token
+    d.destroy!
+    assert_nil Delivery.find_by_tracking_token(token, purpose: :delivery_open)
+  end
+
+  test "signed_click_token round-trips delivery id and URL" do
+    d = Delivery.create!(campaign: @campaign, subscriber: @subscriber, ses_message_id: "click-rt-1", sent_at: Time.current)
+    token = d.signed_click_token(url: "https://example.com/landing")
+    payload = Rails.application.message_verifier(:delivery_click).verify(token)
+    assert_equal d.id, payload["delivery_id"]
+    assert_equal "https://example.com/landing", payload["url"]
+  end
 end
