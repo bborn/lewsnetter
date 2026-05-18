@@ -20,6 +20,10 @@ class Team < ApplicationRecord
   # 🚅 add oauth providers above.
 
   has_one :ses_configuration, class_name: "Team::SesConfiguration", dependent: :destroy
+  # Phase 1 of domain-verification is single-domain per team. The underlying
+  # table allows many; the has_one keeps the wizard simple and reflects
+  # today's product surface.
+  has_one :ses_domain, class_name: "Team::SesDomain", dependent: :destroy
   # 🚅 add has_one associations above.
 
   # 🚅 add scopes above.

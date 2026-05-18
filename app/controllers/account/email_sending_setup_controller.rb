@@ -1,32 +1,37 @@
 # Guided 4-step SES setup wizard. Reachable at /account/teams/:slug/
 # email_sending/setup and from the dashboard onboarding banner. Auto-
-# advances based on the team's current SesConfiguration + SenderAddress
+# advances based on the team's current SesConfiguration + SesDomain
 # state so users can leave and resume without losing their place.
 #
 # Steps:
-#   1. credentials   — paste AWS access key / secret / region (auto-verify)
-#   2. sender        — pick from already-verified SES identities OR add new
-#   3. verify_sender — wait for the user to click the AWS verification link
-#   4. test          — send a real "you're wired up" email through their SES
-#   done            — terminal state, redirect to the management view
+#   1. credentials    — paste AWS access key / secret / region (auto-verify)
+#   2. domain         — enter sending domain + (optional) postal address
+#   3. verify_domain  — display 3 DKIM CNAMEs, poll SES until DKIM SUCCESS
+#   4. test           — send a real "you're wired up" email through their SES
+#   done             — terminal state, redirect to the management view
 #
 # Step computation lives in `current_step` — every action calls it after
 # any mutation and the view branches off it.
+#
+# Per-email identity verification (the older Ses::IdentityCreator code path)
+# is intentionally still wired up via Account::SenderAddressesController,
+# but no longer surfaced in the wizard's primary track. Domain is the
+# blessed onboarding path.
 class Account::EmailSendingSetupController < Account::ApplicationController
   include Billing::RequiresSubscriptionForSes
   load_and_authorize_resource :team, class: "Team", parent: false, id_param: :team_id
 
   before_action :load_ses_configuration
+  before_action :load_ses_domain
   # Paywall must run AFTER load_and_authorize_resource so @team is set.
   before_action :require_active_subscription_for_ses, only: :update_credentials
 
-  STEPS = %i[credentials sender verify_sender test done].freeze
+  STEPS = %i[credentials domain verify_domain test done].freeze
 
   # GET /account/teams/:team_id/email_sending/setup
   def show
     authorize! :manage, @ses_configuration
     @step = current_step
-    @pending_sender = pending_sender
     @verifier_result = nil
   end
 
@@ -39,7 +44,7 @@ class Account::EmailSendingSetupController < Account::ApplicationController
       @verifier_result = Ses::Verifier.new(team: @team).call
       write_verifier_result(@verifier_result)
       if @verifier_result.status == "verified"
-        redirect_to account_team_setup_email_sending_path(@team), notice: "Credentials verified — pick a sender next."
+        redirect_to account_team_setup_email_sending_path(@team), notice: "Credentials verified — let's set up your sending domain."
       else
         flash.now[:alert] = "SES rejected those credentials: #{@verifier_result.error}"
         @step = :credentials
@@ -51,62 +56,63 @@ class Account::EmailSendingSetupController < Account::ApplicationController
     end
   end
 
-  # POST /account/teams/:team_id/email_sending/setup/sender
-  # Step 2 submit. Two paths: pick an existing verified identity (import),
-  # or add a new email (we ask SES to send a verification link).
-  def select_sender
+  # POST /account/teams/:team_id/email_sending/setup/domain
+  # Step 2 submit. Persists the domain + postal address, asks SES to
+  # create the DKIM identity, then advances to the verify-DKIM step where
+  # the user installs the 3 CNAMEs.
+  def submit_domain
     authorize! :manage, @ses_configuration
 
-    if params[:identity].present?
-      # Import an already-verified SES identity as a SenderAddress.
-      sender = @team.sender_addresses.create!(
-        email: params[:identity],
-        name: params[:name].presence,
-        verified: true,
-        ses_status: "verified",
-        last_verified_at: Time.current
-      )
-      redirect_to account_team_setup_email_sending_path(@team), notice: "Imported #{sender.email}."
-    elsif params[:new_email].present?
-      sender = @team.sender_addresses.new(email: params[:new_email], name: params[:name].presence)
-      if sender.save
-        result = Ses::IdentityCreator.new(sender_address: sender).call
-        if result.ok?
-          redirect_to account_team_setup_email_sending_path(@team),
-            notice: "Verification email sent to #{sender.email}. Click the link, then come back here."
-        else
-          sender.destroy
-          flash.now[:alert] = result.message
-          @step = :sender
-          render :show, status: :unprocessable_entity
-        end
+    # Save postal address on the SES configuration regardless of domain
+    # outcome — partial progress should stick. Postal address is optional
+    # so a blank value is fine.
+    @ses_configuration.update(physical_postal_address: postal_address_param)
+
+    domain_attr = params.dig(:team_ses_domain, :domain).to_s.strip
+    if domain_attr.blank?
+      flash.now[:alert] = "Enter a sending domain (e.g. hey.example.com)."
+      @step = :domain
+      render :show, status: :unprocessable_entity
+      return
+    end
+
+    @ses_domain = @team.ses_domain || @team.build_ses_domain
+    @ses_domain.domain = domain_attr
+
+    if @ses_domain.save
+      result = Ses::DomainIdentityCreator.new(ses_domain: @ses_domain).call
+      if result.ok?
+        redirect_to account_team_setup_email_sending_path(@team),
+          notice: "Add the three CNAMEs below — we'll detect DKIM verification automatically."
       else
-        flash.now[:alert] = sender.errors.full_messages.to_sentence
-        @step = :sender
+        flash.now[:alert] = result.message
+        @step = :domain
         render :show, status: :unprocessable_entity
       end
     else
-      redirect_to account_team_setup_email_sending_path(@team), alert: "Pick an identity or enter a new email."
+      flash.now[:alert] = @ses_domain.errors.full_messages.to_sentence
+      @step = :domain
+      render :show, status: :unprocessable_entity
     end
   end
 
-  # GET /account/teams/:team_id/email_sending/setup/sender_status
+  # GET /account/teams/:team_id/email_sending/setup/domain_status
   # Step 3 polling endpoint. The wizard JS hits this every few seconds
-  # while waiting on AWS verification. Returns JSON the front-end uses
+  # while waiting on DKIM verification. Returns JSON the front-end uses
   # to decide whether to advance to step 4.
-  def sender_status
+  def domain_status
     authorize! :manage, @ses_configuration
-    sender = pending_sender
-    if sender.nil?
-      render json: {state: "no_sender"}
-    else
-      result = Ses::IdentityChecker.new(sender_address: sender).call rescue nil
-      render json: {
-        state: sender.reload.verified? ? "verified" : "pending",
-        ses_status: sender.ses_status,
-        checked: !result.nil?
-      }
+    if @ses_domain.nil?
+      render json: {state: "no_domain"}
+      return
     end
+    result = Ses::DomainIdentityChecker.new(ses_domain: @ses_domain).call
+    render json: {
+      state: @ses_domain.reload.status,
+      verification_status: @ses_domain.verification_status,
+      dkim_status: @ses_domain.dkim_status,
+      checked: result.ok?
+    }
   end
 
   # POST /account/teams/:team_id/email_sending/setup/test
@@ -115,7 +121,7 @@ class Account::EmailSendingSetupController < Account::ApplicationController
     authorize! :manage, @ses_configuration
     sender = verified_sender
     if sender.nil?
-      redirect_to account_team_setup_email_sending_path(@team), alert: "No verified sender yet."
+      redirect_to account_team_setup_email_sending_path(@team), alert: "No verified sender yet — wait for DKIM to finish propagating."
       return
     end
     result = Ses::TestSender.new(team: @team, sender_address: sender, to_email: current_user.email).call
@@ -125,7 +131,6 @@ class Account::EmailSendingSetupController < Account::ApplicationController
     else
       flash.now[:alert] = result.error_message
       @step = :test
-      @pending_sender = sender
       render :show, status: :unprocessable_entity
     end
   end
@@ -136,25 +141,30 @@ class Account::EmailSendingSetupController < Account::ApplicationController
     @ses_configuration = @team.ses_configuration || @team.build_ses_configuration
   end
 
+  def load_ses_domain
+    @ses_domain = @team.ses_domain
+  end
+
   # Drives the view. Reads the team's current state to decide which step
   # to show. Recomputed after every mutation so the wizard auto-advances.
   def current_step
-    return :credentials  unless @ses_configuration.persisted? && @ses_configuration.verified?
-    return :sender        if pending_sender.nil?
-    return :verify_sender unless pending_sender.verified?
+    return :credentials   unless @ses_configuration.persisted? && @ses_configuration.verified?
+    return :domain        if @ses_domain.nil?
+    return :verify_domain unless @ses_domain.verified?
     return :done          if @ses_configuration.last_test_sent_at.present?
     :test
   end
 
-  # The sender we're currently shepherding through verification. We pick
-  # the most-recently-created sender so a user adding a 2nd address after
-  # completing the wizard once flows through verification cleanly.
-  def pending_sender
-    @team.sender_addresses.order(created_at: :desc).first
-  end
-
+  # First verified sender on the verified domain — auto-provisioned by
+  # Ses::DomainIdentityChecker. May still be nil if the provisioning hit
+  # an unexpected error (rare; the checker logs + carries on).
   def verified_sender
-    @team.sender_addresses.where(verified: true).order(created_at: :desc).first
+    return nil if @ses_domain.nil? || !@ses_domain.verified?
+    @team.sender_addresses
+      .where(verified: true)
+      .where("LOWER(email) LIKE ?", "%@#{@ses_domain.domain}")
+      .order(created_at: :asc)
+      .first
   end
 
   def write_verifier_result(result)
@@ -180,5 +190,9 @@ class Account::EmailSendingSetupController < Account::ApplicationController
       p.delete(:encrypted_secret_access_key) if p[:encrypted_secret_access_key].blank? && @ses_configuration.configured?
       p[:status] = "verifying"
     end
+  end
+
+  def postal_address_param
+    params.dig(:team_ses_configuration, :physical_postal_address).to_s
   end
 end

@@ -21,6 +21,10 @@ class Team::SesConfiguration < ApplicationRecord
   validates :unsubscribe_host,
     format: {with: /\A[a-z0-9.\-]+\z/i, allow_blank: true},
     length: {maximum: 253}
+  # CAN-SPAM physical postal address. Optional in the form (we don't want
+  # to block setup) but campaigns inject this into the footer before send.
+  # 500 chars is plenty for a multi-line US/intl. address.
+  validates :physical_postal_address, length: {maximum: 500}, allow_blank: true
   # 🚅 add validations above.
 
   # 🚅 add callbacks above.

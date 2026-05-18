@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_16_164311) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_17_100100) do
   create_table "account_onboarding_invitation_lists", force: :cascade do |t|
     t.integer "team_id", null: false
     t.json "invitations"
@@ -470,9 +470,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_16_164311) do
     t.string "configuration_set_name", default: "lewsnetter-default"
     t.string "unsubscribe_host"
     t.datetime "last_test_sent_at"
+    t.text "physical_postal_address"
     t.index ["sns_bounce_topic_arn"], name: "index_team_ses_configurations_on_sns_bounce_topic_arn", where: "sns_bounce_topic_arn IS NOT NULL"
     t.index ["sns_complaint_topic_arn"], name: "index_team_ses_configurations_on_sns_complaint_topic_arn", where: "sns_complaint_topic_arn IS NOT NULL"
     t.index ["team_id"], name: "index_team_ses_configurations_on_team_id", unique: true
+  end
+
+  create_table "team_ses_domains", force: :cascade do |t|
+    t.integer "team_id", null: false
+    t.string "domain", null: false
+    t.string "status", default: "unverified", null: false
+    t.string "verification_status"
+    t.string "dkim_status"
+    t.text "dkim_tokens"
+    t.datetime "last_checked_at"
+    t.datetime "last_verification_requested_at"
+    t.datetime "verified_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["team_id", "domain"], name: "index_team_ses_domains_on_team_id_and_domain", unique: true
+    t.index ["team_id"], name: "index_team_ses_domains_on_team_id"
   end
 
   create_table "teams", force: :cascade do |t|
@@ -663,6 +680,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_16_164311) do
   add_foreign_key "subscribers", "teams"
   add_foreign_key "subscribers_imports", "teams"
   add_foreign_key "team_ses_configurations", "teams"
+  add_foreign_key "team_ses_domains", "teams"
   add_foreign_key "tool_calls", "messages"
   add_foreign_key "users", "oauth_applications", column: "platform_agent_of_id"
   add_foreign_key "webhooks_outgoing_endpoints", "scaffolding_absolutely_abstract_creative_concepts"

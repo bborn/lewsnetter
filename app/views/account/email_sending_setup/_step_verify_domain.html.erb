@@ -1,0 +1,85 @@
+<%# Step 3 — Display 3 DKIM CNAMEs the user needs to add at their DNS
+    provider. Polls the domain_status endpoint every 4s; reloads the page
+    as soon as SES reports the domain SUCCESS so the wizard advances to
+    the test step. Includes a quiet DMARC tip — it's not required but
+    significantly improves inbox placement, so we surface it once. %>
+<%
+  ses_domain ||= local_assigns[:ses_domain]
+  records = ses_domain&.cname_records || []
+%>
+<div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden"
+     data-controller="ses-verify-poll"
+     data-ses-verify-poll-url-value="<%= account_team_setup_domain_status_email_sending_path(team) %>"
+     data-ses-verify-poll-reload-url-value="<%= account_team_setup_email_sending_path(team) %>"
+     data-ses-verify-poll-success-state-value="verified">
+  <div class="px-6 pt-6 pb-4">
+    <h2 class="text-base font-semibold text-zinc-900 dark:text-zinc-50">
+      Verify <code class="font-mono text-base"><%= ses_domain&.domain %></code>
+    </h2>
+    <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+      Add these three CNAME records at your DNS provider. We'll detect verification automatically — usually within a few minutes, occasionally up to an hour.
+    </p>
+  </div>
+
+  <% if records.any? %>
+    <div class="px-6 pb-4">
+      <div class="rounded-md border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+        <div class="grid grid-cols-[auto_1fr_1fr] gap-x-3 px-3 py-2 bg-zinc-50 dark:bg-zinc-950/60 text-[10px] uppercase font-mono tracking-widest text-zinc-500 dark:text-zinc-400 border-b border-zinc-200 dark:border-zinc-800">
+          <span>Type</span>
+          <span>Host</span>
+          <span>Value</span>
+        </div>
+        <% records.each_with_index do |record, i| %>
+          <div class="grid grid-cols-[auto_1fr_1fr] gap-x-3 px-3 py-2.5 items-center text-xs font-mono text-zinc-800 dark:text-zinc-100 <%= 'border-t border-zinc-100 dark:border-zinc-800' if i > 0 %>">
+            <span class="text-zinc-500 dark:text-zinc-400"><%= record[:type] %></span>
+            <span class="truncate" title="<%= record[:host] %>"><%= record[:host] %></span>
+            <span class="truncate" title="<%= record[:value] %>"><%= record[:value] %></span>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% else %>
+    <div class="px-6 pb-4">
+      <div class="rounded-md border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 px-3 py-2.5 text-xs text-rose-700 dark:text-rose-300">
+        Couldn't load DKIM tokens from SES. Try resubmitting your domain.
+      </div>
+    </div>
+  <% end %>
+
+  <div class="px-6 pb-5">
+    <div class="flex items-center gap-3 p-3 rounded-md bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900">
+      <div class="animate-spin h-4 w-4 border-2 border-amber-700 border-t-transparent rounded-full shrink-0" data-ses-verify-poll-target="spinner"></div>
+      <span data-ses-verify-poll-target="status" class="text-sm text-amber-800 dark:text-amber-200">Waiting for DNS to propagate…</span>
+    </div>
+  </div>
+
+  <details class="border-t border-zinc-100 dark:border-zinc-800 group">
+    <summary class="cursor-pointer px-6 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 list-none flex items-center justify-between">
+      <span class="text-sm font-medium text-zinc-700 dark:text-zinc-200">Recommended: add a DMARC record</span>
+      <span class="text-zinc-400 group-open:rotate-90 transition-transform">›</span>
+    </summary>
+    <div class="px-6 pb-5 space-y-2 text-sm text-zinc-600 dark:text-zinc-300">
+      <p>Not required, but it materially improves inbox placement once your domain is verified. Add a TXT record:</p>
+      <div class="rounded-md border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+        <div class="grid grid-cols-[auto_1fr_2fr] gap-x-3 px-3 py-2 bg-zinc-50 dark:bg-zinc-950/60 text-[10px] uppercase font-mono tracking-widest text-zinc-500 dark:text-zinc-400 border-b border-zinc-200 dark:border-zinc-800">
+          <span>Type</span><span>Host</span><span>Value</span>
+        </div>
+        <div class="grid grid-cols-[auto_1fr_2fr] gap-x-3 px-3 py-2.5 items-center text-xs font-mono text-zinc-800 dark:text-zinc-100">
+          <span class="text-zinc-500 dark:text-zinc-400">TXT</span>
+          <span class="truncate">_dmarc.<%= ses_domain&.domain %></span>
+          <span class="truncate" title="v=DMARC1; p=none; rua=mailto:dmarc@<%= ses_domain&.domain %>">v=DMARC1; p=none; rua=mailto:dmarc@<%= ses_domain&.domain %></span>
+        </div>
+      </div>
+      <p class="text-xs text-zinc-500 dark:text-zinc-400"><code class="font-mono">p=none</code> just monitors — graduate to <code class="font-mono">p=quarantine</code> or <code class="font-mono">p=reject</code> once you've reviewed reports for a few weeks.</p>
+    </div>
+  </details>
+
+  <details class="border-t border-zinc-100 dark:border-zinc-800 text-xs text-zinc-500 dark:text-zinc-400">
+    <summary class="cursor-pointer px-6 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/50">Verification taking too long?</summary>
+    <ul class="px-6 pb-4 pl-10 list-disc space-y-1">
+      <li>DNS changes typically propagate in 5–30 minutes, but some providers cache for up to 48h.</li>
+      <li>Double-check the CNAMEs — your DNS provider may auto-append your domain to the host (e.g. expecting <code class="font-mono">x._domainkey</code> not the full <code class="font-mono">x._domainkey.<%= ses_domain&.domain %></code>).</li>
+      <li>Or jump straight to <%= link_to "the email sending page", [:account, team, :email_sending], class: "underline" %> to manage manually.</li>
+    </ul>
+  </details>
+</div>

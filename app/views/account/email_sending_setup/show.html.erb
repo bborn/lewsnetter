@@ -1,15 +1,30 @@
+<%# Loops-style centered wizard shell: tight max width, generous vertical
+    padding, one CTA per card, a single muted secondary link below.
+    Per DESIGN.md we keep our own visual identity (Geist + orange CTA +
+    zinc neutrals); the layout discipline is what we're borrowing. %>
 <%= render 'account/shared/page' do |page| %>
-  <% page.title "Set up email sending" %>
+  <% page.title "Set up sending" %>
   <% page.body do %>
     <%= render 'account/email_sending/paywall_notice' %>
-    <div class="max-w-3xl mx-auto space-y-6">
+
+    <div class="max-w-[520px] mx-auto pt-8 pb-16 space-y-6">
+      <header class="text-center space-y-3">
+        <h1 class="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Set up sending</h1>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400">
+          We send emails from your domain for higher deliverability.
+        </p>
+      </header>
+
       <%= render 'account/email_sending_setup/progress', step: @step %>
 
-      <%= render "account/email_sending_setup/step_#{@step}", team: @team, ses_configuration: @ses_configuration, pending_sender: @pending_sender %>
+      <%= render "account/email_sending_setup/step_#{@step}",
+            team: @team,
+            ses_configuration: @ses_configuration,
+            ses_domain: @ses_domain %>
 
-      <div class="text-center">
+      <div class="text-center pt-2">
         <%= link_to "Skip for now — back to dashboard", [:account, @team],
-              class: "text-xs text-zinc-500 hover:text-zinc-700 hover:underline" %>
+              class: "text-xs text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 hover:underline" %>
       </div>
     </div>
   <% end %>
