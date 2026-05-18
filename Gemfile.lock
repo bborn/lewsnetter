@@ -748,6 +748,13 @@ GEM
       rexml (~> 3.2, >= 3.2.5)
       rubyzip (>= 1.2.2, < 4.0)
       websocket (~> 1.0)
+    sentry-rails (6.5.0)
+      railties (>= 5.2.0)
+      sentry-ruby (~> 6.5.0)
+    sentry-ruby (6.5.0)
+      bigdecimal
+      concurrent-ruby (~> 1.0, >= 1.0.2)
+      logger
     sexp_processor (4.17.5)
     showcase-rails (0.5.0)
       rails (>= 7.2)
@@ -928,6 +935,8 @@ DEPENDENCIES
   ruby-vips
   ruby_llm
   selenium-webdriver
+  sentry-rails
+  sentry-ruby
   sidekiq
   simplecov
   simplecov-json

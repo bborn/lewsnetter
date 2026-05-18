@@ -138,6 +138,7 @@ jobs:
           STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
           STRIPE_WEBHOOKS_ENDPOINT_SECRET: ${{ secrets.STRIPE_WEBHOOKS_ENDPOINT_SECRET }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: |
           mkdir -p .kamal
           umask 077
@@ -149,6 +150,7 @@ jobs:
             printf 'STRIPE_PUBLISHABLE_KEY=%s\n'           "$STRIPE_PUBLISHABLE_KEY"
             printf 'STRIPE_SECRET_KEY=%s\n'                "$STRIPE_SECRET_KEY"
             printf 'STRIPE_WEBHOOKS_ENDPOINT_SECRET=%s\n'  "$STRIPE_WEBHOOKS_ENDPOINT_SECRET"
+            printf 'SENTRY_DSN=%s\n'                       "$SENTRY_DSN"
             # Dotenv multi-line: KEY="line1\nline2\n..." with real newlines
             # inside the double quotes.
             printf 'ORIGIN_CERT="%s"\n' "$ORIGIN_CERT"

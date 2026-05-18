@@ -340,4 +340,9 @@ gem "fast-mcp", "~> 1.5", require: "fast_mcp"
 # JSON Schema validation for MCP tool argument schemas.
 gem "json-schema", "~> 5.1"
 
+# Error tracking. The initializer at config/initializers/sentry.rb only
+# activates when SENTRY_DSN is set, so dev + test runs never ship events.
+gem "sentry-ruby"
+gem "sentry-rails"
+
 # 🚅 super scaffolding will insert new oauth providers above this line.
