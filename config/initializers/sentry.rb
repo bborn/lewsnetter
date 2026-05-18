@@ -37,13 +37,11 @@ Sentry.init do |config|
   #    context via Sentry.set_user / set_extra in code if needed.
   config.send_default_pii = false
 
-  # 2. Scrub PII-bearing fields from params + breadcrumbs before any
-  #    event leaves the process. Sentry uses Rails' filter_parameters
-  #    list by default; we extend it with the fields Lewsnetter
-  #    specifically handles. Belt + suspenders against accidental
-  #    payload logging.
-  rails_filters = Rails.application.config.filter_parameters
-  lewsnetter_extra = %i[
+  # 2. Extend Sentry's built-in field scrubber with the
+  #    Lewsnetter-specific PII surface. Sentry scrubs values whose KEY
+  #    matches anything in this list, regardless of where in the payload
+  #    they appear (params, extras, breadcrumbs, etc.).
+  config.sanitize_fields = %w[
     email name phone address
     encrypted_access_key_id encrypted_secret_access_key
     access_key_id secret_access_key
@@ -53,16 +51,21 @@ Sentry.init do |config|
     rails_master_key secret_key_base
     dkim_tokens
   ]
-  sanitizer = ActiveSupport::ParameterFilter.new(rails_filters + lewsnetter_extra)
 
+  # 3. before_send hook — last-chance filter. Drop health-check routing
+  #    noise so the inbox stays signal. Must return either the (possibly
+  #    modified) Sentry::Event OR nil to drop. Returning anything else
+  #    (e.g. a Hash) silently drops the event AND breaks the SDK.
   config.before_send = lambda do |event, _hint|
-    # Drop health-check + routine noise so the inbox stays signal.
-    msg = event.message.to_s
-    exc_values = event.exception.to_h[:values].to_a.map { |v| v[:value].to_s }.join(" ")
-    return nil if (msg + exc_values).match?(%r{ActionController::RoutingError.*/up\b})
-
-    # Then scrub remaining payload via Rails' parameter filter.
-    sanitizer.filter(event.to_hash)
+    msg = event.respond_to?(:message) ? event.message.to_s : ""
+    exception_values =
+      begin
+        Array(event.exception&.values).map { |v| v.value.to_s }.join(" ")
+      rescue
+        ""
+      end
+    return nil if (msg + exception_values).match?(%r{ActionController::RoutingError.*/up\b})
+    event
   end
 
   # Don't capture infrastructure noise — routing 404s, CSRF flaps on
