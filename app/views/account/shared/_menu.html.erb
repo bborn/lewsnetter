@@ -14,6 +14,7 @@
   <%= render 'account/shared/menu/subsection', title: t('menus.main.labels.audience', default: 'Audience'), expand: expand do %>
     <%= render 'account/subscribers/menu_item' %>
     <%= render 'account/segments/menu_item' %>
+    <%= render 'account/suppressions/menu_item' %>
   <% end %>
 
   <%= render 'account/shared/menu/subsection', title: t('menus.main.labels.sending', default: 'Sending'), expand: expand do %>

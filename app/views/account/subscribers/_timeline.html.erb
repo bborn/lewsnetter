@@ -1,0 +1,119 @@
+<%# Subscriber activity timeline — unified view of every meaningful event
+    that happened to this person (campaign sends + engagement + custom
+    events), newest first.
+
+    Source of truth: Account::SubscriberTimeline. The service decides what
+    counts as an event and produces a flat, sortable list; this partial only
+    handles presentation (grouping consecutive entries from the same
+    Delivery under a single campaign heading, hairline rail, mono caps for
+    metadata).
+
+    Local: `subscriber` (required), `entries` (Array of Hashes from the
+    service, required). %>
+
+<% groups = [] %>
+<% current = nil %>
+<% entries.each do |entry| %>
+  <% key = entry[:delivery_id] ? "delivery_#{entry[:delivery_id]}" : "single_#{entry.object_id}" %>
+  <% if current.nil? || current[:key] != key %>
+    <% current = {key: key, header: nil, items: []} %>
+    <% if entry[:delivery_id] && entry[:kind] == "campaign_sent" %>
+      <% current[:header] = {title: entry[:title].sub(/^Sent: /, ""), url: entry[:url]} %>
+    <% end %>
+    <% groups << current %>
+  <% end %>
+  <% current[:items] << entry %>
+<% end %>
+
+<%= render 'account/shared/box', divider: true do |box| %>
+  <% box.title "Timeline" %>
+  <% box.description do %>
+    Every meaningful event for this subscriber — campaign sends, engagement
+    signals (opens, clicks, bounces), unsubscribes, and custom events from
+    your app. Newest first, capped at <%= entries.size %> rows.
+  <% end %>
+
+  <% box.body do %>
+    <% if entries.any? %>
+      <ol class="relative border-l border-zinc-200 dark:border-zinc-800 pl-6 ml-2 space-y-6">
+        <% groups.each_with_index do |group, group_index| %>
+          <li class="relative">
+            <% if group[:header] %>
+              <div class="mb-3">
+                <% if group[:header][:url] %>
+                  <%= link_to group[:header][:url], class: "block group" do %>
+                    <div class="font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Campaign</div>
+                    <div class="text-[15px] font-semibold text-zinc-900 dark:text-zinc-50 group-hover:text-orange-600 dark:group-hover:text-orange-400">
+                      <%= group[:header][:title] %>
+                    </div>
+                  <% end %>
+                <% else %>
+                  <div class="font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Campaign</div>
+                  <div class="text-[15px] font-semibold text-zinc-900 dark:text-zinc-50">
+                    <%= group[:header][:title] %>
+                  </div>
+                <% end %>
+              </div>
+            <% end %>
+
+            <ul class="space-y-3">
+              <% group[:items].each_with_index do |item, item_index| %>
+                <% is_latest = group_index.zero? && item_index.zero? %>
+                <li class="relative">
+                  <%# Dot on the rail. Active orange only for the very latest entry. %>
+                  <span class="absolute -left-[31px] top-1.5 w-2.5 h-2.5 rounded-full border <%= is_latest ? "bg-orange-600 border-orange-600 dark:bg-orange-400 dark:border-orange-400" : "bg-white dark:bg-zinc-900 border-zinc-300 dark:border-zinc-700" %>"></span>
+
+                  <div class="flex items-baseline gap-3 flex-wrap">
+                    <span class="font-mono text-[11px] uppercase tracking-widest <%= timeline_kind_color(item[:kind]) %> tabular-nums">
+                      <%= timeline_kind_label(item[:kind]) %>
+                    </span>
+                    <span class="font-mono text-[11px] tabular-nums text-zinc-400 dark:text-zinc-500">
+                      <%= l(item[:at], format: :short) if item[:at] %>
+                    </span>
+                  </div>
+
+                  <div class="text-[14px] text-zinc-900 dark:text-zinc-100 mt-0.5">
+                    <% if item[:url].present? && !group[:header] %>
+                      <%= link_to item[:title], item[:url], class: "hover:text-orange-600 dark:hover:text-orange-400" %>
+                    <% elsif item[:url].present? && item[:kind] == "clicked" && item[:subtitle].present? %>
+                      <%= item[:title] %>
+                    <% else %>
+                      <%= item[:title] %>
+                    <% end %>
+                  </div>
+
+                  <% if item[:subtitle].present? %>
+                    <div class="text-[12px] text-zinc-500 dark:text-zinc-400 mt-0.5 break-all">
+                      <% if item[:kind] == "clicked" && item[:url].present? %>
+                        <%= link_to item[:subtitle], item[:url], class: "hover:text-orange-600 dark:hover:text-orange-400", target: "_blank", rel: "noopener" %>
+                      <% else %>
+                        <%= item[:subtitle] %>
+                      <% end %>
+                    </div>
+                  <% end %>
+                </li>
+              <% end %>
+            </ul>
+          </li>
+        <% end %>
+      </ol>
+    <% else %>
+      <div class="text-center px-6 py-10">
+        <div class="font-mono text-[11px] uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-2">No activity yet</div>
+        <p class="text-zinc-600 dark:text-zinc-400 max-w-md mx-auto">
+          When this subscriber receives campaigns, engages with them, or
+          triggers behavioral events from your app, they'll appear here.
+        </p>
+      </div>
+    <% end %>
+  <% end %>
+
+  <% box.actions do %>
+    <% if can?(:create, Event.new(subscriber: subscriber, team: subscriber.team)) %>
+      <%= link_to "Add event", new_account_subscriber_event_path(subscriber), class: first_button_primary %>
+    <% end %>
+    <% if subscriber.events.any? && can?(:read, Event) %>
+      <%= link_to "View all events", [:account, subscriber, :events], class: "button-secondary" %>
+    <% end %>
+  <% end %>
+<% end %>

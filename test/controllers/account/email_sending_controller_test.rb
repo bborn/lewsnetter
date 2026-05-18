@@ -24,13 +24,15 @@ class Account::EmailSendingControllerTest < ActionDispatch::IntegrationTest
     get account_team_email_sending_path(@team)
     assert_response :success
 
+    # SNS topic ARNs are auto-wired via Ses::SnsAutoWire (one-click button
+    # on the show page) — no longer pasted by hand. They render read-only
+    # on the show page once wired, but their labels don't appear in the
+    # editable form anymore.
     expected_labels = [
       "AWS Access Key ID",
       "AWS Secret Access Key",
       "AWS Region",
       "SES Configuration Set",
-      "SNS Bounce Topic ARN",
-      "SNS Complaint Topic ARN",
       "Unsubscribe Host"
     ]
 
@@ -194,6 +196,42 @@ class Account::EmailSendingControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "verify_sns calls Ses::SnsAutoWire and redirects with a notice" do
+    @team.create_ses_configuration!(
+      region: "us-east-1",
+      encrypted_access_key_id: "AKIA",
+      encrypted_secret_access_key: "s",
+      status: "verified"
+    )
+    stub_sns_auto_wire_result(ok: true, summary: {
+      configuration_set: {action: :created, name: "lewsnetter-default"},
+      topics: {
+        bounce: {arn: "arn:aws:sns:us-east-1:1:lewsnetter-ses-bounces", action: :created},
+        complaint: {arn: "arn:aws:sns:us-east-1:1:lewsnetter-ses-complaints", action: :created},
+        delivery: {arn: "arn:aws:sns:us-east-1:1:lewsnetter-ses-deliveries", action: :created}
+      }
+    })
+
+    post account_team_verify_sns_email_sending_path(@team)
+    assert_redirected_to account_team_email_sending_path(@team)
+    assert_match(/SNS wiring complete/i, flash[:notice])
+  end
+
+  test "verify_sns surfaces service failures as a flash alert" do
+    @team.create_ses_configuration!(
+      region: "us-east-1",
+      encrypted_access_key_id: "AKIA",
+      encrypted_secret_access_key: "s",
+      status: "verified"
+    )
+    stub_sns_auto_wire_result(ok: false, summary: {topics: {}, configuration_set: {}},
+      error_message: "topic[bounce]: AccessDenied")
+
+    post account_team_verify_sns_email_sending_path(@team)
+    assert_redirected_to account_team_email_sending_path(@team)
+    assert_match(/AccessDenied/, flash[:alert])
+  end
+
   teardown do
     # Restore the original Verifier#call if a test stubbed it.
     if Ses::Verifier.method_defined?(:_orig_call)
@@ -202,9 +240,24 @@ class Account::EmailSendingControllerTest < ActionDispatch::IntegrationTest
         remove_method :_orig_call
       end
     end
+    if Ses::SnsAutoWire.method_defined?(:_orig_call)
+      Ses::SnsAutoWire.class_eval do
+        alias_method :call, :_orig_call
+        remove_method :_orig_call
+      end
+    end
   end
 
   private
+
+  # Stubs Ses::SnsAutoWire#call to return a canned Result.
+  def stub_sns_auto_wire_result(ok:, summary:, error_message: nil)
+    result = Ses::SnsAutoWire::Result.new(ok: ok, summary: summary, error_message: error_message)
+    Ses::SnsAutoWire.class_eval do
+      alias_method :_orig_call, :call unless method_defined?(:_orig_call)
+      define_method(:call) { result }
+    end
+  end
 
   # Stubs Ses::Verifier#call to return a canned result so controller tests
   # don't hit AWS. We swap the instance method via alias_method so the

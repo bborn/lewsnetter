@@ -200,6 +200,23 @@
             </dl>
           <% end %>
         </section>
+
+        <%# Opens-over-time mini chart. Self-hides when no opens exist yet. %>
+        <%= render "account/campaigns/opens_chart", campaign: @campaign %>
+
+        <%# Top clicked links table. Self-hides when nothing has been clicked. %>
+        <%= render "account/campaigns/top_links", campaign: @campaign %>
+
+        <%# Recipients drill-down — paginated table with status tabs. Embedded
+            via a turbo-frame that points at the standalone deliveries#index
+            endpoint, so tab clicks re-render just this region. %>
+        <%= turbo_frame_tag "campaign-recipients",
+              src: account_campaign_deliveries_path(@campaign, status: "all"),
+              loading: "lazy" do %>
+          <aside class="campaign-show-callout campaign-show-callout--neutral">
+            Loading recipients…
+          </aside>
+        <% end %>
       <% else %>
         <section class="campaign-show-stats campaign-show-stats--empty" aria-label="Campaign engagement stats">
           <p class="campaign-show-stats__empty">

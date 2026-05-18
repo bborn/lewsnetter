@@ -76,6 +76,32 @@ class Account::EmailSendingController < Account::ApplicationController
     redirect_to target, notice: verification_notice(@verifier_result)
   end
 
+  # POST /account/teams/:team_id/email_sending/verify_sns
+  #
+  # One-click SNS + SES configuration-set automation. Uses the team's
+  # already-saved SES IAM credentials to create the three SNS topics
+  # (bounces, complaints, deliveries), subscribe the Lewsnetter webhook
+  # to each, ensure the SES configuration set + event destinations exist,
+  # and write the topic ARNs back onto the team's ses_configuration so
+  # the webhook can route incoming events. Idempotent — safe to re-run
+  # to repair drift.
+  def verify_sns
+    authorize! :manage, @ses_configuration
+
+    webhook_url = derive_webhook_url
+    result = Ses::SnsAutoWire.new(team: @team, webhook_url: webhook_url).call
+
+    if result.ok?
+      redirect_to [:account, @team, :email_sending],
+        notice: sns_auto_wire_notice(result)
+    else
+      redirect_to [:account, @team, :email_sending],
+        alert: I18n.t("email_sending.notifications.sns_failed",
+          default: "SNS setup hit an error: %{error}",
+          error: result.error_message.to_s)
+    end
+  end
+
   # POST /account/teams/:team_id/email_sending/import_identity
   #
   # Body: { identity: "newsletter@example.com" } — comes from a checkbox
@@ -106,6 +132,25 @@ class Account::EmailSendingController < Account::ApplicationController
   end
 
   private
+
+  # The webhook URL we register with SNS must be the public, AWS-reachable
+  # one. In prod, BASE_URL is set; in dev/test, fall back to request.base_url
+  # (won't actually receive AWS POSTs but lets the wire-up succeed against
+  # stubbed clients in tests).
+  def derive_webhook_url
+    base = ENV["BASE_URL"].presence || request.base_url
+    "#{base.chomp("/")}/webhooks/ses/sns"
+  end
+
+  def sns_auto_wire_notice(result)
+    created = result.summary[:topics].values.count { |t| t[:action] == :created }
+    existed = result.summary[:topics].values.count { |t| t[:action] == :exists }
+    parts = []
+    parts << "Created #{created} topic(s)" if created.positive?
+    parts << "verified #{existed} existing" if existed.positive?
+    parts << "configuration set #{result.summary.dig(:configuration_set, :action) || "ready"}"
+    "SNS wiring complete: #{parts.join(", ")}."
+  end
 
   def load_ses_configuration
     @ses_configuration = @team.ses_configuration || @team.build_ses_configuration

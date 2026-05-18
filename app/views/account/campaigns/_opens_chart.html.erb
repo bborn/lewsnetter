@@ -1,0 +1,54 @@
+<%# Opens-over-time sparkline. Locals: campaign (Campaign).
+
+    Pure inline SVG, no JS, no canvas — just <rect>s in a viewBox so the
+    bars scale with the container. Hidden entirely when there are zero
+    opens (so we don't render an empty chart axis). %>
+
+<% buckets = campaign.opens_over_time %>
+<% if buckets.any? && buckets.any? { |_, n| n > 0 } %>
+  <%
+    max = [buckets.map { |_, n| n }.max, 1].max
+    # 6px bar, 2px gap → 8px stride; viewBox height = 40 so the tallest
+    # bar fills the column. SVG scales proportionally inside the column.
+    bar_w = 6
+    gap = 2
+    stride = bar_w + gap
+    chart_h = 40
+    chart_w = buckets.size * stride
+    use_hourly = buckets.size > 7
+
+    first_t = buckets.first[0]
+    last_t = buckets.last[0]
+    range_label = use_hourly ?
+      "#{first_t.strftime("%b %-d %-l%P")} – #{last_t.strftime("%b %-d %-l%P")}" :
+      "#{first_t.strftime("%b %-d")} – #{last_t.strftime("%b %-d")}"
+    total_opens = buckets.sum { |_, n| n }
+  %>
+  <section class="campaign-show-chart" aria-label="Opens over time">
+    <header class="campaign-show-chart__header">
+      <h3 class="campaign-show-chart__title">Opens over time</h3>
+      <span class="campaign-show-chart__hint">
+        <%= pluralize(total_opens, "open") %> · <%= range_label %>
+      </span>
+    </header>
+    <div class="campaign-show-chart__body">
+      <svg xmlns="http://www.w3.org/2000/svg"
+           viewBox="0 0 <%= chart_w %> <%= chart_h %>"
+           preserveAspectRatio="none"
+           class="campaign-show-chart__svg"
+           role="img"
+           aria-label="Bar chart of opens per <%= use_hourly ? "hour" : "day" %>">
+        <% buckets.each_with_index do |(_t, n), i|
+             h = ((n.to_f / max) * (chart_h - 2)).round(2)
+             h = 1 if h < 1 && n.positive?
+             y = chart_h - h
+        %>
+          <rect x="<%= i * stride %>" y="<%= y %>"
+                width="<%= bar_w %>" height="<%= h %>"
+                rx="1" ry="1"
+                class="campaign-show-chart__bar <%= "campaign-show-chart__bar--empty" if n.zero? %>"></rect>
+        <% end %>
+      </svg>
+    </div>
+  </section>
+<% end %>

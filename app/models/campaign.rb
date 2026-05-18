@@ -137,6 +137,88 @@ class Campaign < ApplicationRecord
       click_total: rel.sum(:click_count)
     }
   end
+
+  # Top clicked URLs for this campaign, aggregated from the per-recipient
+  # Delivery rows. `last_clicked_url` is set on a Delivery the first time the
+  # tracking-click route resolves that URL, and `click_count` increments on
+  # every subsequent click of any link. So:
+  #
+  #   - `unique_clicks` is the number of distinct recipients who clicked
+  #     this URL (one Delivery row per recipient).
+  #   - `total_clicks` is the sum of `click_count` across those recipients.
+  #     Because click_count is a per-recipient counter rolled up across all
+  #     links, this slightly over-counts when a recipient clicks multiple
+  #     different URLs — we attribute their full click_count to whatever
+  #     URL was last clicked. The Delivery schema doesn't keep a per-URL
+  #     click counter, and we deliberately don't add one (see the build
+  #     spec — no schema changes). Treat total_clicks as "engagement
+  #     intensity" rather than an exact per-URL hit count.
+  #
+  # Returns an Array of Hashes (NOT an AR relation) so callers can chain
+  # `.first(25)`, `to_json`, CSV, etc. without surprising lazy reloads.
+  # The hashes have symbol keys: :url, :unique_clicks, :total_clicks.
+  def top_links(limit: 25)
+    rows = deliveries
+      .where.not(last_clicked_url: nil)
+      .group(:last_clicked_url)
+      .pluck(
+        :last_clicked_url,
+        Arel.sql("COUNT(*)"),
+        Arel.sql("COALESCE(SUM(click_count), 0)")
+      )
+
+    rows
+      .map { |url, unique_count, total_count|
+        {url: url, unique_clicks: unique_count.to_i, total_clicks: total_count.to_i}
+      }
+      .sort_by { |row| [-row[:total_clicks], -row[:unique_clicks], row[:url]] }
+      .first(limit)
+  end
+
+  # Opens-over-time bucketed for the engagement sparkline. Picks an hour
+  # bucket when the campaign was sent recently (≤ 3 days ago) and a day
+  # bucket otherwise; either way the series is capped at the first 7 days
+  # post-send so a 6-month-old campaign doesn't produce a 180-bar chart.
+  #
+  # Returns an Array of [Time, Integer] tuples sorted ascending, with zero
+  # entries filled in for empty buckets — so the SVG renderer can iterate
+  # straight through without gap-handling. Returns [] when no opens have
+  # landed yet (caller should hide the chart).
+  def opens_over_time
+    rel = deliveries.where.not(opened_at: nil)
+    return [] unless rel.exists?
+
+    anchor = sent_at || rel.minimum(:opened_at) || Time.current
+    use_hourly = (Time.current - anchor) <= 3.days
+
+    if use_hourly
+      bucket_size = 1.hour
+      bucket_count = (7 * 24)
+      sql_expr = "strftime('%Y-%m-%d %H:00:00', opened_at)"
+      parse = ->(s) { Time.zone.parse(s) }
+    else
+      bucket_size = 1.day
+      bucket_count = 7
+      sql_expr = "strftime('%Y-%m-%d 00:00:00', opened_at)"
+      parse = ->(s) { Time.zone.parse(s) }
+    end
+
+    raw = rel.group(Arel.sql(sql_expr)).count
+    counts = raw.transform_keys(&parse)
+
+    start = parse.call(
+      if use_hourly
+        anchor.utc.strftime("%Y-%m-%d %H:00:00")
+      else
+        anchor.utc.strftime("%Y-%m-%d 00:00:00")
+      end
+    )
+
+    bucket_count.times.map { |i|
+      t = start + (bucket_size * i)
+      [t, counts[t].to_i]
+    }
+  end
   # 🚅 add methods above.
 
   private

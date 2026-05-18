@@ -110,9 +110,16 @@ class Webhooks::Ses::SnsController < ApplicationController
 
   def config_for_topic(topic_arn)
     return nil if topic_arn.blank?
-    Team::SesConfiguration.where(sns_bounce_topic_arn: topic_arn)
+    scope = Team::SesConfiguration.where(sns_bounce_topic_arn: topic_arn)
       .or(Team::SesConfiguration.where(sns_complaint_topic_arn: topic_arn))
-      .first
+    # Delivery topic was added with the Ses::SnsAutoWire rollout. The
+    # column may not exist on environments that haven't run the
+    # 20260518170000 migration yet — guard the lookup so the webhook
+    # still works on partial schemas.
+    if Team::SesConfiguration.column_names.include?("sns_delivery_topic_arn")
+      scope = scope.or(Team::SesConfiguration.where(sns_delivery_topic_arn: topic_arn))
+    end
+    scope.first
   end
 
   # Permanent bounces auto-unsubscribe the recipient. Soft bounces (transient)
@@ -132,9 +139,18 @@ class Webhooks::Ses::SnsController < ApplicationController
 
     return unless bounce_type == "Permanent"
 
+    bounce_subtype = bounce["bounceSubType"]
+
     Array(bounce["bouncedRecipients"]).each do |recipient|
       email = recipient["emailAddress"].to_s.downcase
       next if email.blank?
+
+      # Auto-add to the suppression list FIRST so we never re-send to this
+      # address even if the subscriber lookup fails (e.g. address is in the
+      # audience via an inline import but the Subscriber row was already
+      # purged). Idempotent — re-fires of the same SNS event are a no-op.
+      Suppression.suppress(team: team, email: email, reason: "hard_bounce", source: bounce_subtype)
+
       subscriber = team.subscribers.find_by(email: email)
       next unless subscriber
 
@@ -176,9 +192,17 @@ class Webhooks::Ses::SnsController < ApplicationController
       delivery.update!(status: "complained", complained_at: Time.current)
     end
 
+    feedback_type = complaint["complaintFeedbackType"]
+
     Array(complaint["complainedRecipients"]).each do |recipient|
       email = recipient["emailAddress"].to_s.downcase
       next if email.blank?
+
+      # Complaints are a stronger signal than bounces — the recipient
+      # actively flagged us. Add to the suppression list unconditionally so
+      # no future campaign can re-add this address. Idempotent on re-fires.
+      Suppression.suppress(team: team, email: email, reason: "complaint", source: feedback_type)
+
       subscriber = team.subscribers.find_by(email: email)
       next unless subscriber
 

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_18_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_18_180000) do
   create_table "account_onboarding_invitation_lists", force: :cascade do |t|
     t.integer "team_id", null: false
     t.json "invitations"
@@ -477,6 +477,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_18_150000) do
     t.index ["team_id"], name: "index_subscribers_imports_on_team_id"
   end
 
+  create_table "suppressions", force: :cascade do |t|
+    t.integer "team_id", null: false
+    t.string "email", null: false
+    t.string "reason", null: false
+    t.string "source"
+    t.text "note"
+    t.datetime "suppressed_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["suppressed_at"], name: "index_suppressions_on_suppressed_at"
+    t.index ["team_id", "email"], name: "index_suppressions_on_team_id_and_email", unique: true
+    t.index ["team_id"], name: "index_suppressions_on_team_id"
+  end
+
   create_table "team_ses_configurations", force: :cascade do |t|
     t.integer "team_id", null: false
     t.string "encrypted_access_key_id"
@@ -495,8 +509,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_18_150000) do
     t.string "unsubscribe_host"
     t.datetime "last_test_sent_at"
     t.text "physical_postal_address"
+    t.string "sns_delivery_topic_arn"
     t.index ["sns_bounce_topic_arn"], name: "index_team_ses_configurations_on_sns_bounce_topic_arn", where: "sns_bounce_topic_arn IS NOT NULL"
     t.index ["sns_complaint_topic_arn"], name: "index_team_ses_configurations_on_sns_complaint_topic_arn", where: "sns_complaint_topic_arn IS NOT NULL"
+    t.index ["sns_delivery_topic_arn"], name: "index_team_ses_configurations_on_sns_delivery_topic_arn", where: "sns_delivery_topic_arn IS NOT NULL"
     t.index ["team_id"], name: "index_team_ses_configurations_on_team_id", unique: true
   end
 
@@ -705,6 +721,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_18_150000) do
   add_foreign_key "subscribers", "companies"
   add_foreign_key "subscribers", "teams"
   add_foreign_key "subscribers_imports", "teams"
+  add_foreign_key "suppressions", "teams"
   add_foreign_key "team_ses_configurations", "teams"
   add_foreign_key "team_ses_domains", "teams"
   add_foreign_key "tool_calls", "messages"

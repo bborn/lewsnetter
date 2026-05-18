@@ -680,6 +680,266 @@ html.dark a:hover,
     }
   }
 
+  /* Opens-over-time sparkline. Matches campaign-show-stats chrome —
+     hairline border, 8px radius — but sits as a compact band so the
+     SVG bars dominate. Width fits a single column (full-width on the
+     show page). The SVG stretches via viewBox/preserveAspectRatio. */
+  .campaign-show-chart {
+    @apply bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800;
+    border-radius: 8px;
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+  .campaign-show-chart__header {
+    @apply flex items-baseline justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800;
+    padding: 14px 24px;
+  }
+  .campaign-show-chart__title {
+    @apply text-zinc-900 dark:text-zinc-100 font-semibold;
+    font-size: 16px;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  .campaign-show-chart__hint {
+    @apply text-zinc-500 dark:text-zinc-400;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+  }
+  .campaign-show-chart__body {
+    padding: 16px 24px 20px;
+  }
+  .campaign-show-chart__svg {
+    width: 100%;
+    height: 56px;
+    display: block;
+  }
+  .campaign-show-chart__bar {
+    fill: #EA580C; /* orange-600 — the lone accent, per DESIGN.md */
+  }
+  .dark .campaign-show-chart__bar,
+  [data-theme="dark"] .campaign-show-chart__bar {
+    fill: #FB923C; /* orange-400 on dark surfaces */
+  }
+  .campaign-show-chart__bar--empty {
+    fill: rgb(228 228 231 / 1);
+  }
+  .dark .campaign-show-chart__bar--empty,
+  [data-theme="dark"] .campaign-show-chart__bar--empty {
+    fill: rgb(39 39 42 / 1);
+  }
+
+  /* Top clicked links table. Lives below the engagement stats grid in
+     a sibling card. Uses the same .campaign-show-stats shell for the
+     border + header so the surface composes; the table styling is its
+     own to keep tabular numerics + URL truncation in check. */
+  .campaign-show-links__table-wrap {
+    overflow-x: auto;
+  }
+  .campaign-show-links__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .campaign-show-links__table thead th {
+    @apply text-zinc-500 dark:text-zinc-400 border-b border-zinc-200 dark:border-zinc-800;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-align: left;
+    padding: 10px 16px;
+  }
+  .campaign-show-links__table tbody tr {
+    @apply border-b border-zinc-100 dark:border-zinc-800/50;
+  }
+  .campaign-show-links__table tbody tr:last-child {
+    border-bottom: 0;
+  }
+  .campaign-show-links__table td {
+    padding: 12px 16px;
+    vertical-align: middle;
+  }
+  .campaign-show-links__th-url {
+    width: 70%;
+  }
+  .campaign-show-links__th-num {
+    text-align: right;
+    width: 15%;
+  }
+  .campaign-show-links__url {
+    overflow-wrap: anywhere;
+  }
+  .campaign-show-links__url-link {
+    @apply text-zinc-700 dark:text-zinc-300;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 12px;
+    text-decoration: none;
+    border-bottom: 1px dashed rgb(212 212 216 / 1);
+  }
+  .campaign-show-links__url-link:hover {
+    @apply text-orange-700 dark:text-orange-400;
+    border-bottom-color: currentColor;
+  }
+  .campaign-show-links__num {
+    @apply text-zinc-900 dark:text-zinc-100;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  /* Recipients drill-down — paginated table inside its own card, with a
+     status tab strip at the top. Embedded inside a turbo-frame so tab
+     clicks re-render just this region. Keeps the same hairline + 8px
+     radius chrome as the stats card. */
+  .campaign-show-recipients {
+    @apply bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800;
+    border-radius: 8px;
+    margin-bottom: 32px;
+    overflow: hidden;
+  }
+  .campaign-show-recipients__header {
+    @apply flex items-baseline justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800;
+    padding: 16px 24px;
+  }
+  .campaign-show-recipients__title {
+    @apply text-zinc-900 dark:text-zinc-100 font-semibold;
+    font-size: 18px;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  .campaign-show-recipients__csv {
+    font-size: 12px;
+  }
+  .campaign-show-recipients__tabs {
+    @apply flex flex-wrap items-center gap-0 border-b border-zinc-200 dark:border-zinc-800;
+    padding: 0 16px;
+  }
+  .campaign-show-recipients__tab {
+    @apply inline-flex items-center gap-2 text-zinc-500 dark:text-zinc-400;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 12px 14px;
+    border-bottom: 2px solid transparent;
+    text-decoration: none;
+  }
+  .campaign-show-recipients__tab:hover {
+    @apply text-zinc-900 dark:text-zinc-100;
+  }
+  .campaign-show-recipients__tab--active {
+    @apply text-zinc-900 dark:text-zinc-100;
+    border-bottom-color: #EA580C;
+  }
+  .dark .campaign-show-recipients__tab--active,
+  [data-theme="dark"] .campaign-show-recipients__tab--active {
+    border-bottom-color: #FB923C;
+  }
+  .campaign-show-recipients__tab-count {
+    @apply text-zinc-400 dark:text-zinc-500;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+  }
+  .campaign-show-recipients__tab--active .campaign-show-recipients__tab-count {
+    @apply text-orange-700 dark:text-orange-400;
+  }
+  .campaign-show-recipients__table-wrap {
+    overflow-x: auto;
+  }
+  .campaign-show-recipients__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .campaign-show-recipients__table thead th {
+    @apply text-zinc-500 dark:text-zinc-400 border-b border-zinc-200 dark:border-zinc-800;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-align: left;
+    padding: 10px 16px;
+  }
+  .campaign-show-recipients__table tbody tr {
+    @apply border-b border-zinc-100 dark:border-zinc-800/50;
+  }
+  .campaign-show-recipients__table tbody tr:last-child {
+    border-bottom: 0;
+  }
+  .campaign-show-recipients__table td {
+    padding: 12px 16px;
+    vertical-align: middle;
+  }
+  .campaign-show-recipients__recipient {
+    @apply inline-flex flex-col text-zinc-900 dark:text-zinc-100;
+    text-decoration: none;
+    line-height: 1.3;
+    gap: 1px;
+  }
+  .campaign-show-recipients__recipient:hover .campaign-show-recipients__name {
+    @apply text-orange-700 dark:text-orange-400;
+  }
+  .campaign-show-recipients__name {
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .campaign-show-recipients__name--gone {
+    @apply text-zinc-400 dark:text-zinc-500;
+    font-style: italic;
+    font-weight: 400;
+  }
+  .campaign-show-recipients__email {
+    @apply text-zinc-500 dark:text-zinc-400;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 11px;
+  }
+  .campaign-show-recipients__time {
+    @apply text-zinc-500 dark:text-zinc-400;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .campaign-show-recipients__count {
+    @apply text-orange-700 dark:text-orange-400;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 11px;
+    margin-left: 4px;
+  }
+  .campaign-show-recipients__subtype {
+    @apply text-zinc-500 dark:text-zinc-400;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 11px;
+    margin-left: 6px;
+  }
+  .campaign-show-recipients__footer {
+    @apply flex items-center justify-between flex-wrap gap-3 border-t border-zinc-200 dark:border-zinc-800;
+    padding: 14px 24px;
+  }
+  .campaign-show-recipients__page-info {
+    @apply text-zinc-500 dark:text-zinc-400;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+  }
+  .campaign-show-recipients__empty {
+    @apply text-zinc-500 dark:text-zinc-400;
+    font-size: 14px;
+    padding: 32px 24px;
+    margin: 0;
+    text-align: center;
+  }
+
   /* Preview pane — framed as an artifact */
   .campaign-show-preview {
     @apply bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800;

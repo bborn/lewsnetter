@@ -1,0 +1,142 @@
+<%# Inner turbo-frame body for the recipients table. Used both standalone
+    (wrapped by index.html.erb) and embedded on the campaign show page.
+    Locals: campaign, deliveries, pagy, status, status_counts. %>
+
+<%= turbo_frame_tag "campaign-recipients" do %>
+  <section class="campaign-show-recipients" aria-label="Campaign recipients">
+    <header class="campaign-show-recipients__header">
+      <h3 class="campaign-show-recipients__title">Recipients</h3>
+      <div class="campaign-show-recipients__actions">
+        <%= link_to "Download CSV",
+              account_campaign_deliveries_path(campaign, format: :csv),
+              class: "btn-editorial btn-editorial--ghost campaign-show-recipients__csv",
+              data: { turbo: false } %>
+      </div>
+    </header>
+
+    <%# Tab strip — links re-render the same turbo-frame with the new
+        status filter. Counts come straight from the controller so they
+        don't drift from what the table shows. %>
+    <nav class="campaign-show-recipients__tabs" aria-label="Filter recipients by status">
+      <%
+        tabs = [
+          ["all", "All"],
+          ["opened", "Opened"],
+          ["clicked", "Clicked"],
+          ["bounced", "Bounced"],
+          ["complained", "Complained"],
+          ["unsubscribed", "Unsub'd"]
+        ]
+      %>
+      <% tabs.each do |key, label| %>
+        <% active = (status == key) %>
+        <%= link_to account_campaign_deliveries_path(campaign, status: key),
+              class: "campaign-show-recipients__tab #{"campaign-show-recipients__tab--active" if active}",
+              aria: { current: (active ? "page" : nil) },
+              data: { turbo_frame: "campaign-recipients" } do %>
+          <span><%= label %></span>
+          <span class="campaign-show-recipients__tab-count">
+            <%= status_counts[key].to_i %>
+          </span>
+        <% end %>
+      <% end %>
+    </nav>
+
+    <% if deliveries.any? %>
+      <div class="campaign-show-recipients__table-wrap">
+        <table class="campaign-show-recipients__table">
+          <thead>
+            <tr>
+              <th scope="col">Recipient</th>
+              <th scope="col">Status</th>
+              <th scope="col">Opened</th>
+              <th scope="col">Clicked</th>
+              <th scope="col">Bounced</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% deliveries.each do |delivery| %>
+              <% s = delivery.subscriber %>
+              <tr>
+                <td>
+                  <% if s %>
+                    <%= link_to [:account, s], class: "campaign-show-recipients__recipient" do %>
+                      <span class="campaign-show-recipients__name">
+                        <%= s.name.presence || s.email %>
+                      </span>
+                      <% if s.name.present? %>
+                        <span class="campaign-show-recipients__email"><%= s.email %></span>
+                      <% end %>
+                    <% end %>
+                  <% else %>
+                    <span class="campaign-show-recipients__name campaign-show-recipients__name--gone">
+                      (subscriber removed)
+                    </span>
+                  <% end %>
+                </td>
+                <td>
+                  <%= delivery_state_pill(delivery) %>
+                  <% if delivery.bounce_subtype.present? %>
+                    <span class="campaign-show-recipients__subtype">
+                      <%# bounce_subtype from SES is CamelCase (e.g. "MailboxFull",
+                          "MessageRejected"). Insert a space at camel boundaries
+                          before humanizing so "MailboxFull" → "Mailbox full"
+                          rather than the unhelpful "Mailboxfull". %>
+                      <%= delivery.bounce_subtype.to_s.gsub(/([a-z])([A-Z])/, '\1 \2').humanize %>
+                    </span>
+                  <% end %>
+                </td>
+                <td class="campaign-show-recipients__time">
+                  <%= delivery.opened_at ? "#{time_ago_in_words(delivery.opened_at)} ago" : "—" %>
+                </td>
+                <td class="campaign-show-recipients__time">
+                  <% if delivery.clicked_at %>
+                    <span><%= time_ago_in_words(delivery.clicked_at) %> ago</span>
+                    <% if delivery.click_count.to_i > 1 %>
+                      <span class="campaign-show-recipients__count">
+                        ×<%= delivery.click_count %>
+                      </span>
+                    <% end %>
+                  <% else %>
+                    —
+                  <% end %>
+                </td>
+                <td class="campaign-show-recipients__time">
+                  <%= delivery.bounced_at ? "#{time_ago_in_words(delivery.bounced_at)} ago" : "—" %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+
+      <% if pagy && pagy.pages > 1 %>
+        <footer class="campaign-show-recipients__footer">
+          <span class="campaign-show-recipients__page-info">
+            Page <%= pagy.page %> of <%= pagy.pages %> · <%= pagy.count %> total
+          </span>
+          <div class="campaign-show-recipients__pagy">
+            <%== pagy_nav(pagy) %>
+          </div>
+        </footer>
+      <% end %>
+    <% else %>
+      <p class="campaign-show-recipients__empty">
+        <% case status %>
+        <% when "opened" %>
+          No opens recorded yet for this campaign.
+        <% when "clicked" %>
+          No clicks recorded yet for this campaign.
+        <% when "bounced" %>
+          No bounces — clean send.
+        <% when "complained" %>
+          No spam complaints. Healthy.
+        <% when "unsubscribed" %>
+          No unsubscribes from this campaign.
+        <% else %>
+          No deliveries yet for this campaign.
+        <% end %>
+      </p>
+    <% end %>
+  </section>
+<% end %>

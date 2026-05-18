@@ -15,6 +15,10 @@ class Team < ApplicationRecord
   has_many :sender_addresses, dependent: :destroy
   has_many :subscriber_imports, class_name: "Subscribers::Import", dependent: :destroy
   has_many :chats, dependent: :destroy
+  # Per-team blocklist of addresses we will never send to. Auto-populated
+  # from hard bounces + complaints; manually managed via the Suppressions
+  # settings page. See app/models/suppression.rb.
+  has_many :suppressions, class_name: "Suppression", dependent: :destroy
   # 🚅 add has_many associations above.
 
   # 🚅 add oauth providers above.

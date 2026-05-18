@@ -1,0 +1,147 @@
+<% page_title = "Suppression list" %>
+<% content_for :page_title, page_title %>
+
+<%# Per-team blocklist. Reputation-protection infrastructure: every row
+    here is an address we will never send to, regardless of segment or
+    subscribed flag. Most rows are auto-added by the SNS bounce/complaint
+    webhook; operators come here to audit + paste the rare manual add. %>
+
+<div class="max-w-[1120px] mx-auto px-8 pt-14 pb-24">
+
+  <header class="mb-8 flex items-baseline justify-between gap-6">
+    <div>
+      <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-zinc-500 dark:text-zinc-400 mb-2">Compliance</div>
+      <h1 class="text-[32px] font-semibold tracking-[-0.02em] text-zinc-900 dark:text-zinc-50 leading-tight"><%= page_title %></h1>
+      <p class="mt-2 text-[15px] text-zinc-500 dark:text-zinc-400 max-w-2xl leading-relaxed">
+        Addresses we will never send to. Hard bounces and complaints land here
+        automatically; you can also paste addresses in manually. Removing a
+        row lets the next campaign re-add the address to its audience.
+      </p>
+    </div>
+    <div class="font-mono text-[13px] tabular-nums text-zinc-400 dark:text-zinc-500 whitespace-nowrap">
+      <%= number_with_delimiter(@team.suppressions.count) %> total
+    </div>
+  </header>
+
+  <%# Add form — tight inline row so the primary path (paste + submit) is
+      one glance from the top. Single line of help text below. %>
+  <section class="mb-10 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+    <div class="px-6 py-5 border-b border-zinc-200 dark:border-zinc-800">
+      <h2 class="text-[18px] font-semibold tracking-[-0.01em] text-zinc-900 dark:text-zinc-50">Add an address manually</h2>
+      <p class="mt-1 text-[13px] text-zinc-500 dark:text-zinc-400">Use this for vendor opt-out requests or GDPR erasures.</p>
+    </div>
+
+    <%= form_with model: @suppression, url: account_team_suppressions_path(@team), local: true, class: "px-6 py-5" do |f| %>
+      <% if @suppression.errors.any? %>
+        <div class="mb-4 px-4 py-3 rounded-md border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 text-[13px] text-rose-700 dark:text-rose-300">
+          <%= @suppression.errors.full_messages.to_sentence %>
+        </div>
+      <% end %>
+
+      <div class="flex flex-wrap items-end gap-3">
+        <div class="flex-1 min-w-[260px]">
+          <label class="block text-[13px] font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">Email</label>
+          <%= f.email_field :email,
+                placeholder: "person@example.com",
+                autocomplete: "off",
+                required: true,
+                class: "w-full font-mono text-[13px] px-3 py-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:border-orange-600 dark:focus:border-orange-400 focus:ring-[3px] focus:ring-orange-100 dark:focus:ring-orange-950" %>
+        </div>
+
+        <div class="w-44">
+          <label class="block text-[13px] font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">Reason</label>
+          <%= f.select :reason,
+                Suppression::REASONS.map { |r| [r.humanize, r] },
+                {selected: "manual"},
+                class: "w-full text-[13px] px-3 py-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:border-orange-600 dark:focus:border-orange-400 focus:ring-[3px] focus:ring-orange-100 dark:focus:ring-orange-950" %>
+        </div>
+
+        <div class="flex-1 min-w-[200px]">
+          <label class="block text-[13px] font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+            Note <span class="text-zinc-400 font-normal">(optional)</span>
+          </label>
+          <%= f.text_field :note,
+                placeholder: "Why you added it",
+                class: "w-full text-[13px] px-3 py-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:border-orange-600 dark:focus:border-orange-400 focus:ring-[3px] focus:ring-orange-100 dark:focus:ring-orange-950" %>
+        </div>
+
+        <div>
+          <%= f.submit "Add to list",
+                class: "px-4 py-2 rounded-md bg-orange-600 hover:bg-orange-700 text-white text-[14px] font-medium cursor-pointer transition-colors" %>
+        </div>
+      </div>
+    <% end %>
+  </section>
+
+  <%# Index table. Empty state speaks to the happy path: zero rows = good
+      sender reputation. %>
+  <% if @suppressions.any? %>
+    <section class="rounded-lg border border-zinc-200 dark:border-zinc-800 overflow-hidden bg-white dark:bg-zinc-900">
+      <table class="w-full text-left">
+        <thead>
+          <tr class="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950">
+            <th class="px-6 py-3 font-mono text-[11px] uppercase tracking-[0.06em] text-zinc-500 dark:text-zinc-400 font-normal">Email</th>
+            <th class="px-6 py-3 font-mono text-[11px] uppercase tracking-[0.06em] text-zinc-500 dark:text-zinc-400 font-normal">Reason</th>
+            <th class="px-6 py-3 font-mono text-[11px] uppercase tracking-[0.06em] text-zinc-500 dark:text-zinc-400 font-normal">Source</th>
+            <th class="px-6 py-3 font-mono text-[11px] uppercase tracking-[0.06em] text-zinc-500 dark:text-zinc-400 font-normal">Added</th>
+            <th class="px-6 py-3"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @suppressions.each do |suppression| %>
+            <tr class="border-b border-zinc-100 dark:border-zinc-800/70 last:border-0 hover:bg-zinc-50/60 dark:hover:bg-zinc-950/40">
+              <td class="px-6 py-3.5 font-mono text-[13px] text-zinc-900 dark:text-zinc-100 break-all">
+                <%= suppression.email %>
+                <% if suppression.note.present? %>
+                  <div class="mt-1 text-[12px] font-sans text-zinc-500 dark:text-zinc-400"><%= suppression.note %></div>
+                <% end %>
+              </td>
+              <td class="px-6 py-3.5">
+                <%
+                  pill_classes =
+                    case suppression.reason
+                    when "hard_bounce", "complaint" then "border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300"
+                    when "gdpr_request"             then "border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300"
+                    else                                  "border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300"
+                    end
+                %>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-sm border font-mono text-[11px] uppercase tracking-[0.04em] <%= pill_classes %>">
+                  <%= suppression.reason.tr("_", " ") %>
+                </span>
+              </td>
+              <td class="px-6 py-3.5 font-mono text-[12px] text-zinc-500 dark:text-zinc-400">
+                <%= suppression.source.presence || "—" %>
+              </td>
+              <td class="px-6 py-3.5 font-mono text-[12px] tabular-nums text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
+                <%= l(suppression.suppressed_at, format: :short) %>
+              </td>
+              <td class="px-6 py-3.5 text-right">
+                <%= button_to "Remove",
+                      account_suppression_path(suppression),
+                      method: :delete,
+                      data: {turbo_confirm: "Remove #{suppression.email} from the suppression list? Future campaigns will be able to send to this address again."},
+                      class: "text-[13px] text-rose-600 hover:text-rose-700 dark:text-rose-400 bg-transparent border-0 cursor-pointer" %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </section>
+
+    <% if @pagy.pages > 1 %>
+      <div class="mt-6 flex justify-center">
+        <%== pagy_nav(@pagy) %>
+      </div>
+    <% end %>
+  <% else %>
+    <div class="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-center py-16 px-6">
+      <div class="font-mono text-[11px] uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-2">Nothing suppressed yet</div>
+      <h3 class="text-[18px] font-semibold text-zinc-900 dark:text-zinc-100 mb-2">Clean slate</h3>
+      <p class="text-zinc-500 dark:text-zinc-400 max-w-md mx-auto">
+        Bounces and complaints will appear here automatically as SES reports
+        them. You can also paste an address into the form above.
+      </p>
+    </div>
+  <% end %>
+
+</div>

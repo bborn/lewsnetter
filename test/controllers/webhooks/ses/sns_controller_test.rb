@@ -320,6 +320,99 @@ class Webhooks::Ses::SnsControllerTest < ActionDispatch::IntegrationTest
     assert_not_nil @subscriber.bounced_at
   end
 
+  # ----- Suppression auto-add -----
+
+  test "permanent bounce adds a Suppression row for the team" do
+    payload = {
+      "Type" => "Notification",
+      "TopicArn" => @bounce_topic,
+      "Message" => {
+        "eventType" => "Bounce",
+        "mail" => {"destination" => ["victim@example.com"]},
+        "bounce" => {
+          "bounceType" => "Permanent",
+          "bounceSubType" => "General",
+          "bouncedRecipients" => [{"emailAddress" => "victim@example.com"}]
+        }
+      }.to_json
+    }
+
+    assert_difference -> { @team.suppressions.count }, 1 do
+      post "/webhooks/ses/sns", params: payload.to_json, headers: {"CONTENT_TYPE" => "application/json"}
+    end
+    assert_response :ok
+
+    row = @team.suppressions.find_by(email: "victim@example.com")
+    assert_not_nil row
+    assert_equal "hard_bounce", row.reason
+    assert_equal "General", row.source
+  end
+
+  test "transient bounce does NOT add a Suppression row" do
+    payload = {
+      "Type" => "Notification",
+      "TopicArn" => @bounce_topic,
+      "Message" => {
+        "notificationType" => "Bounce",
+        "bounce" => {
+          "bounceType" => "Transient",
+          "bouncedRecipients" => [{"emailAddress" => "victim@example.com"}]
+        }
+      }.to_json
+    }
+
+    assert_no_difference -> { @team.suppressions.count } do
+      post "/webhooks/ses/sns", params: payload.to_json, headers: {"CONTENT_TYPE" => "application/json"}
+    end
+    assert_response :ok
+  end
+
+  test "complaint adds a Suppression row tagged with feedback type" do
+    payload = {
+      "Type" => "Notification",
+      "TopicArn" => @complaint_topic,
+      "Message" => {
+        "eventType" => "Complaint",
+        "mail" => {"messageId" => "msg-c"},
+        "complaint" => {
+          "complaintFeedbackType" => "abuse",
+          "complainedRecipients" => [{"emailAddress" => "victim@example.com"}]
+        }
+      }.to_json
+    }
+
+    assert_difference -> { @team.suppressions.count }, 1 do
+      post "/webhooks/ses/sns", params: payload.to_json, headers: {"CONTENT_TYPE" => "application/json"}
+    end
+    assert_response :ok
+
+    row = @team.suppressions.find_by(email: "victim@example.com")
+    assert_equal "complaint", row.reason
+    assert_equal "abuse", row.source
+  end
+
+  test "repeat bounce events do not create duplicate Suppression rows" do
+    payload = {
+      "Type" => "Notification",
+      "TopicArn" => @bounce_topic,
+      "Message" => {
+        "notificationType" => "Bounce",
+        "bounce" => {
+          "bounceType" => "Permanent",
+          "bouncedRecipients" => [{"emailAddress" => "victim@example.com"}]
+        }
+      }.to_json
+    }
+
+    post "/webhooks/ses/sns", params: payload.to_json, headers: {"CONTENT_TYPE" => "application/json"}
+    assert_response :ok
+
+    assert_no_difference -> { @team.suppressions.count } do
+      post "/webhooks/ses/sns", params: payload.to_json, headers: {"CONTENT_TYPE" => "application/json"}
+      assert_response :ok
+    end
+  end
+
   test "cross-tenant routing — a bounce on team A's topic does not unsubscribe team B's subscriber" do
     other_team = create(:team)
     other_team.subscribers.create!(email: "victim@example.com", external_id: "ov", subscribed: true)

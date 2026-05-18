@@ -1,0 +1,47 @@
+<%# Top clicked links table for the campaign show page.
+    Locals: campaign (Campaign).
+
+    Reads aggregate from Campaign#top_links — sorted by total clicks desc,
+    capped at 25. We render a quiet, no-chrome variant of the existing
+    stats card so the section sits naturally beneath Engagement without
+    competing with it. URLs are truncated at 80 chars in the display so
+    a single ridiculous UTM-stuffed URL can't blow out the column. %>
+
+<% links = campaign.top_links %>
+<% if links.any? %>
+  <section class="campaign-show-stats campaign-show-links" aria-label="Top clicked links">
+    <header class="campaign-show-stats__header">
+      <h3 class="campaign-show-stats__title">Top links</h3>
+      <span class="campaign-show-stats__hint">
+        <%= pluralize(links.size, "link") %> · sorted by total clicks
+      </span>
+    </header>
+
+    <div class="campaign-show-links__table-wrap">
+      <table class="campaign-show-links__table">
+        <thead>
+          <tr>
+            <th scope="col" class="campaign-show-links__th-url">URL</th>
+            <th scope="col" class="campaign-show-links__th-num">Unique</th>
+            <th scope="col" class="campaign-show-links__th-num">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% links.each do |row| %>
+            <tr>
+              <td class="campaign-show-links__url" title="<%= row[:url] %>">
+                <%= link_to truncate(row[:url], length: 80, omission: "…"),
+                            row[:url],
+                            target: "_blank",
+                            rel: "noopener nofollow",
+                            class: "campaign-show-links__url-link" %>
+              </td>
+              <td class="campaign-show-links__num"><%= row[:unique_clicks] %></td>
+              <td class="campaign-show-links__num"><%= row[:total_clicks] %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+<% end %>

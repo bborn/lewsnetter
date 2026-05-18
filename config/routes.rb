@@ -182,6 +182,12 @@ Rails.application.routes.draw do
             post :preview, to: "segments#preview"
           end
         end
+
+        # Per-team suppression list. Collection-only routes — there's no
+        # show/edit (the row is meaningful as-recorded; corrections are
+        # remove + re-add). See Account::SuppressionsController.
+        resources :suppressions, only: [:index, :create, :destroy]
+
         resources :email_templates do
           member do
             get :preview_frame
@@ -212,6 +218,13 @@ Rails.application.routes.draw do
             # See email_templates above — same purge_later pattern.
             delete "assets/:asset_id", to: "campaigns#destroy_asset", as: :asset
           end
+
+          # Per-campaign recipient drill-down (paginated HTML table) and CSV
+          # export. Nested namespace keeps the parent CampaignsController lean
+          # — Deliveries are read-only from this surface; bounce/complaint
+          # state lands via SNS, not via the dashboard.
+          resources :deliveries, only: [:index],
+            controller: "campaigns/deliveries"
         end
         resources :sender_addresses do
           member do
@@ -234,6 +247,7 @@ Rails.application.routes.draw do
         patch "email_sending", to: "email_sending#update"
         put "email_sending", to: "email_sending#update"
         post "email_sending/verify", to: "email_sending#verify", as: :verify_email_sending
+        post "email_sending/verify_sns", to: "email_sending#verify_sns", as: :verify_sns_email_sending
         post "email_sending/import_identity", to: "email_sending#import_identity", as: :import_identity_email_sending
 
         # Developers — friendly setup for the lewsnetter-rails gem (one-click

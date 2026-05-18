@@ -21,7 +21,7 @@ The tradeoff: you have to do the AWS setup. This document walks you through it o
 
 Open the [IAM Users console](https://console.aws.amazon.com/iam/home#/users) and create a new user — name it something obvious like `lewsnetter-ses`. **Do not give it console access.** This user only needs programmatic credentials.
 
-Attach the following inline policy. This is the minimum surface Lewsnetter actually calls (verified against `app/services/ses/` — we do not use any SES action not listed here):
+Attach the following inline policy. This is the minimum surface Lewsnetter actually calls (verified against `app/services/ses/` — we do not use any SES or SNS action not listed here). Note: this policy also covers the one-click SNS auto-wire flow (see Step 5), so SES sending *and* bounce/complaint webhook setup work out of the box:
 
 ```json
 {
@@ -37,23 +37,27 @@ Attach the following inline policy. This is the minimum surface Lewsnetter actua
       "ses:CreateEmailIdentity",
       "ses:GetEmailIdentity",
       "ses:DeleteEmailIdentity",
-      "ses:PutEmailIdentityConfigurationSetAttributes"
+      "ses:PutEmailIdentityConfigurationSetAttributes",
+      "ses:CreateConfigurationSet",
+      "ses:GetConfigurationSet",
+      "ses:DescribeConfigurationSet",
+      "ses:ListConfigurationSets",
+      "ses:CreateConfigurationSetEventDestination",
+      "ses:UpdateConfigurationSetEventDestination",
+      "ses:PutConfigurationSetDeliveryOptions",
+      "sns:CreateTopic",
+      "sns:GetTopicAttributes",
+      "sns:Subscribe",
+      "sns:ListSubscriptionsByTopic"
     ],
     "Resource": "*"
   }]
 }
 ```
 
-If you want to also let Lewsnetter receive bounce/complaint notifications via SNS, add:
+**If you set up Lewsnetter before this version,** your existing IAM user is missing the SNS + configuration-set actions. Edit your IAM policy to match the JSON above (no need to rotate keys). Without the new actions, the **Set up SNS automatically** button on the Email Sending page will return an `AccessDenied` from AWS.
 
-```json
-"sns:CreateTopic",
-"sns:Subscribe",
-"sns:ListSubscriptionsByTopic",
-"sns:GetTopicAttributes"
-```
-
-Lewsnetter's SES code is in `app/services/ses/`. The actions above cover everything in `client_for.rb`, `identity_checker.rb`, `identity_creator.rb`, `domain_identity_checker.rb`, `domain_identity_creator.rb`, `verifier.rb`, and `test_sender.rb`. If you grant a broader policy (like the AWS-managed `AmazonSESFullAccess`), it works but is overprovisioned.
+Lewsnetter's SES code is in `app/services/ses/`. The actions above cover everything in `client_for.rb`, `identity_checker.rb`, `identity_creator.rb`, `domain_identity_checker.rb`, `domain_identity_creator.rb`, `verifier.rb`, `test_sender.rb`, and `sns_auto_wire.rb`. If you grant a broader policy (like the AWS-managed `AmazonSESFullAccess` + `AmazonSNSFullAccess`), it works but is overprovisioned.
 
 ## Step 2 — Generate an Access Key
 

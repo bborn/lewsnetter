@@ -126,6 +126,57 @@ class SesSenderTest < ActiveSupport::TestCase
     end
   end
 
+  test "subscriber on the suppression list is skipped and gets a 'suppressed' Delivery row" do
+    Suppression.create!(team: @team, email: @s1.email, reason: "hard_bounce", source: "General")
+
+    original = Rails.application.config.ses_client
+    Rails.application.config.ses_client = :stub
+    begin
+      result = nil
+      # Two subscribers: @s1 is suppressed, @s2 is not. Expect one stub send +
+      # one suppressed delivery row (so total Delivery count goes up by 2).
+      assert_difference -> { Delivery.count }, 2 do
+        result = SesSender.send_bulk(campaign: @campaign, subscribers: [@s1, @s2])
+      end
+
+      assert_equal 1, result.message_ids.size, "only @s2 should have been sent"
+      assert_equal [@s1], result.suppressed, "suppressed list must call out the skipped subscriber"
+      assert_empty result.failed
+
+      suppressed_delivery = Delivery.find_by(subscriber: @s1)
+      assert_equal "suppressed", suppressed_delivery.status
+      assert_nil suppressed_delivery.ses_message_id
+      assert_nil suppressed_delivery.sent_at
+      assert_equal "address on suppression list", suppressed_delivery.error_message
+
+      sent_delivery = Delivery.find_by(subscriber: @s2)
+      assert_equal "sent", sent_delivery.status
+      assert sent_delivery.ses_message_id.start_with?("stub-")
+    ensure
+      Rails.application.config.ses_client = original
+    end
+  end
+
+  test "suppression check is case-insensitive on the suppression-list email" do
+    # Suppression normalizes to lowercase; subscriber stores as-typed. The
+    # filter must catch a mismatched-casing pair so an operator who pastes
+    # "Foo@Example.com" gets matched against "foo@example.com" subscribers.
+    capsy = @team.subscribers.create!(email: "Capsy@example.com", external_id: "cap", subscribed: true)
+    Suppression.create!(team: @team, email: "capsy@example.com", reason: "manual")
+
+    original = Rails.application.config.ses_client
+    Rails.application.config.ses_client = :stub
+    begin
+      result = SesSender.send_bulk(campaign: @campaign, subscribers: [capsy])
+      assert_empty result.message_ids
+      assert_equal [capsy], result.suppressed
+      delivery = Delivery.find_by(subscriber: capsy)
+      assert_equal "suppressed", delivery.status
+    ensure
+      Rails.application.config.ses_client = original
+    end
+  end
+
   test "SES rejection records a failed Delivery row with the error message" do
     fake_client = Object.new
     fake_client.define_singleton_method(:send_email) { |**_args| raise StandardError, "SES said no" }

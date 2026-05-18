@@ -41,13 +41,25 @@ module Mcp
             failed: deliveries.where(status: "failed").count
           }
 
-          # top_links: kept here for forward-compatibility with Phase 2 click
-          # tracking; for now we fall back to whatever the legacy stats hash
-          # held so existing callers don't break.
-          legacy_links = Array((campaign.stats || {})["links"])
-          top_links = legacy_links.first(10).map do |link|
-            link.is_a?(Hash) ? link : {url: link.to_s, clicks: 0}
+          # top_links: aggregated from the per-recipient Delivery rows via
+          # `last_clicked_url` + `click_count` (see Campaign#top_links for
+          # the methodology + caveats). Falls back to the legacy
+          # `campaign.stats["links"]` blob when no clicks have been
+          # recorded yet, so older campaigns whose links got persisted into
+          # the stats JSON column still surface here.
+          tracked = campaign.top_links(limit: 10).map do |row|
+            {url: row[:url], clicks: row[:total_clicks], unique_clicks: row[:unique_clicks]}
           end
+
+          top_links =
+            if tracked.any?
+              tracked
+            else
+              legacy_links = Array((campaign.stats || {})["links"])
+              legacy_links.first(10).map do |link|
+                link.is_a?(Hash) ? link : {url: link.to_s, clicks: 0}
+              end
+            end
 
           {
             stats: stats,

@@ -54,6 +54,50 @@
 
     <%= render 'account/email_sending/form', team: @team, ses_configuration: @ses_configuration %>
 
+    <%# SNS bounce/complaint/delivery webhook wiring — auto-provisioned via
+        Ses::SnsAutoWire using the team's existing SES IAM creds. Replaces
+        the old manual "paste three ARNs you copied from the AWS console"
+        flow. Idempotent — the same button doubles as "re-verify / repair". %>
+    <% if @ses_configuration.configured? %>
+      <%= render 'account/shared/box', divider: true do |box| %>
+        <% box.title t('email_sending.show.sections.sns.header') %>
+        <% box.description t('email_sending.show.sections.sns.description',
+                            webhook_url: (ENV["BASE_URL"].presence || request.base_url).chomp("/") + "/webhooks/ses/sns") %>
+
+        <% box.body do %>
+          <% if @ses_configuration.sns_bounce_topic_arn.present? %>
+            <% with_attribute_settings object: @ses_configuration, strategy: :label do %>
+              <%= render 'shared/attributes/text', attribute: :sns_bounce_topic_arn,
+                         value: @ses_configuration.sns_bounce_topic_arn %>
+              <%= render 'shared/attributes/text', attribute: :sns_complaint_topic_arn,
+                         value: @ses_configuration.sns_complaint_topic_arn %>
+              <% if @ses_configuration.respond_to?(:sns_delivery_topic_arn) && @ses_configuration.sns_delivery_topic_arn.present? %>
+                <p class="attribute-row">
+                  <span class="attribute-label">SNS Delivery Topic ARN</span>
+                  <span class="attribute-value"><%= @ses_configuration.sns_delivery_topic_arn %></span>
+                </p>
+              <% end %>
+            <% end %>
+          <% else %>
+            <p class="text-sm text-gray-500">
+              <%= t('email_sending.show.sections.sns.not_configured',
+                    default: "Not configured yet. Click the button below and Lewsnetter will create the SNS topics + SES configuration set on your behalf.") %>
+            </p>
+          <% end %>
+        <% end %>
+
+        <% box.actions do %>
+          <% if can?(:manage, @ses_configuration) %>
+            <%= button_to (@ses_configuration.sns_bounce_topic_arn.present? ?
+                            t('email_sending.buttons.reverify_sns', default: "Re-verify SNS wiring") :
+                            t('email_sending.buttons.setup_sns', default: "Set up SNS automatically")),
+                          account_team_verify_sns_email_sending_path(@team),
+                          method: :post, class: first_button_primary %>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% end %>
+
     <% if @verifier_result&.identities&.any? %>
       <%= render 'account/email_sending/verified_identities',
                  team: @team, identities: @verifier_result.identities %>

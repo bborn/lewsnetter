@@ -84,4 +84,35 @@ module StatusPillHelper
       status_pill("draft", label: "Unsubscribed")
     end
   end
+
+  # Render a per-recipient delivery state pill for the campaign recipient
+  # drill-down table. The Delivery row has multiple overlapping signals
+  # (sent, delivered, opened, clicked, bounced, complained, unsubscribed)
+  # — we pick the most informative single label by priority so the column
+  # reads at a glance:
+  #
+  #   bounced > complained > unsubscribed > clicked > opened > delivered > sent > failed
+  #
+  # The "winning" state determines both the label and the colour.
+  def delivery_state_pill(delivery)
+    if delivery.bounced_at.present? || delivery.status == "bounced"
+      status_pill("failed", label: "Bounced")
+    elsif delivery.complained_at.present? || delivery.status == "complained"
+      status_pill("failed", label: "Complained")
+    elsif delivery.unsubscribed_at.present?
+      status_pill("draft", label: "Unsubscribed")
+    elsif delivery.clicked_at.present?
+      status_pill("success", label: "Clicked")
+    elsif delivery.opened_at.present?
+      status_pill("success", label: "Opened")
+    elsif delivery.delivered_at.present? || delivery.status == "delivered"
+      status_pill("info", label: "Delivered")
+    elsif delivery.status == "failed"
+      status_pill("failed", label: "Failed")
+    elsif delivery.ses_message_id.present?
+      status_pill("neutral", label: "Sent")
+    else
+      status_pill("neutral", label: delivery.status.to_s.humanize.presence || "—")
+    end
+  end
 end

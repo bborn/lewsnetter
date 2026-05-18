@@ -157,4 +157,77 @@ class CampaignTest < ActiveSupport::TestCase
     assert_equal 1, stats[:unsubscribed]
     assert_equal 1, stats[:failed]
   end
+
+  test "top_links returns [] when no recipient has clicked a tracked URL" do
+    @team.subscribers.create!(email: "noclick@example.com", external_id: "tl-noclick", subscribed: true)
+    assert_equal [], @campaign.top_links
+  end
+
+  test "top_links aggregates unique + total clicks per URL, sorted by total desc" do
+    subs = 5.times.map do |i|
+      @team.subscribers.create!(email: "tl#{i}@example.com", external_id: "tl-#{i}", subscribed: true)
+    end
+
+    # foo.example.com — 3 unique recipients, with click_counts 5, 2, 1 → total 8
+    Delivery.create!(campaign: @campaign, subscriber: subs[0], ses_message_id: "tl-1",
+      sent_at: 1.hour.ago, clicked_at: 30.minutes.ago,
+      click_count: 5, last_clicked_url: "https://foo.example.com/landing")
+    Delivery.create!(campaign: @campaign, subscriber: subs[1], ses_message_id: "tl-2",
+      sent_at: 1.hour.ago, clicked_at: 25.minutes.ago,
+      click_count: 2, last_clicked_url: "https://foo.example.com/landing")
+    Delivery.create!(campaign: @campaign, subscriber: subs[2], ses_message_id: "tl-3",
+      sent_at: 1.hour.ago, clicked_at: 20.minutes.ago,
+      click_count: 1, last_clicked_url: "https://foo.example.com/landing")
+    # bar.example.com — 2 unique recipients, click_counts 4, 3 → total 7
+    Delivery.create!(campaign: @campaign, subscriber: subs[3], ses_message_id: "tl-4",
+      sent_at: 1.hour.ago, clicked_at: 15.minutes.ago,
+      click_count: 4, last_clicked_url: "https://bar.example.com/x")
+    Delivery.create!(campaign: @campaign, subscriber: subs[4], ses_message_id: "tl-5",
+      sent_at: 1.hour.ago, clicked_at: 10.minutes.ago,
+      click_count: 3, last_clicked_url: "https://bar.example.com/x")
+
+    rows = @campaign.top_links
+
+    assert_equal 2, rows.size
+    assert_equal "https://foo.example.com/landing", rows[0][:url]
+    assert_equal 3, rows[0][:unique_clicks]
+    assert_equal 8, rows[0][:total_clicks]
+
+    assert_equal "https://bar.example.com/x", rows[1][:url]
+    assert_equal 2, rows[1][:unique_clicks]
+    assert_equal 7, rows[1][:total_clicks]
+  end
+
+  test "top_links honours the limit argument" do
+    10.times do |i|
+      sub = @team.subscribers.create!(email: "lim#{i}@example.com", external_id: "lim-#{i}", subscribed: true)
+      Delivery.create!(campaign: @campaign, subscriber: sub, ses_message_id: "lim-#{i}",
+        sent_at: 1.hour.ago, clicked_at: 30.minutes.ago,
+        click_count: 10 - i, # bigger i → fewer clicks → lower rank
+        last_clicked_url: "https://example.com/link-#{i}")
+    end
+
+    rows = @campaign.top_links(limit: 3)
+    assert_equal 3, rows.size
+    # Top three should be the three with the largest click_counts (links 0..2).
+    assert_equal "https://example.com/link-0", rows[0][:url]
+    assert_equal "https://example.com/link-1", rows[1][:url]
+    assert_equal "https://example.com/link-2", rows[2][:url]
+  end
+
+  test "top_links ignores deliveries with no last_clicked_url" do
+    sub_a = @team.subscribers.create!(email: "tla@example.com", external_id: "tla", subscribed: true)
+    sub_b = @team.subscribers.create!(email: "tlb@example.com", external_id: "tlb", subscribed: true)
+    # Clicked → included
+    Delivery.create!(campaign: @campaign, subscriber: sub_a, ses_message_id: "tl-c-a",
+      sent_at: 1.hour.ago, clicked_at: 10.minutes.ago,
+      click_count: 1, last_clicked_url: "https://present.example.com")
+    # No click recorded → excluded
+    Delivery.create!(campaign: @campaign, subscriber: sub_b, ses_message_id: "tl-c-b",
+      sent_at: 1.hour.ago, delivered_at: 30.minutes.ago)
+
+    rows = @campaign.top_links
+    assert_equal 1, rows.size
+    assert_equal "https://present.example.com", rows[0][:url]
+  end
 end

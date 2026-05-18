@@ -1,0 +1,6 @@
+<% if current_team.present? && can?(:manage, current_team) %>
+  <%= render 'account/shared/menu/item', {
+    url: main_app.account_team_suppressions_path(current_team),
+    label: "Suppressions",
+  } %>
+<% end %>

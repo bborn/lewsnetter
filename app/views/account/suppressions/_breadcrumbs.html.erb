@@ -1,0 +1,3 @@
+<% team ||= @team %>
+<%= render 'account/teams/breadcrumbs', team: team %>
+<%= render 'account/shared/breadcrumb', label: "Suppressions", url: [:account, team, :suppressions] %>

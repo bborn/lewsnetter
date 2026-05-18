@@ -1,0 +1,43 @@
+<%# Per-campaign recipient drill-down. Rendered either standalone (full
+    page at /account/campaigns/:campaign_id/deliveries) or embedded in
+    the campaign show page via a turbo-frame so tab switching doesn't
+    blow away the rest of the page.
+
+    Required:
+      @campaign        — parent campaign
+      @deliveries      — paginated AR relation
+      @pagy            — Pagy instance
+      @status          — "all" | "opened" | "clicked" | "bounced" | …
+      @status_counts   — { "all" => 99, "opened" => 12, … }
+
+    The wrapping turbo-frame name "campaign-recipients" matches the
+    embed on the show page. When loaded standalone, the turbo-frame
+    still works — Turbo treats top-level frames as the whole document
+    on navigation. %>
+
+<% if @campaign.persisted? && (controller_path == "account/campaigns/deliveries") && !request.headers["Turbo-Frame"] %>
+  <%# Standalone full-page request — wrap with the page chrome so the
+      breadcrumb + title bar render correctly. %>
+  <%= render 'account/shared/page' do |page| %>
+    <% page.title "Recipients · #{@campaign.subject}" %>
+    <% page.body do %>
+      <%= render partial: "account/campaigns/deliveries/index_frame",
+                 locals: {
+                   campaign: @campaign,
+                   deliveries: @deliveries,
+                   pagy: @pagy,
+                   status: @status,
+                   status_counts: @status_counts
+                 } %>
+    <% end %>
+  <% end %>
+<% else %>
+  <%= render partial: "account/campaigns/deliveries/index_frame",
+             locals: {
+               campaign: @campaign,
+               deliveries: @deliveries,
+               pagy: @pagy,
+               status: @status,
+               status_counts: @status_counts
+             } %>
+<% end %>

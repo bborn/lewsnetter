@@ -9,7 +9,11 @@
 class Delivery < ApplicationRecord
   # 🚅 add concerns above.
 
-  STATUSES = %w[sent delivered bounced complained failed].freeze
+  # `suppressed` is set by SesSender when an address is on the team's
+  # Suppression list — the row exists for postmortem accounting, but SES
+  # never saw the message. Distinct from `failed` so the postmortem can
+  # show "didn't send by design" separately from "tried and broke."
+  STATUSES = %w[sent delivered bounced complained failed suppressed].freeze
 
   # 🚅 add attribute accessors above.
 

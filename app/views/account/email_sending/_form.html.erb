@@ -47,22 +47,12 @@
                    } %>
       <% end %>
 
-      <h3 class="text-lg font-bold mt-6 mb-2"><%= t('email_sending.show.sections.sns.header') %></h3>
-      <p class="text-sm text-gray-500 mb-4">
-        <%= t('email_sending.show.sections.sns.description',
-              webhook_url: request.base_url + "/webhooks/ses/sns") %>
-      </p>
-
-      <% with_field_settings form: form do %>
-        <%= render 'shared/fields/text_field',
-                   method: :sns_bounce_topic_arn,
-                   options: {placeholder: "arn:aws:sns:us-east-1:…:bounce"},
-                   other_options: {label: "SNS Bounce Topic ARN"} %>
-        <%= render 'shared/fields/text_field',
-                   method: :sns_complaint_topic_arn,
-                   options: {placeholder: "arn:aws:sns:us-east-1:…:complaint"},
-                   other_options: {label: "SNS Complaint Topic ARN"} %>
-      <% end %>
+      <%# SNS topic ARNs are no longer pasted manually — see the
+          "SNS bounce + complaint webhooks" panel on the show page,
+          which one-click-provisions topics, subscriptions, and the
+          SES configuration set via Ses::SnsAutoWire. The columns
+          are still on the model (rendered read-only on the show page)
+          for tenants that wired SNS manually before this version. %>
 
       <h3 class="text-lg font-bold mt-6 mb-2"><%= t('email_sending.show.sections.unsubscribe.header') %></h3>
       <p class="text-sm text-gray-500 mb-4">

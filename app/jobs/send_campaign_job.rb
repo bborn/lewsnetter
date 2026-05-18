@@ -17,7 +17,7 @@ class SendCampaignJob < ApplicationJob
       return
     end
 
-    campaign.update!(status: "sending", stats: campaign.stats.merge("sent" => 0, "failed" => 0, "errors" => []))
+    campaign.update!(status: "sending", stats: campaign.stats.merge("sent" => 0, "failed" => 0, "suppressed" => 0, "errors" => []))
 
     recipients =
       begin
@@ -30,12 +30,14 @@ class SendCampaignJob < ApplicationJob
 
     sent_count = 0
     failed_count = 0
+    suppressed_count = 0
     errors = []
 
     recipients.find_in_batches(batch_size: BATCH_SIZE) do |batch|
       result = SesSender.send_bulk(campaign: campaign, subscribers: batch)
       sent_count += result.message_ids.size
       failed_count += result.failed.size
+      suppressed_count += result.suppressed.size
       errors.concat(result.failed.map { |f| "#{f[:subscriber]&.email}: #{f[:error]}" })
 
       bump_last_contacted!(batch, result)
@@ -43,6 +45,7 @@ class SendCampaignJob < ApplicationJob
       stats = campaign.stats.dup
       stats["sent"] = sent_count
       stats["failed"] = failed_count
+      stats["suppressed"] = suppressed_count
       stats["errors"] = errors
       campaign.update_column(:stats, stats)
     end
@@ -87,7 +90,12 @@ class SendCampaignJob < ApplicationJob
   # (which is the right call — a test send isn't a real campaign contact).
   def bump_last_contacted!(batch, result)
     failed_ids = result.failed.map { |f| f[:subscriber]&.id }.compact.to_set
-    succeeded_ids = batch.map(&:id).reject { |id| failed_ids.include?(id) }
+    # Suppressed subscribers had no actual send — don't bump their
+    # contact recency, otherwise "never contacted" segments stop matching
+    # someone who's been on the blocklist the whole time.
+    suppressed_ids = result.suppressed.map(&:id).to_set
+    skip_ids = failed_ids | suppressed_ids
+    succeeded_ids = batch.map(&:id).reject { |id| skip_ids.include?(id) }
     return if succeeded_ids.empty?
 
     Subscriber.where(id: succeeded_ids).update_all([

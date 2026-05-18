@@ -1,0 +1,7 @@
+<%# Breadcrumbs for the recipient drill-down page. Same chain as the
+    campaign show page, plus a trailing "Recipients" crumb. Reuses the
+    parent campaign's crumbs so the team + campaign links are wired
+    exactly the same way. %>
+<% campaign ||= @campaign %>
+<%= render 'account/campaigns/breadcrumbs', campaign: campaign, team: campaign&.team %>
+<%= render 'account/shared/breadcrumb', label: 'Recipients' %>

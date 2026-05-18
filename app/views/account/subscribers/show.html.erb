@@ -2,7 +2,10 @@
   page_title = @subscriber.email.presence || @subscriber.name.presence || @subscriber.external_id.presence || "Subscriber ##{@subscriber.id}"
   page_subtitle = @subscriber.name.presence if @subscriber.email.present?
   custom_attrs = (@subscriber.custom_attributes || {}).reject { |_, v| v.blank? }
-  recent_events = @subscriber.events.order(occurred_at: :desc).limit(20)
+  # The Timeline supersedes the old "Recent events" box — it includes the
+  # same custom event rows alongside campaign + engagement signals, so
+  # operators get one auditable stream instead of two adjacent lists.
+  timeline_entries = Account::SubscriberTimeline.new(subscriber: @subscriber).call
 %>
 <%= render 'account/shared/page' do |page| %>
   <% page.title page_title %>
@@ -46,7 +49,7 @@
 
     <%= render 'account/subscribers/custom_attributes', subscriber: @subscriber, custom_attrs: custom_attrs %>
 
-    <%= render 'account/subscribers/events', subscriber: @subscriber, events: recent_events %>
+    <%= render 'account/subscribers/timeline', subscriber: @subscriber, entries: timeline_entries %>
 
     <%# 🚅 super scaffolding will insert new children above this line. %>
   <% end %>

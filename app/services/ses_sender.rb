@@ -18,25 +18,47 @@
 # delivered events. Failed sends still get a row (status="failed") so the
 # postmortem aggregations match the audience size.
 class SesSender
-  Result = Struct.new(:message_ids, :failed, :delivery_write_errors, keyword_init: true)
+  Result = Struct.new(:message_ids, :failed, :suppressed, :delivery_write_errors, keyword_init: true)
 
   class << self
     # campaign: Campaign with a sender_address + body
     # subscribers: enumerable of Subscriber records
     def send_bulk(campaign:, subscribers:)
       subscribers = Array(subscribers)
-      return Result.new(message_ids: [], failed: [], delivery_write_errors: 0) if subscribers.empty?
+      if subscribers.empty?
+        return Result.new(message_ids: [], failed: [], suppressed: [], delivery_write_errors: 0)
+      end
 
       team = campaign.team
       client, stub_mode = resolve_client(team)
       from_address = build_from_address(campaign)
       configuration_set_name = resolve_configuration_set_name(team)
 
+      # Pre-compute the suppression set for this batch BEFORE iterating, so
+      # we never hand a known-bad address to SES. One indexed query per batch
+      # (using deterministic-encrypted email lookup) — cheap even on the
+      # largest batches, and avoids loading 11k rows just to do a Set check.
+      batch_emails = subscribers.map { |s| s.email.to_s.downcase }.uniq.reject(&:blank?)
+      suppressed_set = Suppression.for_team_emails(team, batch_emails)
+
       message_ids = []
       failed = []
+      suppressed = []
       delivery_write_errors = 0
 
       subscribers.each do |subscriber|
+        email_key = subscriber.email.to_s.downcase
+        if suppressed_set.include?(email_key)
+          # Record a Delivery row so per-campaign analytics can explain why
+          # this person got nothing. We use a dedicated "suppressed" status
+          # rather than "failed" so the postmortem can show it separately
+          # (suppressed != something-went-wrong; the system worked).
+          record_suppressed_delivery(campaign: campaign, subscriber: subscriber)
+          suppressed << subscriber
+          next
+        end
+
+
         # Phase 2: create the Delivery row BEFORE rendering so the renderer
         # can embed the row's tracking_token in the open pixel + click URLs.
         # The row starts with status="sent", ses_message_id=nil, sent_at=nil;
@@ -103,7 +125,12 @@ class SesSender
         end
       end
 
-      Result.new(message_ids: message_ids, failed: failed, delivery_write_errors: delivery_write_errors)
+      Result.new(
+        message_ids: message_ids,
+        failed: failed,
+        suppressed: suppressed,
+        delivery_write_errors: delivery_write_errors
+      )
     end
 
     private
@@ -148,6 +175,26 @@ class SesSender
       Rails.logger.warn(
         "[SesSender] failed to finalize sent Delivery id=#{delivery.id}: #{e.class}: #{e.message}"
       )
+    end
+
+    # Write a Delivery row stamped "suppressed" so per-campaign analytics has
+    # something to point at when explaining "audience said N, but only N-K
+    # got mail." No SES call, no sent_at — just the breadcrumb.
+    def record_suppressed_delivery(campaign:, subscriber:)
+      Delivery.create!(
+        campaign: campaign,
+        subscriber: subscriber,
+        status: "suppressed",
+        error_message: "address on suppression list",
+        ses_message_id: nil,
+        sent_at: nil
+      )
+    rescue => e
+      Rails.logger.warn(
+        "[SesSender] failed to record suppressed Delivery for subscriber=#{subscriber.id} " \
+        "campaign=#{campaign.id}: #{e.class}: #{e.message}"
+      )
+      nil
     end
 
     def mark_delivery_failed(delivery, error_message)
