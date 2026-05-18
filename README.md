@@ -6,6 +6,14 @@ Lewsnetter is a self-hostable email campaign platform that ships with a built-in
 
 Built on Rails 8 + [BulletTrain](https://bullettrain.co). MIT licensed.
 
+## Docs
+
+- [Setting up Amazon SES](docs/setup-ses.md) — IAM policy, domain verification, DKIM, DMARC
+- [MCP server + agent recipes](docs/mcp.md) — connect Claude / Cursor / your own agent
+- [`lewsnetter-rails` gem](docs/lewsnetter-rails.md) — live sync subscribers from a Rails app
+- [Self-hosting](docs/self-hosting.md) — Kamal deploy walkthrough
+- [Architecture](docs/architecture.md) — stack, decisions, where to start reading
+
 ## What it does
 
 - **Author with markdown + [Liquid](https://shopify.github.io/liquid/).** Write a campaign body in markdown, drop in `{{ first_name | default: "there" }}` placeholders, render through a reusable MJML template that owns the chrome (header, footer, unsubscribe link).
