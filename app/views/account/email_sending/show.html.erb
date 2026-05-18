@@ -1,6 +1,7 @@
 <%= render 'account/shared/page' do |page| %>
   <% page.title t('.section', teams_possessive: possessive_string(@team.name)) %>
   <% page.body do %>
+    <%= render 'account/email_sending/paywall_notice' %>
 
     <%= render 'account/shared/box', divider: true do |box| %>
       <% box.title t('.header') %>

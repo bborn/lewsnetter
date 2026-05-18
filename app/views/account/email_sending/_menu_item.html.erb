@@ -1,0 +1,6 @@
+<% if current_team.present? %>
+  <%= render 'account/shared/menu/item', {
+    url: main_app.account_team_email_sending_path(current_team),
+    label: t('email_sending.navigation.label'),
+  } %>
+<% end %>

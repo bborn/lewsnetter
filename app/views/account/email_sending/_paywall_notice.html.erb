@@ -1,0 +1,24 @@
+<%# Rendered at the top of the SES setup wizard + settings page when the
+    current team is non-exempt and has no active Pro subscription. Tells
+    them upfront they'll need to pay before the save action will succeed,
+    so they don't fill in their AWS keys and then bounce off a redirect.
+
+    Requires: @team in scope. %>
+<% if @team.present? && !@team.billing_exempt? && @team.current_billing_subscription.blank? %>
+  <div class="max-w-3xl mx-auto mb-6 rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 p-5">
+    <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-amber-700 dark:text-amber-400 mb-2">
+      Subscription required
+    </div>
+    <h3 class="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-1">
+      You'll need a Pro subscription to save Amazon SES credentials
+    </h3>
+    <p class="text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed mb-4">
+      $10/month per team. Cancel anytime. The rest of Lewsnetter (campaigns,
+      subscribers, segments, MCP, API) stays free — only connecting your AWS
+      keys requires a subscription.
+    </p>
+    <%= link_to "Subscribe to Pro →",
+          account_team_billing_subscriptions_path(@team),
+          class: "button" %>
+  </div>
+<% end %>

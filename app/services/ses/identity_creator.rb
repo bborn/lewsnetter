@@ -45,7 +45,7 @@ module Ses
       Result.new(
         ok: false,
         status: "unconfigured",
-        message: "Your team's SES credentials aren't configured yet. Set them up under Email Sending first."
+        message: "Your team's SES credentials aren't configured yet. Set them up at Sending → Email Sending first."
       )
     rescue Aws::SESV2::Errors::LimitExceededException => e
       Rails.logger.warn("[Ses::IdentityCreator] limit exceeded: #{e.message}")

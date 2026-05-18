@@ -19,6 +19,7 @@
   <%= render 'account/shared/menu/subsection', title: t('menus.main.labels.sending', default: 'Sending'), expand: expand do %>
     <%= render 'account/email_templates/menu_item' %>
     <%= render 'account/sender_addresses/menu_item' %>
+    <%= render 'account/email_sending/menu_item' %>
   <% end %>
 
   <% @last_menu_orientation = @menu_orientation %>
