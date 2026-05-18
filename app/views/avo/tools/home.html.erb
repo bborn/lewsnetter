@@ -77,7 +77,12 @@
                   <td class="py-2 pr-4"><%= user.full_name.presence || "—" %></td>
                   <td class="py-2 pr-4"><%= user.current_team&.name || "—" %></td>
                   <td class="py-2 pr-4">
-                    <%= link_to "Open", resource_path(model_class: User, record: user), class: "text-blue-600 hover:underline" %>
+                    <%# Avo generates one named route per resource, e.g.
+                        resources_user_path(user). Using it directly is
+                        more robust than the polymorphic resource_path
+                        helper, which has a kwargs surface that varies
+                        across Avo versions. %>
+                    <%= link_to "Open", avo.resources_user_path(user), class: "text-blue-600 hover:underline" %>
                   </td>
                 </tr>
               <% end %>
