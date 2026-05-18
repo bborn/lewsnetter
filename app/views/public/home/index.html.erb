@@ -37,8 +37,8 @@
       </p>
       <div class="flex items-center gap-3 flex-wrap">
         <%= link_to "Start free — no card", app_sign_up_url, class: "button text-base px-6 py-3" %>
-        <a href="#how" class="button-secondary text-base px-6 py-3">How it works</a>
-        <span class="text-sm text-zinc-500 dark:text-zinc-400 ml-2">Free during beta · Open source</span>
+        <a href="#pricing" class="button-secondary text-base px-6 py-3">$10/mo · See pricing</a>
+        <span class="text-sm text-zinc-500 dark:text-zinc-400 ml-2">Or self-host for free — it's open source</span>
       </div>
     </div>
   </section>
@@ -123,6 +123,69 @@
   </section>
 
   <%# ============================================================
+      Pricing — keep it simple. One number, no tiers, two options:
+      pay $10/mo for hosted, or self-host for free since it's MIT.
+      ============================================================ %>
+  <section id="pricing" class="border-t border-zinc-100 dark:border-zinc-900">
+    <div class="max-w-5xl mx-auto px-6 py-24">
+      <div class="text-center max-w-2xl mx-auto mb-14">
+        <div class="text-[11px] uppercase tracking-widest font-mono text-zinc-500 dark:text-zinc-400 mb-3">Pricing</div>
+        <h2 class="text-4xl md:text-5xl font-semibold tracking-[-0.02em] text-zinc-900 dark:text-zinc-50 mb-4">
+          Ten dollars a month. That's it.
+        </h2>
+        <p class="text-lg text-zinc-600 dark:text-zinc-300 leading-relaxed">
+          No tiers, no per-subscriber pricing, no surprise overages. One flat fee per team.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+
+        <%# Hosted — the actual product %>
+        <article class="bg-white dark:bg-zinc-900 border-2 border-orange-500 rounded-lg p-8 relative">
+          <div class="absolute -top-3 left-8 bg-orange-500 text-white text-[10px] uppercase tracking-widest font-mono px-2 py-1 rounded">Recommended</div>
+          <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-orange-700 dark:text-orange-400 mb-2">Hosted</div>
+          <div class="flex items-baseline gap-1 mb-1">
+            <span class="text-5xl font-semibold tracking-[-0.025em] text-zinc-950 dark:text-zinc-50 tabular-nums">$10</span>
+            <span class="font-mono text-sm text-zinc-500 dark:text-zinc-400">/mo per team</span>
+          </div>
+          <p class="text-sm text-zinc-500 dark:text-zinc-400 mb-6">Cancel anytime.</p>
+          <ul class="space-y-2.5 text-[15px] text-zinc-700 dark:text-zinc-300 mb-8">
+            <li class="flex items-start gap-3"><span aria-hidden="true" class="select-none text-zinc-400">•</span><span>Unlimited campaigns + subscribers</span></li>
+            <li class="flex items-start gap-3"><span aria-hidden="true" class="select-none text-zinc-400">•</span><span>Bring your own Amazon SES</span></li>
+            <li class="flex items-start gap-3"><span aria-hidden="true" class="select-none text-zinc-400">•</span><span>MCP server + REST API included</span></li>
+            <li class="flex items-start gap-3"><span aria-hidden="true" class="select-none text-zinc-400">•</span><span>Live sync via <code class="text-[13px] font-mono bg-zinc-100 dark:bg-zinc-800 px-1 py-0.5 rounded">lewsnetter-rails</code> gem</span></li>
+            <li class="flex items-start gap-3"><span aria-hidden="true" class="select-none text-zinc-400">•</span><span>Backed up to Cloudflare R2</span></li>
+          </ul>
+          <%= link_to "Sign up — free until you connect SES", app_sign_up_url, class: "button w-full justify-center text-base py-3" %>
+        </article>
+
+        <%# Self-host — for the developers we're courting %>
+        <article class="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-8">
+          <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-zinc-500 dark:text-zinc-400 mb-2">Self-hosted</div>
+          <div class="flex items-baseline gap-1 mb-1">
+            <span class="text-5xl font-semibold tracking-[-0.025em] text-zinc-950 dark:text-zinc-50 tabular-nums">Free</span>
+            <span class="font-mono text-sm text-zinc-500 dark:text-zinc-400">MIT licensed</span>
+          </div>
+          <p class="text-sm text-zinc-500 dark:text-zinc-400 mb-6">You operate it.</p>
+          <ul class="space-y-2.5 text-[15px] text-zinc-700 dark:text-zinc-300 mb-8">
+            <li class="flex items-start gap-3"><span aria-hidden="true" class="select-none text-zinc-400">•</span><span>The exact same app — no feature gates</span></li>
+            <li class="flex items-start gap-3"><span aria-hidden="true" class="select-none text-zinc-400">•</span><span>Rails 8 + SQLite + Litestream + Kamal</span></li>
+            <li class="flex items-start gap-3"><span aria-hidden="true" class="select-none text-zinc-400">•</span><span>One-box deploy (Hetzner CPX21 works fine)</span></li>
+            <li class="flex items-start gap-3"><span aria-hidden="true" class="select-none text-zinc-400">•</span><span>Bring your own AWS, R2, domain</span></li>
+            <li class="flex items-start gap-3"><span aria-hidden="true" class="select-none text-zinc-400">•</span><span>No support — you read the code</span></li>
+          </ul>
+          <a href="https://github.com/bborn/lewsnetter" target="_blank" rel="noopener" class="button-secondary w-full justify-center text-base py-3">View on GitHub →</a>
+        </article>
+
+      </div>
+
+      <p class="text-center mt-10 text-sm text-zinc-500 dark:text-zinc-400">
+        The whole app — campaigns, subscribers, segments, MCP, API — is free until you connect Amazon SES. The $10/mo unlocks sending.
+      </p>
+    </div>
+  </section>
+
+  <%# ============================================================
       Tech + transparency strip — for the developers + privacy-aware
       audience this product attracts. Honest about what's there.
       ============================================================ %>
@@ -167,7 +230,7 @@
           </div>
           <div class="flex justify-between pb-2">
             <dt class="text-zinc-500 dark:text-zinc-400">Pricing</dt>
-            <dd class="text-zinc-900 dark:text-zinc-100 font-mono text-xs">Free during beta</dd>
+            <dd class="text-zinc-900 dark:text-zinc-100 font-mono text-xs">$10/mo per team</dd>
           </div>
         </dl>
       </div>
