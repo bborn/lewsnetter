@@ -48,8 +48,6 @@
                         account_team_verify_email_sending_path(@team),
                         method: :post, class: first_button_primary %>
         <% end %>
-        <%= link_to t('.buttons.docs'), "https://lewsnetter.com/docs/ses",
-                    class: "button-secondary", target: "_blank", rel: "noopener" %>
         <%= link_to t('global.buttons.back'), [:account, @team], class: "button-secondary" %>
       <% end %>
     <% end %>

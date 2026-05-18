@@ -1,20 +1,24 @@
 # URL helpers for cross-host links on the marketing surface
-# (lewsnetter.dev → app.lewsnetter.dev). In production these always
-# point at the app subdomain so signed-in flows land on the right
-# canonical host. In dev they fall back to the same host the request
-# came in on, so localhost links keep working.
+# (e.g. lewsnetter.dev → app.lewsnetter.dev for the hosted version).
+# Self-hosters who run a single-host deployment don't set APP_BASE_URL
+# and these fall back to same-host route helpers.
 module MarketingHelper
-  APP_BASE_URL = "https://app.lewsnetter.dev".freeze
+  # `APP_BASE_URL` is the canonical app host. Hosted Lewsnetter sets this
+  # to "https://app.lewsnetter.dev"; self-hosters typically leave it
+  # unset so all routes resolve same-host.
+  def app_base_url
+    ENV["APP_BASE_URL"].presence
+  end
 
   def app_sign_in_url
-    Rails.env.production? ? "#{APP_BASE_URL}/users/sign_in" : new_user_session_url
+    app_base_url ? "#{app_base_url}/users/sign_in" : new_user_session_url
   end
 
   def app_sign_up_url
-    Rails.env.production? ? "#{APP_BASE_URL}/users/sign_up" : new_user_registration_url
+    app_base_url ? "#{app_base_url}/users/sign_up" : new_user_registration_url
   end
 
   def app_dashboard_url
-    Rails.env.production? ? "#{APP_BASE_URL}/account" : account_dashboard_url
+    app_base_url ? "#{app_base_url}/account" : account_dashboard_url
   end
 end

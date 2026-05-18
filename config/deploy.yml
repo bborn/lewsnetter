@@ -91,6 +91,13 @@ env:
     # unsubscribe links in emails, MCP metadata, API docs). The marketing
     # surface lives at the apex (lewsnetter.dev) and doesn't need an env var.
     BASE_URL: "https://app.lewsnetter.dev"
+    # Marketing helper uses this to build cross-host CTAs from the apex
+    # landing page over to the app subdomain. Self-hosters running a
+    # single-host deployment leave it unset and links resolve same-host.
+    APP_BASE_URL: "https://app.lewsnetter.dev"
+    # Operator contact for legal/abuse — surfaced in legal pages + footer.
+    LEWSNETTER_LEGAL_EMAIL: "legal@lewsnetter.dev"
+    LEWSNETTER_ABUSE_EMAIL: "abuse@lewsnetter.dev"
     HIDE_THINGS: "true"
     HIDE_EXAMPLES: "true"
     # Litestream → Cloudflare R2. Bucket `lewsnetter-litestream` was

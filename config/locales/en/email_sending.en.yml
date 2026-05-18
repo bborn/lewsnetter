@@ -36,7 +36,7 @@ en:
         _: &unsubscribe_host Unsubscribe Host
         label: *unsubscribe_host
         heading: *unsubscribe_host
-        help: "Optional. CNAME this hostname to lewsnetter.dev in your DNS for branded unsubscribe URLs."
+        help: "Optional. CNAME this hostname to your Lewsnetter app's host (the hosted version is app.lewsnetter.dev) for branded unsubscribe URLs."
       status:
         _: &status SES Status
         label: *status
@@ -70,7 +70,7 @@ en:
           description: Configure SES to publish bounce and complaint notifications to these topics. The public webhook lives at %{webhook_url}.
         unsubscribe:
           header: Unsubscribe Host (optional)
-          description: "Optional. CNAME this hostname to lewsnetter.dev in your DNS for branded unsubscribe URLs that share organizational identity with your From domain (better deliverability)."
+          description: "Optional. CNAME this hostname to your Lewsnetter app's host (the hosted version is app.lewsnetter.dev — self-hosters use whatever host BASE_URL points at) for branded unsubscribe URLs that share organizational identity with your From domain (better deliverability)."
         identities:
           header: Verified Sending Identities
           description: Tick an identity to add it as a Sender Address for this team.

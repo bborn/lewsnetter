@@ -12,8 +12,12 @@
       <a href="/terms"          class="text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100">Terms</a>
       <a href="/dpa"            class="text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100">DPA</a>
       <a href="/acceptable-use" class="text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100">Acceptable Use</a>
+      <% abuse_email = ENV["LEWSNETTER_ABUSE_EMAIL"].presence %>
+      <% if abuse_email %>
+        <span class="text-zinc-300 dark:text-zinc-700">·</span>
+        <a href="mailto:<%= abuse_email %>" class="text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 font-mono"><%= abuse_email.split('@').first %>@</a>
+      <% end %>
       <span class="text-zinc-300 dark:text-zinc-700">·</span>
-      <a href="mailto:abuse@lewsnetter.com" class="text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 font-mono">abuse@</a>
       <a href="https://github.com/bborn/lewsnetter" target="_blank" rel="noopener" class="text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100">GitHub</a>
     </nav>
   </div>
