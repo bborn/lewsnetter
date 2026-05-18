@@ -43,8 +43,11 @@
 
     <% if partial.actions? || (pagy && pagy.pages > 1) %>
       <div class="pt-2 pb-6 px-6 space-y-6">
-        <div class="sm:flex">
-          <div class="flex-1 space-x">
+        <div class="sm:flex sm:items-center">
+          <%# `flex flex-wrap items-center gap-2` so primary / secondary /
+              back buttons share the same baseline + height regardless of
+              any inline whitespace or empty inline children inside them. %>
+          <div class="flex-1 flex flex-wrap items-center gap-2">
             <%= partial.actions %>
           </div>
           <% if pagy && pagy.pages > 1 %>

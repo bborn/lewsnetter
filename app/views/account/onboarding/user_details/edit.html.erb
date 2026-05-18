@@ -47,16 +47,22 @@
 
         <div class="buttons">
           <%= f.submit t('.buttons.next'), class: first_button_primary %>
-          <% if other_teams.any? %>
-            <%= link_to t('global.buttons.back'), main_app.account_teams_path, class: first_button_primary %>
-          <% else %>
-            <%= link_to t('menus.main.labels.logout'), main_app.destroy_user_session_path(@user, onboard_logout: true), class: first_button_primary, data: {turbo_method: 'delete'} %>
-          <% end %>
         </div>
       <% end %>
     <% end %>
   <% end %>
 <% end %>
+
+<div class="mt-6 text-center">
+  <% if other_teams.any? %>
+    <%= link_to t('global.buttons.back'), main_app.account_teams_path,
+                class: "text-sm font-medium text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 underline underline-offset-4 decoration-zinc-300 hover:decoration-zinc-500 transition-colors" %>
+  <% else %>
+    <%= link_to t('menus.main.labels.logout'), main_app.destroy_user_session_path(@user, onboard_logout: true),
+                class: "text-sm font-medium text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 underline underline-offset-4 decoration-zinc-300 hover:decoration-zinc-500 transition-colors",
+                data: {turbo_method: 'delete'} %>
+  <% end %>
+</div>
 
 <script type="text/javascript">
   function btSetUserTimeZone(){
