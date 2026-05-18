@@ -42,6 +42,8 @@
       <% end %>
     <% end %>
 
+    <%= render 'account/subscribers/company', subscriber: @subscriber %>
+
     <%= render 'account/subscribers/custom_attributes', subscriber: @subscriber, custom_attrs: custom_attrs %>
 
     <%= render 'account/subscribers/events', subscriber: @subscriber, events: recent_events %>

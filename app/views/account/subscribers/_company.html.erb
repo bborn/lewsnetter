@@ -1,0 +1,54 @@
+<%# Shows the subscriber's parent Company (when one is linked) along with
+    its custom_attributes. Critical for segment-debugging: segments often
+    filter on companies.custom_attributes (tenant_type, plan, etc.) and
+    without surfacing the company here, "why is this person in this
+    segment?" requires a rails console session. %>
+<% return unless subscriber.company.present? %>
+<% company = subscriber.company %>
+<% company_attrs = (company.custom_attributes || {}).reject { |_, v| v.blank? } %>
+
+<%= render 'account/shared/box', divider: true do |box| %>
+  <% box.title "Company" %>
+  <% box.description do %>
+    Subscribers inherit their company's attributes for segmentation —
+    a segment filtering on <code class="font-mono text-[12px] text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 px-1 py-0.5 rounded">companies.custom_attributes</code>
+    matches this subscriber based on the values below.
+  <% end %>
+
+  <% box.body do %>
+    <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5 text-sm">
+      <div>
+        <dt class="font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-1">Name</dt>
+        <dd class="font-sans text-zinc-900 dark:text-zinc-100 break-words"><%= company.name.presence || "—" %></dd>
+      </div>
+      <% if company.respond_to?(:external_id) && company.external_id.present? %>
+        <div>
+          <dt class="font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-1">External ID</dt>
+          <dd class="font-mono text-[13px] text-zinc-700 dark:text-zinc-300 break-words"><%= company.external_id %></dd>
+        </div>
+      <% end %>
+    </dl>
+
+    <% if company_attrs.any? %>
+      <div class="mt-6 pt-6 border-t border-zinc-200 dark:border-zinc-800">
+        <div class="font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-4">
+          Custom attributes (<%= company_attrs.size %>)
+        </div>
+        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5 text-sm">
+          <% company_attrs.each do |key, value| %>
+            <div>
+              <dt class="font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-1"><%= key.to_s.humanize %></dt>
+              <dd class="font-sans text-zinc-900 dark:text-zinc-100 break-words">
+                <% if value.is_a?(Hash) || value.is_a?(Array) %>
+                  <pre class="font-mono text-[12px] whitespace-pre-wrap text-zinc-700 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded px-3 py-2"><%= JSON.pretty_generate(value) %></pre>
+                <% else %>
+                  <%= value.to_s %>
+                <% end %>
+              </dd>
+            </div>
+          <% end %>
+        </dl>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>
