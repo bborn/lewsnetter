@@ -23,12 +23,17 @@ class Account::SubscribersController < Account::ApplicationController
       return
     end
 
-    needle = "%#{q.downcase}%"
-    results = @team.subscribers
-      .where(
-        "LOWER(email) LIKE :n OR LOWER(name) LIKE :n OR LOWER(external_id) LIKE :n",
-        n: needle
-      )
+    # W2 — email is deterministic-encrypted, so `LIKE` over the ciphertext
+    # matches nothing (functional dead code). Mirror the working approach
+    # from Mcp::Tools::Subscribers::List: exact-match email, substring-LIKE
+    # for name + external_id, then merge the id sets. See audit W2.
+    like = "%#{ActiveRecord::Base.sanitize_sql_like(q.downcase)}%"
+    scope = @team.subscribers
+    exact_email_ids = scope.where(email: q).pluck(:id)
+    name_ids        = scope.where("LOWER(name) LIKE ?", like).pluck(:id)
+    external_id_ids = scope.where("LOWER(external_id) LIKE ?", like).pluck(:id)
+    results = scope
+      .where(id: (exact_email_ids + name_ids + external_id_ids).uniq)
       .order(:email)
       .limit(10)
 

@@ -29,8 +29,22 @@ module Mcp
       user = User.find_by(id: token.resource_owner_id)
       return error(env, 401, "Token resource owner not found") if user.nil?
 
-      team = user.current_team
-      return error(env, 401, "Token resource owner has no current team") if team.nil?
+      # IMPORTANT: scope the request to the TOKEN's bound team, not
+      # `user.current_team`. `users.current_team_id` is mutated any time the
+      # user clicks around the web UI, so a sync token issued for Team A
+      # would silently start acting on Team B once the same user viewed Team
+      # B in the dashboard. The Platform::Application is the stable binding.
+      # See docs/security/2026-05-19-data-isolation-audit.md (C2).
+      application = token.application
+      team = application&.team
+      if team.nil?
+        # Applications created via /oauth/register (RFC 7591 dynamic client
+        # registration) have no team_id. Those tokens are unusable at the MCP
+        # boundary until the application is bound to a team via the
+        # Developers settings page. Reject explicitly so the client gets a
+        # clear error rather than silently picking some team.
+        return error(env, 401, "Token's application is not bound to a team. Provision a sync token at /account/teams/:id/developers.")
+      end
 
       env["mcp.user"] = user
       env["mcp.team"] = team

@@ -24,14 +24,19 @@
   </div>
 <% else %>
   <div class="text-center">
-    <div class="font-mono text-[11px] uppercase tracking-widest text-amber-600 mb-3">Link expired</div>
+    <div class="font-mono text-[11px] uppercase tracking-widest text-amber-600 mb-3">Link invalid</div>
 
     <h1 class="text-[28px] sm:text-[32px] font-semibold tracking-tight text-zinc-900 mb-4 leading-tight">
-      That link's expired.
+      That link is invalid or expired.
     </h1>
 
-    <p class="text-zinc-600 leading-relaxed max-w-md mx-auto">
-      Reply to your most recent email and we'll remove you manually.
+    <p class="text-zinc-600 leading-relaxed max-w-md mx-auto mb-6">
+      Reply to your most recent email and we'll remove you manually — or email
+      <a href="mailto:bruno@influencekit.com?subject=Please%20unsubscribe%20me"
+         class="font-medium text-zinc-900 hover:text-primary-600 underline-offset-2 underline">
+        bruno@influencekit.com
+      </a>
+      and we'll take care of it.
     </p>
   </div>
 <% end %>

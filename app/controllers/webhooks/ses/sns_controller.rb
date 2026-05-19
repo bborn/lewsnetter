@@ -5,23 +5,39 @@
 # Team::SesConfiguration via the topic ARN — so tenants are isolated and
 # one team's bounces never affect another's subscribers.
 #
-# Mounted outside the Account:: namespace so it's reachable without auth
-# (SNS does its own signing; for MVP we accept TopicArn match as proof and
-# rely on routing isolation. Signature verification is a follow-up.)
+# Mounted outside the Account:: namespace so it's reachable without auth.
+# Authenticity is established TWO ways now (both required):
 #
-# In addition to flipping subscriber flags (used by segment filters), we now
+#   1. Cryptographic SNS signature verification via
+#      Aws::SNS::MessageVerifier — proves the payload was signed by AWS
+#      using a cert from sns.<region>.amazonaws.com. Closes H2/H3 in the
+#      data-isolation audit.
+#   2. TopicArn → Team::SesConfiguration lookup — routes the (now-trusted)
+#      payload to the correct tenant.
+#
+# In addition to flipping subscriber flags (used by segment filters), we
 # update the matching `Delivery` row by `ses_message_id` so per-campaign
-# postmortems show real bounce/complaint/delivered counts. If no delivery
-# row matches (event from before this rollout, or a different system), we
-# still update the subscriber and log a miss.
+# postmortems show real bounce/complaint/delivered counts. The Delivery
+# lookup is SCOPED to the team that owns the SNS topic so a stray event
+# carrying another team's message id cannot pollute their stats.
 class Webhooks::Ses::SnsController < ApplicationController
   skip_before_action :verify_authenticity_token
   skip_before_action :authenticate_user!, raise: false
 
   def create
+    # Read once, verify, then parse. SNS POSTs `application/json` with the
+    # signature baked into the body itself — there is no header to check.
+    raw_body = request.body.read
+
+    unless sns_signature_authentic?(raw_body)
+      Rails.logger.warn("[SNS] signature verification failed; rejecting payload")
+      head :bad_request
+      return
+    end
+
     payload =
       begin
-        JSON.parse(request.body.read)
+        JSON.parse(raw_body)
       rescue JSON::ParserError
         head :bad_request and return
       end
@@ -39,6 +55,16 @@ class Webhooks::Ses::SnsController < ApplicationController
     else
       head :bad_request
     end
+  end
+
+  # Hook so the test suite (and ad-hoc operator probes) can bypass real AWS
+  # signature verification — production always runs the real verifier. We
+  # expose it as a class-level toggle rather than env so the test suite can
+  # opt-in per-test without polluting other suites.
+  class << self
+    # When true, the controller skips Aws::SNS::MessageVerifier. Default
+    # false — verification is mandatory in every other env.
+    attr_accessor :skip_signature_verification
   end
 
   private
@@ -85,6 +111,9 @@ class Webhooks::Ses::SnsController < ApplicationController
     message_id = mail["messageId"]
     Rails.logger.info("[SNS] received event_type=#{event_type.inspect} team=#{team.id} topic=#{topic_arn} message_id=#{message_id.inspect}")
 
+    # Every handler below receives `team` so the Delivery lookup can be
+    # scoped to the team that owns the SNS topic (H2 — prevents cross-
+    # tenant pollution of stats).
     case event_type
     when "Bounce"
       handle_bounce(team, message["bounce"] || {}, message_id)
@@ -129,7 +158,7 @@ class Webhooks::Ses::SnsController < ApplicationController
   def handle_bounce(team, bounce, message_id)
     bounce_type = bounce["bounceType"]
 
-    update_delivery_for(message_id) do |delivery|
+    update_delivery_for(team, message_id) do |delivery|
       delivery.update!(
         status: "bounced",
         bounced_at: Time.current,
@@ -166,7 +195,7 @@ class Webhooks::Ses::SnsController < ApplicationController
   def handle_reject(team, reject, mail, message_id)
     reason = reject["reason"]
 
-    update_delivery_for(message_id) do |delivery|
+    update_delivery_for(team, message_id) do |delivery|
       delivery.update!(
         status: "failed",
         error_message: "rejected: #{reason}"
@@ -188,7 +217,7 @@ class Webhooks::Ses::SnsController < ApplicationController
   # underlying email provider will already have raised our complaint
   # rate — we just want to make sure we never send to this address again.
   def handle_complaint(team, complaint, message_id)
-    update_delivery_for(message_id) do |delivery|
+    update_delivery_for(team, message_id) do |delivery|
       delivery.update!(status: "complained", complained_at: Time.current)
     end
 
@@ -215,7 +244,7 @@ class Webhooks::Ses::SnsController < ApplicationController
   # No subscriber-side action; this exists purely to stamp the Delivery row
   # so the postmortem can show a delivered count.
   def handle_delivery(team, message_id)
-    update_delivery_for(message_id) do |delivery|
+    update_delivery_for(team, message_id) do |delivery|
       # If the row was already marked bounced/complained by an out-of-order
       # event, keep that terminal status — `delivered` shouldn't undo it.
       attrs = {delivered_at: Time.current}
@@ -226,14 +255,19 @@ class Webhooks::Ses::SnsController < ApplicationController
   end
 
   # Find the Delivery row by SES MessageId and yield it for in-place update.
-  # If we have no message_id, or no row matches it (event from before this
-  # rollout, or from a parallel system), log + skip — the subscriber-flag
-  # updates still happen in the caller.
-  def update_delivery_for(message_id)
+  # Scoped to the team that owns the SNS topic (H2): without this, a
+  # malicious tenant could craft a payload referencing another team's
+  # ses_message_id and corrupt their campaign postmortem. If no row matches
+  # for THIS team (legit cases: event from before this rollout, parallel
+  # system, or — now — a cross-tenant probe we're correctly ignoring), log
+  # + skip; subscriber-flag updates in the caller still proceed.
+  def update_delivery_for(team, message_id)
     return if message_id.blank?
-    delivery = Delivery.find_by(ses_message_id: message_id)
+    delivery = Delivery.joins(:campaign)
+      .where(campaigns: {team_id: team.id})
+      .find_by(ses_message_id: message_id)
     if delivery.nil?
-      Rails.logger.info("[SNS] no Delivery match for message_id=#{message_id.inspect}")
+      Rails.logger.info("[SNS] no Delivery match for team=#{team.id} message_id=#{message_id.inspect}")
       return
     end
     yield delivery
@@ -241,5 +275,23 @@ class Webhooks::Ses::SnsController < ApplicationController
     # Don't let a delivery update error fail the webhook — SNS will retry
     # the whole notification and we'd then double-apply the subscriber flag.
     Rails.logger.warn("[SNS] failed to update Delivery message_id=#{message_id.inspect}: #{e.class}: #{e.message}")
+  end
+
+  # H3 — verify the payload was signed by Amazon SNS. Returns false (and
+  # the controller 400s) on any failure; returns true if verification is
+  # explicitly disabled for the current test (see
+  # `skip_signature_verification`). Verifier instance is cached on the
+  # class so cert PEM downloads are amortized across requests.
+  def sns_signature_authentic?(body)
+    return true if self.class.skip_signature_verification
+
+    Webhooks::Ses::SnsController.message_verifier.authentic?(body)
+  rescue => e
+    Rails.logger.warn("[SNS] verifier raised #{e.class}: #{e.message}")
+    false
+  end
+
+  def self.message_verifier
+    @message_verifier ||= Aws::SNS::MessageVerifier.new
   end
 end

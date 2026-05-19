@@ -14,9 +14,13 @@ class UnsubscribeController < ApplicationController
     subscriber = find_subscriber
 
     if subscriber.nil?
+      # We deliberately do NOT 404 here: a real subscriber clicking a stale or
+      # malformed link must not be left thinking we lost track of them. Render
+      # the friendly "this link is invalid or expired" page (still 200) with a
+      # mailto fallback so they can get a human to remove them.
       @status = :invalid
       @unsubscribe_team_name = nil
-      render :update, status: :not_found
+      render :update
       return
     end
 
@@ -50,12 +54,12 @@ class UnsubscribeController < ApplicationController
     token = params[:token].to_s
     return nil if token.blank?
 
-    # Tokens are signed global IDs; if a non-signed integer ID is supplied
-    # (legacy / manual link) fall back to finding by id directly. This keeps
-    # the route forgiving without leaking the ability to enumerate ids:
-    # GlobalID::Locator.locate_signed only resolves signed tokens.
-    GlobalID::Locator.locate_signed(token, for: "unsubscribe") ||
-      Subscriber.find_by(id: token)
+    # Tokens MUST be signed global IDs. We previously fell back to
+    # `Subscriber.find_by(id: token)` for "legacy / manual links" — that path
+    # let any unauthenticated attacker iterate /unsubscribe/1, /unsubscribe/2,
+    # etc., and mass-unsubscribe every team's subscribers. The signed token is
+    # now the only acceptable credential. See docs/security/2026-05-19-data-isolation-audit.md (C1).
+    GlobalID::Locator.locate_signed(token, for: "unsubscribe")
   rescue StandardError
     nil
   end

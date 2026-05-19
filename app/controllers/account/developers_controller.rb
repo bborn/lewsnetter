@@ -58,7 +58,15 @@ class Account::DevelopersController < Account::ApplicationController
 
   # DELETE /account/teams/:team_id/developers/tokens/:id
   def revoke_token
-    token = Doorkeeper::AccessToken.find(params[:id])
+    # Scope the lookup to the current team's applications BEFORE finding.
+    # The old `Doorkeeper::AccessToken.find(params[:id])` + `authorize!` flow
+    # returned 403 for tokens belonging to other teams, leaking which token
+    # IDs exist platform-wide (enumeration oracle). Scoping at the loader
+    # turns "not yours" into RecordNotFound (404) — indistinguishable from a
+    # bogus id. See docs/security/2026-05-19-data-isolation-audit.md (W1).
+    token = Doorkeeper::AccessToken
+      .where(application_id: team_applications.pluck(:id))
+      .find(params[:id])
     authorize! :destroy, token.application
     token.revoke
     redirect_to account_team_developers_path(@team), notice: "Token revoked."
