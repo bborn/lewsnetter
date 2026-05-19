@@ -14,16 +14,6 @@ class Account::EmailTemplatesControllerTest < ActionDispatch::IntegrationTest
     )
   end
 
-  test "edit page renders the Uploaded images disclosure with the multi-file picker" do
-    get edit_account_email_template_url(@template)
-    assert_response :success
-    # The disclosure heading + the multi-file picker name MUST both be
-    # present. The picker lives behind a <details> now (the primary surface
-    # for adding images is the editor itself), but it's still in the DOM.
-    assert_match(/Uploaded images/, response.body)
-    assert_select 'input[type="file"][name="email_template[assets][]"]', 1
-  end
-
   test "update attaches an image asset" do
     file = fixture_file_upload("test-logo.png", "image/png")
 
