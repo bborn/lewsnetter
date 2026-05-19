@@ -331,16 +331,6 @@ select_classes = "block w-full rounded-md shadow-sm font-light text-base md:text
         </div>
       </section>
 
-      <%# ============================================================
-          Section 4 — Assets (uploads). The shared partial defines its
-          own card chrome (mb-8 p-4 border rounded-md) — we don't touch
-          it (it's shared with EmailTemplate edit). Wrap it in a class
-          that re-skins it inline to match the .campaign-edit-section
-          look without modifying the partial.
-          ============================================================ %>
-      <div class="campaign-edit-assets-wrap">
-        <%= render "account/shared/assets/section", form: form, resource: campaign %>
-      </div>
     <% end %>
 
     <%# Sticky action bar — primary CTA + cancel pinned to bottom of viewport so

@@ -66,8 +66,6 @@
       <%# 🚅 super scaffolding will insert new fields above this line. %>
     <% end %>
 
-    <%= render "account/shared/assets/section", form: form, resource: email_template %>
-
     <div class="buttons">
       <%= form.submit (form.object.persisted? ? t('.buttons.update') : t('.buttons.create')), class: "button" %>
       <%= link_to t('global.buttons.cancel'), cancel_path, class: "button-secondary" %>

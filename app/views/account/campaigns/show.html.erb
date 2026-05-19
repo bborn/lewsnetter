@@ -232,7 +232,7 @@
         <header class="campaign-show-meta__header">
           <h3 class="campaign-show-meta__title">Details</h3>
           <% if can? :edit, @campaign %>
-            <%= link_to "Edit campaign", [:edit, :account, @campaign], class: "campaign-show-meta__edit" %>
+            <%= link_to "Edit campaign", [:edit, :account, @campaign], class: "button" %>
           <% end %>
         </header>
         <dl class="campaign-show-meta__grid">
