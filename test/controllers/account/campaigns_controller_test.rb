@@ -168,10 +168,10 @@ class Account::CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_equal original_body, @campaign.body_markdown
   end
 
-  test "edit page renders the Assets section" do
+  test "edit page renders the Uploaded images disclosure with the multi-file picker" do
     get edit_account_campaign_url(@campaign)
     assert_response :success
-    assert_match(/Assets/, response.body)
+    assert_match(/Uploaded images/, response.body)
     assert_select 'input[type="file"][name="campaign[assets][]"]', 1
   end
 

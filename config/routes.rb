@@ -191,9 +191,14 @@ Rails.application.routes.draw do
         resources :email_templates do
           member do
             get :preview_frame
-            # Asset uploads (images, primarily logos) are scoped per-template
-            # so the asset_id in the URL refers to an ActiveStorage::Attachment
-            # row. We `purge_later` rather than `purge` so a slow R2 delete
+            # Drag/paste/toolbar image upload from the MJML code editor.
+            # Attaches a file to the template's assets collection and
+            # returns JSON { url, name, ... } so the editor can splice
+            # <mj-image src="…"/> at the cursor.
+            post "assets", to: "email_templates#upload_asset", as: :upload_asset
+            # Asset deletes are scoped per-template so the asset_id in
+            # the URL refers to an ActiveStorage::Attachment row. We
+            # `purge_later` rather than `purge` so a slow storage delete
             # doesn't block the redirect.
             delete "assets/:asset_id", to: "email_templates#destroy_asset", as: :asset
           end

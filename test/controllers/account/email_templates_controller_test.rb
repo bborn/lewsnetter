@@ -14,11 +14,13 @@ class Account::EmailTemplatesControllerTest < ActionDispatch::IntegrationTest
     )
   end
 
-  test "edit page renders the Assets section" do
+  test "edit page renders the Uploaded images disclosure with the multi-file picker" do
     get edit_account_email_template_url(@template)
     assert_response :success
-    # Heading + the multi-file picker name attribute MUST be present.
-    assert_match(/Assets/, response.body)
+    # The disclosure heading + the multi-file picker name MUST both be
+    # present. The picker lives behind a <details> now (the primary surface
+    # for adding images is the editor itself), but it's still in the DOM.
+    assert_match(/Uploaded images/, response.body)
     assert_select 'input[type="file"][name="email_template[assets][]"]', 1
   end
 
@@ -72,6 +74,54 @@ class Account::EmailTemplatesControllerTest < ActionDispatch::IntegrationTest
     # The History partial resolves whodunnit -> user email; the signed-in
     # user's email must show up at least once.
     assert_includes response.body, @user.email
+  end
+
+  test "upload_asset attaches an image and returns JSON metadata" do
+    file = fixture_file_upload("test-logo.png", "image/png")
+
+    assert_difference -> { @template.assets.count }, 1 do
+      post upload_asset_account_email_template_url(@template), params: {file: file}
+    end
+
+    assert_response :success
+    body = JSON.parse(response.body)
+    assert body["url"].present?, "expected JSON to include a url"
+    assert_equal "test-logo.png", body["name"]
+    assert_equal "test-logo.png", body["filename"]
+    assert_equal "image/png", body["content_type"]
+    assert body["asset_id"].present?
+  end
+
+  test "upload_asset rejects a non-image file" do
+    file = fixture_file_upload("not-an-image.txt", "text/plain")
+
+    assert_no_difference -> { @template.assets.count } do
+      post upload_asset_account_email_template_url(@template), params: {file: file}
+    end
+
+    assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_match(/image/i, body["error"])
+  end
+
+  test "upload_asset returns 422 when no file is provided" do
+    post upload_asset_account_email_template_url(@template), params: {}
+
+    assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_match(/No file/i, body["error"])
+  end
+
+  test "upload_asset is scoped to teams the user can access" do
+    other_user = FactoryBot.create(:onboarded_user)
+    other_template = other_user.current_team.email_templates.create!(
+      name: "Other team", mjml_body: "<mjml><mj-body></mj-body></mjml>"
+    )
+
+    file = fixture_file_upload("test-logo.png", "image/png")
+    # Signed in as @user; posting to another team's template must be denied.
+    post upload_asset_account_email_template_url(other_template), params: {file: file}
+    refute_equal 200, response.status
   end
 
   test "destroy_asset purges the attachment" do

@@ -14,9 +14,28 @@
           giving authors a real code editor (line numbers, XML highlighting,
           bracket matching, search). Falls back to a plain textarea if JS
           is disabled. %>
+      <%# The code-editor controller turns this textarea into a CodeMirror 6
+          editor. When the template is persisted we also wire the upload URL
+          so authors can drag, paste, or click an image into the body — the
+          editor splices `<mj-image src="…" alt="" />` at the cursor. %>
+      <%
+        code_editor_data = {
+          controller: "code-editor",
+          code_editor_language_value: "xml",
+          code_editor_min_height_value: "520px"
+        }
+        if email_template.persisted?
+          code_editor_data[:code_editor_upload_url_value] =
+            upload_asset_account_email_template_path(email_template)
+        end
+      %>
       <%= render 'shared/fields/text_area', method: :mjml_body,
                  options: {rows: 20, class: "font-mono text-xs", placeholder: "<mjml>\n  <mj-body>\n    <mj-section>\n      <mj-column>\n        <mj-text>Hello {{first_name}}!</mj-text>\n        {{body}}\n      </mj-column>\n    </mj-section>\n  </mj-body>\n</mjml>",
-                   data: {controller: "code-editor", code_editor_language_value: "xml", code_editor_min_height_value: "520px"}} %>
+                   data: code_editor_data} %>
+
+      <p class="-mt-2 text-[13px] text-zinc-500 dark:text-zinc-400">
+        Drop, paste, or click <strong class="font-medium text-zinc-700 dark:text-zinc-300">Insert image</strong> above the editor to add an image. It uploads and inserts <code class="font-mono text-[12px]">&lt;mj-image src="…" /&gt;</code> at the cursor.
+      </p>
 
       <div class="-mt-2 space-y-2 text-sm text-zinc-600 dark:text-zinc-400">
         <details class="rounded-md border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/40 group">

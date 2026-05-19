@@ -1,6 +1,6 @@
 class Account::EmailTemplatesController < Account::ApplicationController
   account_load_and_authorize_resource :email_template, through: :team, through_association: :email_templates,
-    member_actions: [:preview_frame, :destroy_asset]
+    member_actions: [:preview_frame, :destroy_asset, :upload_asset]
 
   # GET /account/teams/:team_id/email_templates
   # GET /account/teams/:team_id/email_templates.json
@@ -131,12 +131,54 @@ class Account::EmailTemplatesController < Account::ApplicationController
     end
   end
 
+  # POST /account/email_templates/:id/upload_asset
+  #
+  # Drag/paste/toolbar image upload from the MJML code editor. Accepts a
+  # single multipart `file`, attaches it to the template's assets
+  # collection, and returns JSON { url, name, asset_id, size, content_type }
+  # so the editor can splice <mj-image src="..."/> at the cursor. Mirrors
+  # Account::CampaignsController#upload_asset.
+  def upload_asset
+    file = params[:file]
+    if file.blank?
+      render json: {error: "No file provided"}, status: :unprocessable_entity
+      return
+    end
+
+    unless file.content_type.to_s.start_with?("image/")
+      render json: {error: "Only image files are allowed."}, status: :unprocessable_entity
+      return
+    end
+
+    if file.size > EmailTemplate::ASSET_MAX_BYTES
+      max_mb = (EmailTemplate::ASSET_MAX_BYTES / 1.megabyte.to_f).round
+      render json: {error: "Image is too large. Max #{max_mb}MB."}, status: :unprocessable_entity
+      return
+    end
+
+    @email_template.assets.attach(file)
+    attachment = @email_template.assets.attachments.last
+    blob = attachment.blob
+
+    render json: {
+      url: rails_storage_proxy_url(blob),
+      name: blob.filename.to_s,
+      filename: blob.filename.to_s,
+      size: blob.byte_size,
+      content_type: blob.content_type,
+      asset_id: attachment.id
+    }
+  rescue => e
+    Rails.logger.error("EmailTemplate#upload_asset failed: #{e.class}: #{e.message}")
+    render json: {error: "Upload failed"}, status: :unprocessable_entity
+  end
+
   # DELETE /account/email_templates/:id/assets/:asset_id
   #
   # Removes a single ActiveStorage attachment from this template. Scoped to
   # @email_template.assets.attachments so a hand-crafted asset_id can't
   # purge a blob attached to a different record. `purge_later` enqueues the
-  # R2 delete on the Active Storage purge queue so the redirect is snappy
+  # storage delete on the Active Storage purge queue so the redirect is snappy
   # even when the storage backend is slow.
   def destroy_asset
     attachment = @email_template.assets.attachments.find_by(id: params[:asset_id])
