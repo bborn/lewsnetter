@@ -1,6 +1,14 @@
 class Segment < ApplicationRecord
   # 🚅 add concerns above.
 
+  # Audit trail — every create/update/destroy creates a `versions` row with a
+  # column-level diff in `object_changes`. The `definition` JSON column carries
+  # the SQL predicate that decides who gets a campaign, so versioning here is
+  # how we answer "what predicate ran when we sent that?".
+  # See ApplicationController#user_for_paper_trail for whodunnit.
+  has_paper_trail on: [:create, :update, :destroy],
+                  ignore: [:updated_at]
+
   # Forbidden tokens kept in sync with AI::SegmentTranslator::FORBIDDEN_TOKENS —
   # defense in depth at the job/scope-application layer. If the AI service
   # ever changes how predicates are sourced (UI builder, manual edit, etc.)

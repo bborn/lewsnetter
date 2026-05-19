@@ -333,6 +333,13 @@ gem "ruby_llm"
 # {{key|fallback}} regex renderer.
 gem "liquid", "~> 5.5"
 
+# Audit/version history for the records that matter for "what did I send"
+# auditability: Campaign, EmailTemplate, Segment. Stores per-save diffs in
+# a `versions` table so we can answer "what was the body when this sent?
+# who edited it? when?" after the fact. Whodunnit is wired through
+# ApplicationController#user_for_paper_trail.
+gem "paper_trail"
+
 # MCP (Model Context Protocol) server. Mounted at /mcp via a Rack endpoint
 # in routes.rb; auth handled by Mcp::DoorkeeperAuth middleware.
 gem "fast-mcp", "~> 1.5", require: "fast_mcp"

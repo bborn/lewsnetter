@@ -1,6 +1,14 @@
 class Campaign < ApplicationRecord
   # 🚅 add concerns above.
 
+  # Audit trail — every create/update/destroy creates a `versions` row with a
+  # column-level diff in `object_changes`. Lets the campaign show page (and
+  # later: forensic SQL) answer "what was the exact body when this sent? who
+  # edited it? when?" `updated_at` is filtered so save noise doesn't dilute
+  # the history. See ApplicationController#user_for_paper_trail for whodunnit.
+  has_paper_trail on: [:create, :update, :destroy],
+                  ignore: [:updated_at]
+
   STATUSES = %w[draft scheduled sending sent failed].freeze
 
   # Mirror of EmailTemplate::ASSET_MAX_BYTES — keep these in lockstep.

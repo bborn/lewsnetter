@@ -83,4 +83,53 @@ class SegmentTest < ActiveSupport::TestCase
       segment.applies_to(@team.subscribers).to_a
     end
   end
+
+  # ---------------------------------------------------------------------
+  # PaperTrail audit-history wiring. The segment's `definition` JSON
+  # carries the SQL predicate that selects who gets a campaign — versioning
+  # is how we answer "what predicate ran when we sent that?".
+  # ---------------------------------------------------------------------
+  test "paper_trail records a version on create" do
+    segment = @team.segments.create!(name: "Audit", definition: {"predicate" => "subscribed = 1"})
+    assert_equal 1, segment.versions.count
+    assert_equal "create", segment.versions.last.event
+  end
+
+  test "paper_trail records a version on update with the definition diff" do
+    segment = @team.segments.create!(name: "Audit", definition: {"predicate" => "subscribed = 1"})
+    assert_difference -> { segment.versions.count }, 1 do
+      segment.update!(definition: {"predicate" => "subscribed = 1 AND id > 0"})
+    end
+    v = segment.versions.last
+    assert_equal "update", v.event
+    changes = parse_paper_trail_changes(v.object_changes)
+    assert_includes changes.keys, "definition"
+  end
+
+  test "paper_trail ignores updated_at-only saves" do
+    segment = @team.segments.create!(name: "Audit", definition: {"predicate" => "subscribed = 1"})
+    assert_no_difference -> { segment.versions.count } do
+      segment.touch
+    end
+  end
+
+  test "paper_trail records a version on destroy" do
+    # Segment has dependent: :restrict_with_error on campaigns — create a
+    # standalone segment with no campaigns so the destroy actually runs.
+    segment = @team.segments.create!(name: "Audit", definition: {"predicate" => "subscribed = 1"})
+    id = segment.id
+    segment.destroy!
+    v = PaperTrail::Version.where(item_type: "Segment", item_id: id, event: "destroy").last
+    assert_not_nil v
+  end
+
+  private
+
+  def parse_paper_trail_changes(raw)
+    return raw if raw.is_a?(Hash)
+    YAML.safe_load(
+      raw,
+      permitted_classes: [Time, Date, DateTime, ActiveSupport::TimeWithZone, ActiveSupport::TimeZone, Symbol]
+    )
+  end
 end

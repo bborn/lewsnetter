@@ -577,6 +577,9 @@ GEM
     orm_adapter (0.5.0)
     ostruct (0.6.3)
     pagy (9.4.0)
+    paper_trail (17.0.0)
+      activerecord (>= 7.1)
+      request_store (~> 1.4)
     parallel (1.28.0)
     parallel_tests (5.7.0)
       parallel
@@ -693,6 +696,8 @@ GEM
     regexp_parser (2.12.0)
     reline (0.6.3)
       io-console (~> 0.5)
+    request_store (1.7.0)
+      rack (>= 1.4)
     require_all (3.0.0)
     responders (3.2.0)
       actionpack (>= 7.0)
@@ -920,6 +925,7 @@ DEPENDENCIES
   minitest-reporters
   minitest-retry
   mjml-rails
+  paper_trail
   parallel_tests
   premailer-rails
   propshaft

@@ -68,6 +68,11 @@
         <pre class="text-[12px] font-mono whitespace-pre-wrap text-zinc-700 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-950 px-6 py-4 overflow-auto max-h-96 border-t border-zinc-200 dark:border-zinc-800"><%= @email_template.mjml_body %></pre>
       </details>
 
+      <%# ============================================================
+          Audit history — every create/update/destroy lands here.
+          ============================================================ %>
+      <%= render "account/shared/history", record: @email_template %>
+
       <%# 🚅 super scaffolding will insert new action model index views above this line. %>
     <% end %>
 

@@ -1,0 +1,142 @@
+<%# Reusable History panel for paper_trail-versioned records — last `limit`
+    versions of `record` rendered as a vertical timeline. Long-text columns
+    (body_markdown, body_mjml, predicate) are summarised as char deltas
+    instead of rendered side-by-side so big diffs don't blow out the page.
+    Call as `render "account/shared/history", record: @campaign, limit: 20`
+    from the host show page. %>
+<%
+  limit = local_assigns.fetch(:limit, 20)
+  versions = record.versions.reorder(created_at: :desc, id: :desc).limit(limit)
+
+  # Fields we treat as "long text" — old/new are summarized as char deltas
+  # plus a head sample instead of rendered side-by-side, which would blow
+  # out the page for a multi-kilobyte body.
+  long_text_fields = %w[
+    body_markdown body_mjml body_html mjml_body rendered_html
+    predicate definition natural_language_source stats
+  ].freeze
+
+  # Resolve whodunnit -> email in a single SQL hit per render.
+  whodunnit_ids = versions.map(&:whodunnit).compact.uniq
+  user_emails =
+    if whodunnit_ids.any?
+      User.where(id: whodunnit_ids).pluck(:id, :email).to_h.transform_keys(&:to_s)
+    else
+      {}
+    end
+
+  format_scalar = ->(value) do
+    case value
+    when nil then "(nil)"
+    when "" then "(empty)"
+    when true, false then value.inspect
+    else
+      str = value.to_s
+      str.length > 120 ? "#{str[0, 117]}…" : str
+    end
+  end
+%>
+
+<section class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg mb-6"
+         aria-labelledby="history-heading-<%= record.class.name.underscore %>-<%= record.id %>">
+  <header class="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-baseline justify-between gap-4">
+    <div>
+      <div class="font-mono text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-1">Audit history</div>
+      <h3 id="history-heading-<%= record.class.name.underscore %>-<%= record.id %>"
+          class="text-zinc-900 dark:text-zinc-50 font-semibold text-lg leading-tight">
+        Changes
+      </h3>
+    </div>
+    <div class="font-mono text-[11px] text-zinc-400 dark:text-zinc-500 tabular-nums">
+      <% total = record.versions.count %>
+      Showing <%= [versions.size, total].min %> of <%= total %>
+    </div>
+  </header>
+
+  <% if versions.empty? %>
+    <p class="px-6 py-10 text-sm text-zinc-500 dark:text-zinc-400 text-center">
+      No recorded changes yet. Future edits will appear here.
+    </p>
+  <% else %>
+    <ol class="divide-y divide-zinc-200 dark:divide-zinc-800">
+      <% versions.each do |version| %>
+        <%
+          # PaperTrail stores the version sequence; index_in_sequence is the
+          # version count up to and including this row. Cheaper than counting
+          # again per row — use `total - i` since we're sorted descending.
+        %>
+        <% version_number = total - versions.to_a.index(version) %>
+        <% whodunnit = version.whodunnit %>
+        <% who_email = whodunnit.present? ? user_emails[whodunnit.to_s] : nil %>
+        <% who_label =
+             if who_email.present?
+               who_email
+             elsif whodunnit.blank?
+               "system"
+             else
+               "(unknown user ##{whodunnit})"
+             end %>
+        <% changes = (version.object_changes.is_a?(String) ? (YAML.safe_load(version.object_changes, permitted_classes: [Time, Date, DateTime, ActiveSupport::TimeWithZone, ActiveSupport::TimeZone, Symbol]) rescue nil) : version.object_changes) || {} %>
+        <% changes = changes.reject { |k, _v| k == "updated_at" } %>
+
+        <li class="px-6 py-5">
+          <div class="flex items-baseline justify-between gap-4 mb-3">
+            <div class="font-mono text-[12px] text-zinc-700 dark:text-zinc-200">
+              <span class="font-semibold">Version <%= version_number %></span>
+              <span class="text-zinc-400 dark:text-zinc-600">·</span>
+              <span class="uppercase tracking-wider text-[10px] text-zinc-500 dark:text-zinc-400"><%= version.event %></span>
+            </div>
+            <div class="font-mono text-[11px] text-zinc-500 dark:text-zinc-400 text-right">
+              <time datetime="<%= version.created_at.iso8601 %>"
+                    title="<%= l(version.created_at, format: :long) %>">
+                <%= time_ago_in_words(version.created_at) %> ago
+              </time>
+              <div class="text-zinc-700 dark:text-zinc-300 mt-0.5"><%= who_label %></div>
+            </div>
+          </div>
+
+          <% if version.event == "destroy" %>
+            <p class="text-sm text-rose-700 dark:text-rose-400">Record destroyed.</p>
+          <% elsif changes.empty? %>
+            <p class="text-sm text-zinc-500 dark:text-zinc-400">No tracked attribute changes.</p>
+          <% else %>
+            <dl class="space-y-2">
+              <% changes.each do |attr, (old_val, new_val)| %>
+                <div class="grid grid-cols-[140px_1fr] gap-3 items-start text-sm">
+                  <dt class="font-mono text-[11px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 pt-0.5">
+                    <%= attr %>
+                  </dt>
+                  <dd class="text-zinc-700 dark:text-zinc-200">
+                    <% if long_text_fields.include?(attr) %>
+                      <%
+                        old_size = old_val.to_s.bytesize
+                        new_size = new_val.to_s.bytesize
+                        delta = new_size - old_size
+                        delta_label = delta.zero? ? "no size change" : "#{delta.positive? ? "+" : ""}#{delta} bytes"
+                        new_head = new_val.to_s.gsub(/\s+/, " ").strip[0, 80]
+                      %>
+                      <div class="text-zinc-500 dark:text-zinc-400 text-xs mb-1">
+                        changed · <%= old_size %>B → <%= new_size %>B (<%= delta_label %>)
+                      </div>
+                      <% if new_head.present? %>
+                        <div class="font-mono text-xs text-zinc-700 dark:text-zinc-300 truncate">
+                          <%= new_head %><%= "…" if new_val.to_s.length > 80 %>
+                        </div>
+                      <% end %>
+                    <% else %>
+                      <div class="font-mono text-xs">
+                        <span class="text-rose-700 dark:text-rose-400">"<%= format_scalar.call(old_val) %>"</span>
+                        <span class="text-zinc-400 dark:text-zinc-600 mx-1">→</span>
+                        <span class="text-emerald-700 dark:text-emerald-400">"<%= format_scalar.call(new_val) %>"</span>
+                      </div>
+                    <% end %>
+                  </dd>
+                </div>
+              <% end %>
+            </dl>
+          <% end %>
+        </li>
+      <% end %>
+    </ol>
+  <% end %>
+</section>

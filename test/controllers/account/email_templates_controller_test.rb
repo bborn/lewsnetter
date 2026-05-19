@@ -49,6 +49,31 @@ class Account::EmailTemplatesControllerTest < ActionDispatch::IntegrationTest
     refute_predicate @template.assets, :attached?
   end
 
+  # ---------------------------------------------------------------------
+  # PaperTrail audit history is rendered on the show page, and whodunnit
+  # must resolve back to the signed-in user's email. This test exercises
+  # both the controller-level `set_paper_trail_whodunnit` wiring and the
+  # `account/shared/_history.html.erb` partial.
+  # ---------------------------------------------------------------------
+  test "show page renders the Audit history section with the signed-in user as whodunnit" do
+    # An update by the signed-in user — the `before_action` should stamp
+    # current_user.id as the version's whodunnit.
+    patch account_email_template_url(@template), params: {
+      email_template: {name: "Welcome (v2)"}
+    }
+    @template.reload
+    last_version = @template.versions.last
+    assert_equal @user.id.to_s, last_version.whodunnit,
+      "expected whodunnit to be set to current_user.id (got #{last_version.whodunnit.inspect})"
+
+    get account_email_template_url(@template)
+    assert_response :success
+    assert_match(/Audit history/, response.body)
+    # The History partial resolves whodunnit -> user email; the signed-in
+    # user's email must show up at least once.
+    assert_includes response.body, @user.email
+  end
+
   test "destroy_asset purges the attachment" do
     @template.assets.attach(
       io: File.open(Rails.root.join("test/fixtures/files/test-logo.png")),

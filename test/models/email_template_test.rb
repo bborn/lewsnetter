@@ -49,4 +49,49 @@ class EmailTemplateTest < ActiveSupport::TestCase
     assert(@template.errors[:assets].any? { |m| m =~ /smaller|MB|size/i },
       "expected a size error, got #{@template.errors[:assets].inspect}")
   end
+
+  # ---------------------------------------------------------------------
+  # PaperTrail audit-history wiring. EmailTemplate edits propagate to
+  # every campaign that uses the template, so this audit trail is what
+  # lets us answer "who changed the layout under that send?"
+  # ---------------------------------------------------------------------
+  test "paper_trail records a version on create" do
+    assert_equal 1, @template.versions.count
+    assert_equal "create", @template.versions.last.event
+  end
+
+  test "paper_trail records a version on update with the body diff" do
+    new_body = "<mjml><mj-body><mj-section><mj-column><mj-text>Hello again</mj-text></mj-column></mj-section></mj-body></mjml>"
+    assert_difference -> { @template.versions.count }, 1 do
+      @template.update!(mjml_body: new_body)
+    end
+    v = @template.versions.last
+    assert_equal "update", v.event
+    changes = parse_paper_trail_changes(v.object_changes)
+    assert_includes changes.keys, "mjml_body"
+    assert_equal new_body, changes["mjml_body"][1]
+  end
+
+  test "paper_trail ignores updated_at-only saves" do
+    assert_no_difference -> { @template.versions.count } do
+      @template.touch
+    end
+  end
+
+  test "paper_trail records a version on destroy" do
+    id = @template.id
+    @template.destroy!
+    v = PaperTrail::Version.where(item_type: "EmailTemplate", item_id: id, event: "destroy").last
+    assert_not_nil v
+  end
+
+  private
+
+  def parse_paper_trail_changes(raw)
+    return raw if raw.is_a?(Hash)
+    YAML.safe_load(
+      raw,
+      permitted_classes: [Time, Date, DateTime, ActiveSupport::TimeWithZone, ActiveSupport::TimeZone, Symbol]
+    )
+  end
 end

@@ -230,4 +230,58 @@ class CampaignTest < ActiveSupport::TestCase
     assert_equal 1, rows.size
     assert_equal "https://present.example.com", rows[0][:url]
   end
+
+  # ---------------------------------------------------------------------
+  # PaperTrail audit-history wiring. These tests guard:
+  #   1. Versions are created on create / update / destroy.
+  #   2. The diff (object_changes) captures the actual edit so the
+  #      History UI can render it.
+  #   3. The `updated_at` ignore filter actually filters — a `touch` that
+  #      only bumps updated_at must NOT create a version.
+  # ---------------------------------------------------------------------
+  test "paper_trail records a version on create" do
+    assert_equal 1, @campaign.versions.count, "expected one :create version after setup"
+    assert_equal "create", @campaign.versions.last.event
+  end
+
+  test "paper_trail records a version on update with the diff in object_changes" do
+    assert_difference -> { @campaign.versions.count }, 1 do
+      @campaign.update!(subject: "New subject")
+    end
+    v = @campaign.versions.last
+    assert_equal "update", v.event
+    changes = parse_paper_trail_changes(v.object_changes)
+    assert_includes changes.keys, "subject"
+    assert_equal ["Hello", "New subject"], changes["subject"]
+  end
+
+  test "paper_trail ignores updated_at-only saves" do
+    # `touch` bumps only updated_at — that column is in `ignore:`, so no
+    # version should land.
+    assert_no_difference -> { @campaign.versions.count } do
+      @campaign.touch
+    end
+  end
+
+  test "paper_trail records a version on destroy" do
+    id = @campaign.id
+    @campaign.destroy!
+    destroy_version = PaperTrail::Version
+      .where(item_type: "Campaign", item_id: id, event: "destroy")
+      .last
+    assert_not_nil destroy_version, "expected a :destroy version row to be persisted"
+  end
+
+  private
+
+  # PaperTrail stores object_changes as YAML by default; round-trip it the
+  # same way the History partial does. Permits the timestamp classes that
+  # show up when AR auto-touches columns.
+  def parse_paper_trail_changes(raw)
+    return raw if raw.is_a?(Hash)
+    YAML.safe_load(
+      raw,
+      permitted_classes: [Time, Date, DateTime, ActiveSupport::TimeWithZone, ActiveSupport::TimeZone, Symbol]
+    )
+  end
 end

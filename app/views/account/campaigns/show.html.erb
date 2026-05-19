@@ -330,6 +330,11 @@
       <% end %>
 
       <%# ============================================================
+          Audit history — every create/update/destroy lands here.
+          ============================================================ %>
+      <%= render "account/shared/history", record: @campaign %>
+
+      <%# ============================================================
           Footer — quiet back / delete row
           ============================================================ %>
       <footer class="campaign-show-footer">

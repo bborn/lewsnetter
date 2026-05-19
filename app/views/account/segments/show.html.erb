@@ -171,6 +171,9 @@
         <% end %>
       <% end %>
 
+      <%# Audit history — every create/update/destroy lands here. %>
+      <%= render "account/shared/history", record: @segment %>
+
       <%# Footer metadata %>
       <p class="text-xs text-gray-500 mt-3">
         Created <%= l(@segment.created_at, format: :long) if @segment.created_at %>
