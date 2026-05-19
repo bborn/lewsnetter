@@ -25,7 +25,7 @@ class Api::V1::CrossTeamEnforcementTest < Api::V1::Test
       params: body,
       headers: {"CONTENT_TYPE" => "application/x-ndjson", "Authorization" => "Bearer #{access_token}"}
     assert_response :forbidden
-    assert_match(/different team/i, response.parsed_body["error"])
+    assert_match(/bound to team .+ but the URL targets team/i, response.parsed_body["error"])
     assert_equal 0, @other_team.subscribers.count
   end
 

@@ -19,18 +19,36 @@ class Api::V1::ApplicationController < ActionController::API
     return unless doorkeeper_token
     return if params[:team_id].blank?
 
-    token_team_id = doorkeeper_token.application&.team_id
-    if token_team_id.nil?
+    token_team = doorkeeper_token.application&.team
+    if token_team.nil?
       # Tokens from /oauth/register have no team binding — refuse rather than
       # silently let them target any team the user happens to belong to.
       render json: {error: "Access token is not bound to a team. Provision a sync token at /account/teams/:id/developers."}, status: :forbidden
       return
     end
 
-    # Teams in this app are looked up by integer primary key in URLs.
-    # `Team.find(params[:team_id])`-style routes always carry a numeric id.
-    return if token_team_id == params[:team_id].to_i
+    # URLs use BulletTrain's obfuscated_id (a short alphanumeric string),
+    # NOT the raw integer PK. Team.find handles both — it tries the
+    # obfuscates_id deobfuscation first, then falls back to integer lookup.
+    url_team =
+      begin
+        Team.find(params[:team_id])
+      rescue ActiveRecord::RecordNotFound
+        nil
+      end
 
-    render json: {error: "Access token is bound to a different team than the one in this URL."}, status: :forbidden
+    if url_team.nil?
+      render json: {error: "Team '#{params[:team_id]}' not found."}, status: :not_found
+      return
+    end
+
+    return if token_team.id == url_team.id
+
+    render json: {
+      error: "Access token is bound to team '#{token_team.name}' but the URL targets team '#{url_team.name}'. " \
+             "Check LEWSNETTER_TEAM_SLUG matches the team your sync token was provisioned under.",
+      token_team_id: token_team.to_param,
+      url_team_id: url_team.to_param
+    }, status: :forbidden
   end
 end
