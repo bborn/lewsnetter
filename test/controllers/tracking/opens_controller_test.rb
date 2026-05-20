@@ -72,4 +72,19 @@ class Tracking::OpensControllerTest < ActionDispatch::IntegrationTest
     assert_match(/no-store/, response.headers["Cache-Control"])
     assert_equal "no-cache", response.headers["Pragma"]
   end
+
+  test "resolves the token when the request arrives on a branded host" do
+    # When a team configures a branded email subdomain, the open pixel is
+    # hosted on that host. The controller resolves everything from the signed
+    # token, so a request on the branded Host header must still stamp the open.
+    assert_nil @delivery.opened_at
+
+    get "/track/o/#{@delivery.tracking_token}.gif",
+      headers: {"HTTP_HOST" => "email.influencekit.com"}
+
+    assert_response :ok
+    assert_equal "image/gif", response.media_type
+    assert_not_nil @delivery.reload.opened_at,
+      "expected the open to be stamped regardless of which host served the pixel"
+  end
 end

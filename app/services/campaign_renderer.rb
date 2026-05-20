@@ -135,13 +135,27 @@ class CampaignRenderer
     Rails.application.routes.url_helpers.tracking_open_url(@delivery.tracking_token, **default_url_options)
   end
 
-  # The host config_action_mailer sets is the source of truth for absolute
-  # URLs in outbound mail — both unsubscribe + tracking pixels share it.
+  # URL options for the open-pixel + click-tracking absolute URLs.
+  #
+  # The host is resolved through the SAME single resolver the unsubscribe
+  # link uses (UnsubscribeUrlHelper.host_for): when the team has configured
+  # a branded email subdomain, the pixel + click URLs share that host with
+  # the unsubscribe link; otherwise both fall back to the app-wide default
+  # (BASE_URL → action_mailer.default_url_options[:host]). One host per
+  # email — better branding and a mild deliverability win.
   def default_url_options
-    opts = Rails.application.config.action_mailer.default_url_options || {host: "localhost"}
-    # Hard-default protocol so URLs include https:// in environments where
-    # default_url_options doesn't carry a protocol (test, sometimes dev).
-    {protocol: "https"}.merge(opts)
+    {
+      host: tracking_host,
+      # Hard-default protocol so URLs include https:// in environments where
+      # default_url_options doesn't carry a protocol (test, sometimes dev).
+      protocol: "https"
+    }
+  end
+
+  # The hostname this team's email links use. Delegates to the shared
+  # resolver so unsubscribe + pixel + click never drift apart.
+  def tracking_host
+    UnsubscribeUrlHelper.host_for(team: @campaign.team) || "localhost"
   end
 
   # Resolves the final MJML source to compile.

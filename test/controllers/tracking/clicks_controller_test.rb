@@ -77,4 +77,20 @@ class Tracking::ClicksControllerTest < ActionDispatch::IntegrationTest
     assert_response :redirect
     assert_match(/external\.example\.org/, response.location)
   end
+
+  test "resolves the token when the request arrives on a branded host" do
+    # When a team configures a branded email subdomain, click links are hosted
+    # on that host. The controller resolves the delivery + destination from the
+    # signed token, so a request on the branded Host header must still record
+    # the click and redirect correctly.
+    token = @delivery.signed_click_token(url: @destination)
+
+    get "/track/c/#{token}", headers: {"HTTP_HOST" => "email.influencekit.com"}
+
+    assert_redirected_to @destination
+    @delivery.reload
+    assert_not_nil @delivery.clicked_at
+    assert_equal 1, @delivery.click_count
+    assert_equal @destination, @delivery.last_clicked_url
+  end
 end

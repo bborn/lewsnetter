@@ -398,6 +398,68 @@ class CampaignRendererTest < ActiveSupport::TestCase
     assert_match(%r{/track/c/[^"]+}, result.html)
   end
 
+  test "open pixel + click URLs use the team's unsubscribe_host when configured" do
+    @team.build_ses_configuration(
+      region: "us-east-1",
+      status: "verified",
+      unsubscribe_host: "email.influencekit.com"
+    ).save!
+
+    @campaign.update!(body_mjml: <<~MJML)
+      <mjml>
+        <mj-body>
+          <mj-section>
+            <mj-column>
+              <mj-text>Click <a href="https://example.com/landing">here</a>.</mj-text>
+            </mj-column>
+          </mj-section>
+        </mj-body>
+      </mjml>
+    MJML
+    delivery = Delivery.create!(
+      campaign: @campaign, subscriber: @subscriber, ses_message_id: "track-host-1", sent_at: Time.current
+    )
+
+    result = CampaignRenderer.new(campaign: @campaign.reload, subscriber: @subscriber, delivery: delivery).call
+
+    # Open pixel is hosted on the branded host.
+    assert_match %r{https://email\.influencekit\.com/track/o/[^"]+\.gif}, result.html,
+      "expected the open pixel to use the team's branded unsubscribe_host"
+    # Click redirect is hosted on the branded host too.
+    assert_match %r{https://email\.influencekit\.com/track/c/[^"]+}, result.html,
+      "expected the click tracker to use the team's branded unsubscribe_host"
+  end
+
+  test "open pixel + click URLs fall back to BASE_URL host when no unsubscribe_host is set" do
+    base_host = Rails.application.config.action_mailer.default_url_options[:host]
+    assert base_host.present?, "test relies on action_mailer.default_url_options[:host]"
+    # No ses_configuration → no branded host.
+    assert_nil @team.ses_configuration
+
+    @campaign.update!(body_mjml: <<~MJML)
+      <mjml>
+        <mj-body>
+          <mj-section>
+            <mj-column>
+              <mj-text>Click <a href="https://example.com/landing">here</a>.</mj-text>
+            </mj-column>
+          </mj-section>
+        </mj-body>
+      </mjml>
+    MJML
+    delivery = Delivery.create!(
+      campaign: @campaign, subscriber: @subscriber, ses_message_id: "track-host-2", sent_at: Time.current
+    )
+
+    result = CampaignRenderer.new(campaign: @campaign.reload, subscriber: @subscriber, delivery: delivery).call
+
+    assert_includes result.html, "https://#{base_host}/track/o/",
+      "expected the open pixel to fall back to the BASE_URL host"
+    assert_includes result.html, "https://#{base_host}/track/c/",
+      "expected the click tracker to fall back to the BASE_URL host"
+    refute_includes result.html, "email.influencekit.com"
+  end
+
   test "leaves mailto: tel: and fragment links alone" do
     @campaign.update!(body_mjml: <<~MJML)
       <mjml>
