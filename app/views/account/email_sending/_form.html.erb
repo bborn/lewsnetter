@@ -56,7 +56,7 @@
 
       <h3 class="text-lg font-bold mt-6 mb-2"><%= t('email_sending.show.sections.unsubscribe.header') %></h3>
       <p class="text-sm text-gray-500 mb-4">
-        <%= t('email_sending.show.sections.unsubscribe.description') %>
+        <%= t('email_sending.show.sections.unsubscribe.description', cname_target: branded_host_cname_target) %>
       </p>
 
       <% with_field_settings form: form do %>

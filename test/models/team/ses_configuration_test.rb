@@ -35,18 +35,18 @@ class Team::SesConfigurationTest < ActiveSupport::TestCase
   test "resolved_unsubscribe_host returns the configured host when present" do
     @config.unsubscribe_host = "email.influencekit.com"
     assert_equal "email.influencekit.com",
-      @config.resolved_unsubscribe_host(default: "lewsnetter.whinynil.co")
+      @config.resolved_unsubscribe_host(default: "app.example.com")
   end
 
   test "resolved_unsubscribe_host falls back to default when blank" do
     @config.unsubscribe_host = ""
-    assert_equal "lewsnetter.whinynil.co",
-      @config.resolved_unsubscribe_host(default: "lewsnetter.whinynil.co")
+    assert_equal "app.example.com",
+      @config.resolved_unsubscribe_host(default: "app.example.com")
   end
 
   test "resolved_unsubscribe_host falls back to default when nil" do
     @config.unsubscribe_host = nil
-    assert_equal "lewsnetter.whinynil.co",
-      @config.resolved_unsubscribe_host(default: "lewsnetter.whinynil.co")
+    assert_equal "app.example.com",
+      @config.resolved_unsubscribe_host(default: "app.example.com")
   end
 end

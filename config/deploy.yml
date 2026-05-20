@@ -41,12 +41,20 @@ servers:
 # /home/kamal-proxy/.apps-config/<service>/<role>/tls/{cert,key}.pem. No
 # host-side bind-mount hook needed.
 #
-# Note: the current Origin CA cert SANs are lewsnetter.dev + *.lewsnetter.dev.
-# The cert does NOT cover email.influencekit.com, which lives in a different
-# CF zone — kamal-proxy will present this cert for that hostname too. Until
-# a multi-zone Origin CA cert is minted (or kamal-proxy gains per-host cert
-# support), the influencekit.com zone should stay on CF "Flexible"; only
-# the lewsnetter.dev zone is safe to flip to "Full (Strict)".
+# Note: the Origin CA cert SANs are lewsnetter.dev + *.lewsnetter.dev. It is
+# trusted ONLY by Cloudflare's edge, not by browsers. That's fine for hosts
+# behind our own CF orange-cloud (lewsnetter.dev, app.lewsnetter.dev), which
+# can run CF "Full (Strict)".
+#
+# Tenant-branded hosts (e.g. unsubscribe.influencekit.com) reach us by
+# CNAME'ing to email.lewsnetter.dev — a GREY-cloud (DNS-only) record that
+# resolves straight to this origin IP. A grey-cloud target is what avoids
+# Cloudflare error 1014: a cross-account CNAME may not point at a *proxied*
+# CF record, so it must point at a plain IP. The tenant keeps their own
+# subdomain orange-clouded in their CF zone, so their CF terminates TLS with
+# their own valid cert. The CF→origin leg lands here presenting the
+# *.lewsnetter.dev cert (hostname won't match the tenant's), so the tenant
+# zone must use CF "Full" — NOT "Full (Strict)", which rejects the mismatch.
 proxy:
   ssl:
     certificate_pem: ORIGIN_CERT
@@ -56,19 +64,20 @@ proxy:
   # transition the CF→origin leg may still be plain HTTP for a short
   # window — letting both ports serve avoids a redirect loop.
   ssl_redirect: false
-  # Multi-host: kamal-proxy will accept requests for any of these hostnames
-  # and route to the same Rails app. The primary host is for the platform
-  # itself; additional hosts are tenant-branded unsubscribe subdomains
-  # (CNAME'd by the tenant to lewsnetter.dev and recorded in
+  # Multi-host: kamal-proxy accepts requests for any of these hostnames and
+  # routes them all to the same Rails app. lewsnetter.dev / app.lewsnetter.dev
+  # are the platform itself. email.lewsnetter.dev is the grey-cloud CNAME
+  # target tenants point their branded host at. The remaining entries are
+  # live tenant-branded hosts (recorded in
   # Team::SesConfiguration#unsubscribe_host).
   #
-  # Adding a new tenant unsubscribe host = append it here + redeploy.
-  # Long-term we'd want this to be data-driven, but for MVP a static list
-  # is fine while we have one tenant.
+  # Adding a new tenant host = append it here + redeploy. Long-term this
+  # should be data-driven, but a static list is fine while tenants are few.
   hosts:
-    - lewsnetter.dev       # marketing — landing + legal pages
-    - app.lewsnetter.dev   # the product — sign-in, /account, /api, /mcp, /oauth, /developers
-    - email.influencekit.com  # tenant-branded unsubscribe (CF Flexible — separate zone)
+    - lewsnetter.dev          # marketing — landing + legal pages
+    - app.lewsnetter.dev      # the product — sign-in, /account, /api, /mcp, /oauth
+    - email.lewsnetter.dev    # grey-cloud CNAME target for tenant branded hosts
+    - unsubscribe.influencekit.com  # tenant (InfluenceKit) — unsub, tracking, images
   forward_headers: true
   app_port: 3000
   healthcheck:
@@ -88,13 +97,22 @@ env:
     RAILS_LOG_TO_STDOUT: "true"
     RAILS_SERVE_STATIC_FILES: "true"
     # The Rails-side BASE_URL is the app surface (used for OAuth callbacks,
-    # unsubscribe links in emails, MCP metadata, API docs). The marketing
-    # surface lives at the apex (lewsnetter.dev) and doesn't need an env var.
+    # unsubscribe links in emails, MCP metadata, API docs).
     BASE_URL: "https://app.lewsnetter.dev"
     # Marketing helper uses this to build cross-host CTAs from the apex
     # landing page over to the app subdomain. Self-hosters running a
     # single-host deployment leave it unset and links resolve same-host.
     APP_BASE_URL: "https://app.lewsnetter.dev"
+    # The marketing apex. Public::HomeController bounces anonymous visitors
+    # who hit the app subdomain back here. Self-hosters on a single host
+    # leave it unset and the bounce resolves same-host via root_url.
+    MARKETING_BASE_URL: "https://lewsnetter.dev"
+    # DNS CNAME target tenants point their branded unsubscribe/tracking
+    # subdomain at (shown in the Email Sending setup UI). Must be a DNS-only
+    # / grey-cloud host that resolves straight to the origin — see the proxy
+    # block's TLS note re: Cloudflare error 1014. Self-hosters on a single
+    # host leave it unset; it falls back to the BASE_URL host.
+    BRANDED_HOST_CNAME_TARGET: "email.lewsnetter.dev"
     # Operator contact for legal/abuse — surfaced in legal pages + footer.
     LEWSNETTER_LEGAL_EMAIL: "legal@lewsnetter.dev"
     LEWSNETTER_ABUSE_EMAIL: "abuse@lewsnetter.dev"

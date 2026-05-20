@@ -20,7 +20,7 @@ class UnsubscribeUrlHelperTest < ActiveSupport::TestCase
 
     url = UnsubscribeUrlHelper.url_for(
       subscriber: @subscriber.reload,
-      default_host: "lewsnetter.whinynil.co"
+      default_host: "app.example.com"
     )
 
     assert url.start_with?("https://email.influencekit.com/unsubscribe/"),
@@ -36,10 +36,10 @@ class UnsubscribeUrlHelperTest < ActiveSupport::TestCase
 
     url = UnsubscribeUrlHelper.url_for(
       subscriber: @subscriber.reload,
-      default_host: "lewsnetter.whinynil.co"
+      default_host: "app.example.com"
     )
 
-    assert url.start_with?("https://lewsnetter.whinynil.co/unsubscribe/"),
+    assert url.start_with?("https://app.example.com/unsubscribe/"),
       "expected URL to use default host, got #{url}"
   end
 
@@ -48,10 +48,10 @@ class UnsubscribeUrlHelperTest < ActiveSupport::TestCase
 
     url = UnsubscribeUrlHelper.url_for(
       subscriber: @subscriber,
-      default_host: "lewsnetter.whinynil.co"
+      default_host: "app.example.com"
     )
 
-    assert url.start_with?("https://lewsnetter.whinynil.co/unsubscribe/"),
+    assert url.start_with?("https://app.example.com/unsubscribe/"),
       "expected URL to use default host, got #{url}"
   end
 
@@ -66,7 +66,7 @@ class UnsubscribeUrlHelperTest < ActiveSupport::TestCase
   test "embeds a Rails signed GlobalID that the unsubscribe locator resolves" do
     url = UnsubscribeUrlHelper.url_for(
       subscriber: @subscriber,
-      default_host: "lewsnetter.whinynil.co"
+      default_host: "app.example.com"
     )
 
     token = url.split("/unsubscribe/").last

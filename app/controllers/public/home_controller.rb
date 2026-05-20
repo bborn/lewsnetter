@@ -32,14 +32,16 @@ class Public::HomeController < Public::ApplicationController
   end
 
   def dashboard_url_for(request)
-    if Rails.env.production? && !on_app_subdomain?(request)
-      "https://app.lewsnetter.dev/account"
+    app_base = ENV["APP_BASE_URL"].presence
+    if app_base && !on_app_subdomain?(request)
+      "#{app_base.chomp("/")}/account"
     else
       account_dashboard_url
     end
   end
 
   def marketing_root_url(request)
-    Rails.env.production? ? "https://lewsnetter.dev/" : root_url
+    marketing_base = ENV["MARKETING_BASE_URL"].presence
+    marketing_base ? "#{marketing_base.chomp("/")}/" : root_url
   end
 end

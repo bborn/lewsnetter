@@ -110,6 +110,8 @@ The shipped config is for the hosted Lewsnetter deployment. You'll want to chang
 - `proxy.hosts` → your domain(s)
 - `env.clear.BASE_URL` → your app URL
 - `env.clear.APP_BASE_URL` → same as BASE_URL (unless you split marketing + app onto two subdomains like the hosted version does)
+- `env.clear.MARKETING_BASE_URL` → drop it unless you split marketing + app onto two hosts; single-host deployments leave it unset
+- `env.clear.BRANDED_HOST_CNAME_TARGET` → drop it unless tenants brand their unsubscribe/tracking subdomains; if you keep it, point it at a DNS-only host that resolves straight to your origin. Unset, it falls back to the `BASE_URL` host
 - `env.clear.LEWSNETTER_LEGAL_EMAIL` + `LEWSNETTER_ABUSE_EMAIL` → real mailboxes you check
 - `env.clear.LITESTREAM_REPLICA_*` → your R2 / S3 bucket details
 - `registry.username` → your GHCR (or other) username
