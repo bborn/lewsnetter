@@ -65,8 +65,12 @@ class Account::CampaignsController < Account::ApplicationController
   # POST /account/campaigns/:id/upload_asset
   #
   # Drag-and-drop / paste image upload from the markdown editor. Accepts a
-  # single multipart `file`, attaches it to the campaign's assets collection,
-  # and returns JSON { url, name } so the JS controller can splice
+  # single multipart `file`. Instead of attaching to the campaign's `assets`
+  # collection (whose blob lifecycle is ORM-coupled and gets purged on
+  # record destroy — breaking already-sent emails), we create a standalone
+  # EmailImage record. Its blob lives in the `public: true` `email_media`
+  # service, so the returned `url` is permanent and non-expiring. Returns
+  # JSON { url, name, asset_id } so the JS controller can splice
   # `![name](url)` into the markdown body at the cursor.
   def upload_asset
     file = params[:file]
@@ -75,14 +79,36 @@ class Account::CampaignsController < Account::ApplicationController
       return
     end
 
-    @campaign.assets.attach(file)
-    attachment = @campaign.assets.attachments.last
-    blob = attachment.blob
+    unless file.content_type.to_s.start_with?("image/")
+      render json: { error: "Only image files are allowed." }, status: :unprocessable_entity
+      return
+    end
+
+    if file.size > Campaign::ASSET_MAX_BYTES
+      max_mb = (Campaign::ASSET_MAX_BYTES / 1.megabyte.to_f).round
+      render json: { error: "Image is too large. Max #{max_mb}MB." }, status: :unprocessable_entity
+      return
+    end
+
+    email_image = @campaign.team.email_images.new(
+      content_type: file.content_type,
+      byte_size: file.size,
+      original_filename: file.original_filename
+    )
+    email_image.file.attach(file)
+
+    unless email_image.save
+      render json: { error: email_image.errors.full_messages.to_sentence.presence || "Upload failed" },
+        status: :unprocessable_entity
+      return
+    end
+
+    blob = email_image.file.blob
 
     render json: {
-      url: rails_storage_proxy_url(blob),
+      url: email_image.public_url,
       name: blob.filename.to_s,
-      asset_id: attachment.id
+      asset_id: email_image.id
     }
   rescue => e
     Rails.logger.error("upload_asset failed: #{e.class}: #{e.message}")

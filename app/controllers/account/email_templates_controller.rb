@@ -134,9 +134,13 @@ class Account::EmailTemplatesController < Account::ApplicationController
   # POST /account/email_templates/:id/upload_asset
   #
   # Drag/paste/toolbar image upload from the MJML code editor. Accepts a
-  # single multipart `file`, attaches it to the template's assets
-  # collection, and returns JSON { url, name, asset_id, size, content_type }
-  # so the editor can splice <mj-image src="..."/> at the cursor. Mirrors
+  # single multipart `file`. Instead of attaching to the template's
+  # `assets` collection (whose blob lifecycle is ORM-coupled and gets
+  # purged on record destroy — breaking already-sent emails), we create a
+  # standalone EmailImage record. Its blob lives in the `public: true`
+  # `email_media` service, so the returned `url` is permanent and
+  # non-expiring. Returns JSON { url, name, filename, size, content_type,
+  # asset_id } — the editor only consumes `url`. Mirrors
   # Account::CampaignsController#upload_asset.
   def upload_asset
     file = params[:file]
@@ -156,17 +160,28 @@ class Account::EmailTemplatesController < Account::ApplicationController
       return
     end
 
-    @email_template.assets.attach(file)
-    attachment = @email_template.assets.attachments.last
-    blob = attachment.blob
+    email_image = @email_template.team.email_images.new(
+      content_type: file.content_type,
+      byte_size: file.size,
+      original_filename: file.original_filename
+    )
+    email_image.file.attach(file)
+
+    unless email_image.save
+      render json: {error: email_image.errors.full_messages.to_sentence.presence || "Upload failed"},
+        status: :unprocessable_entity
+      return
+    end
+
+    blob = email_image.file.blob
 
     render json: {
-      url: rails_storage_proxy_url(blob),
+      url: email_image.public_url,
       name: blob.filename.to_s,
       filename: blob.filename.to_s,
       size: blob.byte_size,
       content_type: blob.content_type,
-      asset_id: attachment.id
+      asset_id: email_image.id
     }
   rescue => e
     Rails.logger.error("EmailTemplate#upload_asset failed: #{e.class}: #{e.message}")

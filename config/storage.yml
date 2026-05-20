@@ -19,5 +19,27 @@ amazon:
   request_checksum_calculation: when_required
   response_checksum_validation: when_required
 
+# Public bucket for email images (EmailImage#file). SEPARATE R2 bucket from
+# `amazon` on purpose: `lewsnetter-uploads` also holds subscriber-CSV imports
+# (sensitive) and must stay private. Email images need to be world-readable
+# so `<mj-image src>` URLs work in recipients' inboxes forever.
+#
+# `public: true` makes Active Storage skip signing. NOTE: R2's S3 endpoint
+# (*.r2.cloudflarestorage.com) is NOT publicly readable even for a public
+# bucket — the bucket must be served via a bound custom domain. EmailImage
+# builds its public URL off EMAIL_MEDIA_HOST rather than `blob.url`; see
+# EmailImage#public_url for the full rationale.
+email_media:
+  service: S3
+  public: true
+  access_key_id: <%= Rails.application.credentials.dig(:cloudflare, :r2_uploads, :access_key_id) %>
+  secret_access_key: <%= Rails.application.credentials.dig(:cloudflare, :r2_uploads, :secret_access_key) %>
+  region: auto
+  bucket: lewsnetter-email-media
+  endpoint: <%= Rails.application.credentials.dig(:cloudflare, :r2_uploads, :endpoint) || "https://407493dfba8306ff79bb5cd68f609eb0.r2.cloudflarestorage.com" %>
+  force_path_style: true
+  request_checksum_calculation: when_required
+  response_checksum_validation: when_required
+
 cloudinary:
   service: Cloudinary

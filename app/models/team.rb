@@ -19,6 +19,12 @@ class Team < ApplicationRecord
   # from hard bounces + complaints; manually managed via the Suppressions
   # settings page. See app/models/suppression.rb.
   has_many :suppressions, class_name: "Suppression", dependent: :destroy
+  # Permanent email images embedded in sent emails. DELIBERATELY no
+  # `dependent: :destroy`: an EmailImage must outlive the team, because
+  # emails already delivered to recipients' inboxes reference its URL
+  # forever. Destroying a team must NOT purge its email images. See
+  # app/models/email_image.rb for the full rationale.
+  has_many :email_images
   # 🚅 add has_many associations above.
 
   # 🚅 add oauth providers above.

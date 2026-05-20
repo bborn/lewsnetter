@@ -66,11 +66,17 @@ class Account::EmailTemplatesControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, @user.email
   end
 
-  test "upload_asset attaches an image and returns JSON metadata" do
+  # upload_asset now creates a standalone EmailImage (whose blob lives in the
+  # permanent `public: true` email_media service) rather than attaching to
+  # the template's `assets` collection, so the embedded URL outlives the
+  # template. The JSON contract (`url`) is unchanged for the editor JS.
+  test "upload_asset creates an EmailImage and returns a permanent URL" do
     file = fixture_file_upload("test-logo.png", "image/png")
 
-    assert_difference -> { @template.assets.count }, 1 do
-      post upload_asset_account_email_template_url(@template), params: {file: file}
+    assert_difference -> { EmailImage.count }, 1 do
+      assert_no_difference -> { @template.assets.count } do
+        post upload_asset_account_email_template_url(@template), params: {file: file}
+      end
     end
 
     assert_response :success
@@ -80,12 +86,17 @@ class Account::EmailTemplatesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "test-logo.png", body["filename"]
     assert_equal "image/png", body["content_type"]
     assert body["asset_id"].present?
+
+    email_image = EmailImage.last
+    assert_equal @team, email_image.team
+    assert_equal body["asset_id"], email_image.id
+    assert_predicate email_image.file, :attached?
   end
 
   test "upload_asset rejects a non-image file" do
     file = fixture_file_upload("not-an-image.txt", "text/plain")
 
-    assert_no_difference -> { @template.assets.count } do
+    assert_no_difference -> { EmailImage.count } do
       post upload_asset_account_email_template_url(@template), params: {file: file}
     end
 
