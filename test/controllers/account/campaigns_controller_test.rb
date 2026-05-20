@@ -182,6 +182,52 @@ class Account::CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_predicate @campaign.assets, :attached?
   end
 
+  # upload_asset now creates a standalone EmailImage (blob in the permanent
+  # `public: true` email_media service) instead of attaching to the
+  # campaign's `assets` collection — so the embedded URL outlives the
+  # campaign. The JSON contract (`url`, `name`, `asset_id`) is unchanged for
+  # the markdown editor JS.
+  test "upload_asset creates an EmailImage and returns a permanent URL" do
+    file = fixture_file_upload("test-logo.png", "image/png")
+
+    assert_difference -> { EmailImage.count }, 1 do
+      assert_no_difference -> { @campaign.assets.count } do
+        post upload_asset_account_campaign_url(@campaign), params: {file: file}
+      end
+    end
+
+    assert_response :success
+    body = JSON.parse(response.body)
+    assert body["url"].present?, "expected JSON to include a url"
+    assert_equal "test-logo.png", body["name"]
+    assert body["asset_id"].present?
+
+    email_image = EmailImage.last
+    assert_equal @team, email_image.team
+    assert_equal body["asset_id"], email_image.id
+    assert_predicate email_image.file, :attached?
+  end
+
+  test "upload_asset rejects a non-image file" do
+    file = fixture_file_upload("not-an-image.txt", "text/plain")
+
+    assert_no_difference -> { EmailImage.count } do
+      post upload_asset_account_campaign_url(@campaign), params: {file: file}
+    end
+
+    assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_match(/image/i, body["error"])
+  end
+
+  test "upload_asset returns 422 when no file is provided" do
+    post upload_asset_account_campaign_url(@campaign), params: {}
+
+    assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_match(/No file/i, body["error"])
+  end
+
   test "destroy_asset purges the campaign attachment" do
     @campaign.assets.attach(
       io: File.open(Rails.root.join("test/fixtures/files/test-logo.png")),
