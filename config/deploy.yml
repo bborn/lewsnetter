@@ -46,7 +46,7 @@ servers:
 # behind our own CF orange-cloud (lewsnetter.dev, app.lewsnetter.dev), which
 # can run CF "Full (Strict)".
 #
-# Tenant-branded hosts (e.g. unsubscribe.influencekit.com) reach us by
+# Tenant-branded hosts (e.g. e.influencekit.com) reach us by
 # CNAME'ing to email.lewsnetter.dev — a GREY-cloud (DNS-only) record that
 # resolves straight to this origin IP. A grey-cloud target is what avoids
 # Cloudflare error 1014: a cross-account CNAME may not point at a *proxied*
@@ -77,7 +77,7 @@ proxy:
     - lewsnetter.dev          # marketing — landing + legal pages
     - app.lewsnetter.dev      # the product — sign-in, /account, /api, /mcp, /oauth
     - email.lewsnetter.dev    # grey-cloud CNAME target for tenant branded hosts
-    - unsubscribe.influencekit.com  # tenant (InfluenceKit) — unsub, tracking, images
+    - e.influencekit.com      # tenant (InfluenceKit) — unsub, tracking, images
   forward_headers: true
   app_port: 3000
   healthcheck:
