@@ -29,6 +29,21 @@ amazon:
 # bucket — the bucket must be served via a bound custom domain. EmailImage
 # builds its public URL off EMAIL_MEDIA_HOST rather than `blob.url`; see
 # EmailImage#public_url for the full rationale.
+#
+# In test + dev the service is local Disk — EmailImage#file hardcodes
+# `service: :email_media`, so without this branch every test that attaches
+# a file would try to hit the real R2 bucket and fail with NoSuchBucket.
+<% if Rails.env.test? %>
+email_media:
+  service: Disk
+  public: true
+  root: <%= Rails.root.join("tmp/storage_email_media#{ENV["TEST_ENV_NUMBER"]}") %>
+<% elsif Rails.env.development? %>
+email_media:
+  service: Disk
+  public: true
+  root: <%= Rails.root.join("storage_email_media") %>
+<% else %>
 email_media:
   service: S3
   public: true
@@ -40,6 +55,7 @@ email_media:
   force_path_style: true
   request_checksum_calculation: when_required
   response_checksum_validation: when_required
+<% end %>
 
 cloudinary:
   service: Cloudinary

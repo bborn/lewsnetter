@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_19_113503) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_20_141958) do
   create_table "account_onboarding_invitation_lists", force: :cascade do |t|
     t.integer "team_id", null: false
     t.json "invitations"
@@ -190,6 +190,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_19_113503) do
     t.index ["campaign_id"], name: "index_deliveries_on_campaign_id"
     t.index ["ses_message_id"], name: "index_deliveries_on_ses_message_id", unique: true
     t.index ["subscriber_id"], name: "index_deliveries_on_subscriber_id"
+  end
+
+  create_table "email_images", force: :cascade do |t|
+    t.integer "team_id"
+    t.string "content_type"
+    t.bigint "byte_size"
+    t.string "original_filename"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["team_id"], name: "index_email_images_on_team_id"
   end
 
   create_table "email_templates", force: :cascade do |t|
@@ -704,6 +714,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_19_113503) do
   add_foreign_key "companies", "teams"
   add_foreign_key "deliveries", "campaigns"
   add_foreign_key "deliveries", "subscribers"
+  add_foreign_key "email_images", "teams", on_delete: :nullify
   add_foreign_key "email_templates", "teams"
   add_foreign_key "events", "subscribers"
   add_foreign_key "events", "teams"

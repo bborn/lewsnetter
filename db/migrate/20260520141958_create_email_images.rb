@@ -6,7 +6,12 @@ class CreateEmailImages < ActiveRecord::Migration[8.0]
   # expires. See app/models/email_image.rb for the no-cascade rationale.
   def change
     create_table :email_images do |t|
-      t.references :team, null: false, foreign_key: true, index: true
+      # team_id is nullable + the FK nullifies on team delete. An email
+      # image MUST survive its team being destroyed — a newsletter sitting
+      # in someone's inbox still references the image URL. On team delete
+      # the row's team_id goes NULL; the image, its blob, and its public
+      # URL all persist.
+      t.references :team, null: true, foreign_key: {on_delete: :nullify}, index: true
       t.string :content_type
       t.bigint :byte_size
       t.string :original_filename

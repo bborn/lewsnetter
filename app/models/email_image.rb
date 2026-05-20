@@ -25,7 +25,11 @@
 # rows (and their blobs) are kept on purpose. Cleanup, if ever needed, is an
 # explicit, deliberate operator action — never an app-driven cascade.
 class EmailImage < ApplicationRecord
-  belongs_to :team
+  # optional: true — an email image deliberately outlives its team. When a
+  # team is destroyed the FK nullifies team_id (see the migration); the
+  # image row, blob, and public URL persist so a sent newsletter still
+  # renders. A nil team is therefore a valid, expected state.
+  belongs_to :team, optional: true
 
   # The image bytes. `service: :email_media` routes the blob to the
   # `public: true` R2 bucket so the object is world-readable and its URL is
