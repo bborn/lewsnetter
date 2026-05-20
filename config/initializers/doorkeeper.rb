@@ -456,6 +456,16 @@ Doorkeeper.configure do
   #   Rails.logger.info(context.issued_token)
   # end
 
+  # Bind a dynamically-registered Platform::Application to the authorizing
+  # user's team. MCP clients (Claude) register teamless via RFC 7591 dynamic
+  # client registration; Mcp::DoorkeeperAuth rejects any token whose
+  # application has no team. Binding here — once, at authorize-time — gives
+  # the application a stable team so its tokens work at the MCP boundary.
+  # See Oauth::ApplicationTeamBinder.
+  before_successful_authorization do |controller, _context|
+    Oauth::ApplicationTeamBinder.from_authorization_request(controller)
+  end
+
   # Under some circumstances you might want to have applications auto-approved,
   # so that the user skips the authorization step.
   # For example if dealing with a trusted application.
