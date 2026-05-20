@@ -22,18 +22,25 @@ module Oauth
   module ApplicationTeamBinder
     module_function
 
-    # Entry point for the Doorkeeper hook. Pulls the application + resource
-    # owner out of the authorizations controller and binds.
+    # Entry point for the before_successful_authorization Doorkeeper hook.
     #
-    # Never raises: a failure here must not break the OAuth grant. Worst case
-    # we fall back to the pre-existing teamless-app behavior.
-    def from_authorization_request(controller)
-      client_id = controller.params[:client_id].presence
-      return unless client_id
+    # `pre_auth` is the Doorkeeper::OAuth::PreAuthorization from an
+    # /oauth/authorize request. The SAME hook also fires on /oauth/token, but
+    # there it is called with no context at all — so `pre_auth` is nil and
+    # this is a no-op.
+    #
+    # CRITICAL: read only from `pre_auth`. Never call the controller's
+    # `current_resource_owner` — on the token endpoint that invokes the
+    # resource-owner authenticator, which redirects to sign-in mid-exchange
+    # and crashes the token request with a DoubleRenderError.
+    #
+    # Never raises: a failure here must not break the OAuth grant.
+    def from_preauthorization(pre_auth)
+      return if pre_auth.nil?
 
       bind(
-        application: Platform::Application.by_uid(client_id),
-        resource_owner: controller.send(:current_resource_owner)
+        application: pre_auth.client&.application,
+        resource_owner: pre_auth.resource_owner
       )
     rescue => e
       Rails.logger.error("[Oauth::ApplicationTeamBinder] #{e.class}: #{e.message}")

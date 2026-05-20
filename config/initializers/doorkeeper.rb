@@ -461,9 +461,12 @@ Doorkeeper.configure do
   # client registration; Mcp::DoorkeeperAuth rejects any token whose
   # application has no team. Binding here — once, at authorize-time — gives
   # the application a stable team so its tokens work at the MCP boundary.
-  # See Oauth::ApplicationTeamBinder.
-  before_successful_authorization do |controller, _context|
-    Oauth::ApplicationTeamBinder.from_authorization_request(controller)
+  #
+  # This hook ALSO fires on /oauth/token (with no context). We read only
+  # from `context.pre_auth`, which is present only on /oauth/authorize — so
+  # the token request is a clean no-op. See Oauth::ApplicationTeamBinder.
+  before_successful_authorization do |_controller, context|
+    Oauth::ApplicationTeamBinder.from_preauthorization(context&.pre_auth)
   end
 
   # Under some circumstances you might want to have applications auto-approved,

@@ -51,61 +51,44 @@ class Oauth::ApplicationTeamBinderTest < ActiveSupport::TestCase
   end
 
   # ---------------------------------------------------------------------
-  # from_authorization_request — the Doorkeeper-hook entry point. Extracts
-  # the application (by client_id) + resource owner from the authorizations
-  # controller, then binds.
+  # from_preauthorization — the Doorkeeper-hook entry point. Reads the
+  # application + resource owner straight off the PreAuthorization. It must
+  # NOT touch the controller: the same hook fires on /oauth/token with a nil
+  # context, and calling current_resource_owner there redirects to sign-in
+  # and crashes the token exchange.
   # ---------------------------------------------------------------------
-  test "from_authorization_request binds via client_id + current_resource_owner" do
-    controller = stub_controller(client_id: @application.uid, owner: @user)
+  test "from_preauthorization binds the application to the resource owner's team" do
+    pre_auth = stub_pre_auth(application: @application, resource_owner: @user)
 
-    Oauth::ApplicationTeamBinder.from_authorization_request(controller)
+    Oauth::ApplicationTeamBinder.from_preauthorization(pre_auth)
 
     assert_equal @team, @application.reload.team
   end
 
-  test "from_authorization_request is a no-op when client_id is missing" do
-    controller = stub_controller(client_id: nil, owner: @user)
-
+  test "from_preauthorization is a no-op when pre_auth is nil (the /oauth/token path)" do
     assert_nothing_raised do
-      Oauth::ApplicationTeamBinder.from_authorization_request(controller)
+      Oauth::ApplicationTeamBinder.from_preauthorization(nil)
     end
   end
 
-  test "from_authorization_request swallows errors so the OAuth grant survives" do
-    # A controller whose current_resource_owner blows up must not break auth.
-    controller = Class.new do
-      def initialize(uid) = (@uid = uid)
+  test "from_preauthorization swallows errors so the OAuth grant survives" do
+    exploding = Object.new
+    def exploding.client = raise("boom")
 
-      def params = ActionController::Parameters.new(client_id: @uid)
-
-      private
-
-      def current_resource_owner = raise("boom")
-    end.new(@application.uid)
+    def exploding.resource_owner = nil
 
     assert_nothing_raised do
-      Oauth::ApplicationTeamBinder.from_authorization_request(controller)
+      Oauth::ApplicationTeamBinder.from_preauthorization(exploding)
     end
   end
 
   private
 
-  def stub_controller(client_id:, owner:)
-    Class.new do
-      def initialize(client_id, owner)
-        @client_id = client_id
-        @owner = owner
-      end
-
-      def params
-        ActionController::Parameters.new(client_id: @client_id)
-      end
-
-      private
-
-      def current_resource_owner
-        @owner
-      end
-    end.new(client_id, owner)
+  # Mimics a Doorkeeper::OAuth::PreAuthorization: it exposes `client`
+  # (a Doorkeeper::OAuth::Client, which carries `.application`) and
+  # `resource_owner`.
+  def stub_pre_auth(application:, resource_owner:)
+    client = Struct.new(:application).new(application)
+    Struct.new(:client, :resource_owner).new(client, resource_owner)
   end
 end
