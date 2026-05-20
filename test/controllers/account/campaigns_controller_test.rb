@@ -182,11 +182,11 @@ class Account::CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_predicate @campaign.assets, :attached?
   end
 
-  # upload_asset now creates a standalone EmailImage (blob in the permanent
-  # `public: true` email_media service) instead of attaching to the
-  # campaign's `assets` collection — so the embedded URL outlives the
-  # campaign. The JSON contract (`url`, `name`, `asset_id`) is unchanged for
-  # the markdown editor JS.
+  # upload_asset now creates a standalone EmailImage (blob in the dedicated
+  # email_media storage service) instead of attaching to the campaign's
+  # `assets` collection — so the embedded URL outlives the campaign. The
+  # JSON contract (`url`, `name`, `asset_id`) is unchanged for the markdown
+  # editor JS.
   test "upload_asset creates an EmailImage and returns a permanent URL" do
     file = fixture_file_upload("test-logo.png", "image/png")
 

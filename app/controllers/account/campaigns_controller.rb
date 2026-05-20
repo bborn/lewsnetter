@@ -68,10 +68,11 @@ class Account::CampaignsController < Account::ApplicationController
   # single multipart `file`. Instead of attaching to the campaign's `assets`
   # collection (whose blob lifecycle is ORM-coupled and gets purged on
   # record destroy — breaking already-sent emails), we create a standalone
-  # EmailImage record. Its blob lives in the `public: true` `email_media`
-  # service, so the returned `url` is permanent and non-expiring. Returns
-  # JSON { url, name, asset_id } so the JS controller can splice
-  # `![name](url)` into the markdown body at the cursor.
+  # EmailImage record. The returned `url` is the permanent /e/:id redirect
+  # route (see EmailImage#public_url + EmailImagesController) on the team's
+  # branded email host, so it outlives the campaign. Returns JSON
+  # { url, name, asset_id } so the JS controller can splice `![name](url)`
+  # into the markdown body at the cursor.
   def upload_asset
     file = params[:file]
     if file.blank?

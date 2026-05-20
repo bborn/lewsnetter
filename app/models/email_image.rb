@@ -10,10 +10,12 @@
 # recipients' inboxes. An image in a sent email must outlive everything.
 #
 # EmailImage decouples the blob's lifecycle from any editable record. Its
-# `:file` attachment lives in the `email_media` Active Storage service, which
-# is configured `public: true` (see config/storage.yml) and backed by a
-# dedicated public R2 bucket. The image is served directly from a custom
-# domain — no expiring signature, no proxy controller, no app round-trip.
+# `:file` attachment lives in the `email_media` Active Storage service — a
+# dedicated PRIVATE R2 bucket. Inboxes reach the image through a Rails
+# redirect (GET /e/:id → EmailImagesController#show → 302 to a fresh signed
+# R2 URL). The permanent URL is the Rails route itself, served on the team's
+# OWN branded email host, so a tenant's email carries zero
+# app.lewsnetter.dev references.
 #
 # NEVER DESTROYED BY THE APP — DELIBERATE
 # ---------------------------------------
@@ -25,66 +27,53 @@
 # rows (and their blobs) are kept on purpose. Cleanup, if ever needed, is an
 # explicit, deliberate operator action — never an app-driven cascade.
 class EmailImage < ApplicationRecord
+  # Signed-id purpose for the /e/:id route token. A purpose-scoped signed id
+  # is unguessable (so /e/1, /e/2 enumeration can't reach another team's
+  # images) and — with no expires_in — permanent, which a URL baked into a
+  # sent email must be.
+  SIGNED_ID_PURPOSE = :email_image
+
   # optional: true — an email image deliberately outlives its team. When a
   # team is destroyed the FK nullifies team_id (see the migration); the
-  # image row, blob, and public URL persist so a sent newsletter still
-  # renders. A nil team is therefore a valid, expected state.
+  # image row, blob, and URL persist so a sent newsletter still renders.
+  # A nil team is therefore a valid, expected state.
   belongs_to :team, optional: true
 
-  # The image bytes. `service: :email_media` routes the blob to the
-  # `public: true` R2 bucket so the object is world-readable and its URL is
-  # permanent. In test/development this is overridden by the `:test`/`:local`
-  # disk services per config/environments.
+  # The image bytes. `service: :email_media` pins the blob to the dedicated
+  # private R2 bucket. In test/development this resolves to local Disk (see
+  # config/storage.yml).
   has_one_attached :file, service: :email_media
 
   validates :content_type, presence: true
   validate :file_must_be_an_attached_image
 
-  # The permanent, non-expiring, public URL for this image — the value that
-  # gets baked into `<mj-image src>` / `![](…)` and shipped to inboxes.
-  #
-  # THE R2 PUBLIC-URL WRINKLE
-  # -------------------------
-  # Cloudflare R2's S3-compatible endpoint (`*.r2.cloudflarestorage.com`) is
-  # NOT publicly readable even for a "public" bucket — it always requires
-  # SigV4 auth. A public R2 bucket is served via an `r2.dev` subdomain or a
-  # bound custom domain. So Active Storage's default `blob.url` for a
-  # `public: true` S3 service (built off the configured `endpoint`) would
-  # produce a URL that 403s.
-  #
-  # We sidestep Active Storage's URL builder entirely and construct the URL
-  # against the custom domain ourselves: `https://EMAIL_MEDIA_HOST/<key>`.
-  # `EMAIL_MEDIA_HOST` is an env var so self-hosters point it at their own
-  # bucket's public host. If it's blank (unconfigured), we fall back to the
-  # Active Storage proxy URL and log a warning — functional, but the proxy
-  # URL is app-coupled and not as durable, so operators should set the host.
-  def public_url
-    blob = file.blob
-    return nil if blob.nil?
+  # Resolve an EmailImage from the token in a /e/:id URL.
+  def self.find_by_token(token)
+    find_signed(token.to_s, purpose: SIGNED_ID_PURPOSE)
+  end
 
-    host = ENV["EMAIL_MEDIA_HOST"].to_s.strip
-    if host.present?
-      "https://#{host}/#{blob.key}"
-    else
-      Rails.logger.warn(
-        "[EmailImage##{id}] EMAIL_MEDIA_HOST is not set — falling back to the " \
-        "Active Storage proxy URL. Set EMAIL_MEDIA_HOST to the public bucket " \
-        "host (e.g. media.lewsnetter.dev) so sent-email image URLs are permanent."
-      )
-      Rails.application.routes.url_helpers.rails_storage_proxy_url(
-        blob, only_path: false, host: default_url_host
-      )
-    end
+  # The permanent URL baked into `<mj-image src>` / `![](…)` and shipped to
+  # inboxes. It points at the Rails redirect route (GET /e/:id), NOT directly
+  # at storage:
+  #
+  #   https://<team email host>/e/<signed id>
+  #
+  # The host is the team's branded email host — the SAME resolver that the
+  # unsubscribe link + open pixel + click redirect use (UnsubscribeUrlHelper.
+  # host_for). So every link in a tenant's email shares one host; recipients
+  # never see app.lewsnetter.dev.
+  #
+  # The route is permanent because the signed id is permanent. Each request
+  # to it 302-redirects to a freshly-signed (short-lived, fine) R2 URL — see
+  # EmailImagesController. That's why the bucket can stay private.
+  def public_url
+    return nil unless file.attached?
+
+    host = UnsubscribeUrlHelper.host_for(team: team)
+    "https://#{host}/e/#{signed_id(purpose: SIGNED_ID_PURPOSE)}"
   end
 
   private
-
-  # Host used only for the proxy-URL fallback when EMAIL_MEDIA_HOST is unset.
-  def default_url_host
-    Rails.application.config.action_mailer.default_url_options&.dig(:host) ||
-      Rails.application.routes.default_url_options[:host] ||
-      "localhost"
-  end
 
   def file_must_be_an_attached_image
     unless file.attached?

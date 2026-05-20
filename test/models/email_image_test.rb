@@ -57,39 +57,42 @@ class EmailImageTest < ActiveSupport::TestCase
   end
 
   # ---------------------------------------------------------------------
-  # public_url — the permanent custom-domain URL baked into <mj-image src>.
+  # public_url — the permanent /e/:id redirect URL baked into <mj-image src>.
+  # It points at the Rails route on the team's branded email host, NOT at
+  # storage directly. See EmailImagesController.
   # ---------------------------------------------------------------------
-  test "public_url builds a custom-domain URL off EMAIL_MEDIA_HOST" do
+  test "public_url builds an /e/:id route on the team's branded email host" do
+    @team.create_ses_configuration!(
+      region: "us-east-1", status: "verified", unsubscribe_host: "email.influencekit.com"
+    )
     image = build_email_image
     image.save!
 
-    with_env("EMAIL_MEDIA_HOST" => "media.lewsnetter.dev") do
-      url = image.public_url
-      assert_equal "https://media.lewsnetter.dev/#{image.file.blob.key}", url
-    end
+    url = image.public_url
+    token = image.signed_id(purpose: EmailImage::SIGNED_ID_PURPOSE)
+    assert_equal "https://email.influencekit.com/e/#{token}", url
   end
 
-  test "public_url strips whitespace from EMAIL_MEDIA_HOST" do
+  test "public_url falls back to the app-wide host when no branded host is set" do
     image = build_email_image
     image.save!
 
-    with_env("EMAIL_MEDIA_HOST" => "  media.lewsnetter.dev  ") do
-      assert_equal "https://media.lewsnetter.dev/#{image.file.blob.key}", image.public_url
-    end
+    # No ses_configuration → host_for falls back to the action_mailer
+    # default host configured for the test environment.
+    fallback = Rails.application.config.action_mailer.default_url_options[:host]
+    assert_match %r{\Ahttps://#{Regexp.escape(fallback)}/e/.+\z}, image.public_url
   end
 
-  test "public_url falls back to the proxy URL when EMAIL_MEDIA_HOST is blank" do
+  test "public_url token round-trips through find_by_token" do
     image = build_email_image
     image.save!
 
-    with_env("EMAIL_MEDIA_HOST" => "") do
-      url = image.public_url
-      assert url.present?, "expected a fallback URL"
-      # Falls back to the Active Storage proxy route rather than the
-      # custom-domain host.
-      assert_match(%r{/rails/active_storage/}, url,
-        "expected the proxy-URL fallback, got #{url.inspect}")
-    end
+    token = image.public_url.split("/e/").last
+    assert_equal image, EmailImage.find_by_token(token)
+  end
+
+  test "find_by_token returns nil for a garbage token" do
+    assert_nil EmailImage.find_by_token("not-a-real-signed-id")
   end
 
   test "public_url returns nil when no file is attached" do
@@ -113,18 +116,5 @@ class EmailImageTest < ActiveSupport::TestCase
     assert EmailImage.exists?(image_id),
       "EmailImage was destroyed when its team was destroyed — it must survive " \
       "so already-sent emails keep working"
-  end
-
-  private
-
-  def with_env(overrides)
-    original = {}
-    overrides.each do |k, v|
-      original[k] = ENV[k]
-      ENV[k] = v
-    end
-    yield
-  ensure
-    original.each { |k, v| v.nil? ? ENV.delete(k) : ENV[k] = v }
   end
 end

@@ -67,8 +67,8 @@ class Account::EmailTemplatesControllerTest < ActionDispatch::IntegrationTest
   end
 
   # upload_asset now creates a standalone EmailImage (whose blob lives in the
-  # permanent `public: true` email_media service) rather than attaching to
-  # the template's `assets` collection, so the embedded URL outlives the
+  # dedicated `email_media` storage service) rather than attaching to the
+  # template's `assets` collection, so the embedded URL outlives the
   # template. The JSON contract (`url`) is unchanged for the editor JS.
   test "upload_asset creates an EmailImage and returns a permanent URL" do
     file = fixture_file_upload("test-logo.png", "image/png")

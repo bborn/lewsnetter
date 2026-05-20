@@ -19,16 +19,17 @@ amazon:
   request_checksum_calculation: when_required
   response_checksum_validation: when_required
 
-# Public bucket for email images (EmailImage#file). SEPARATE R2 bucket from
-# `amazon` on purpose: `lewsnetter-uploads` also holds subscriber-CSV imports
-# (sensitive) and must stay private. Email images need to be world-readable
-# so `<mj-image src>` URLs work in recipients' inboxes forever.
+# Dedicated bucket for email images (EmailImage#file). SEPARATE from the
+# `amazon` bucket — that one also holds subscriber-CSV imports; keeping
+# email media in its own bucket is tidy isolation.
 #
-# `public: true` makes Active Storage skip signing. NOTE: R2's S3 endpoint
-# (*.r2.cloudflarestorage.com) is NOT publicly readable even for a public
-# bucket — the bucket must be served via a bound custom domain. EmailImage
-# builds its public URL off EMAIL_MEDIA_HOST rather than `blob.url`; see
-# EmailImage#public_url for the full rationale.
+# This service is PRIVATE (no `public: true`). Email images reach inboxes
+# via a Rails redirect: GET /e/:id → EmailImagesController#show → 302 to a
+# freshly-signed R2 URL. That signed URL only needs to outlive the few ms
+# it takes the image client to follow the redirect, so the bucket never
+# needs public access or a custom domain. The permanent, branded URL is
+# the Rails route, served on the team's own email host — see
+# EmailImage#public_url.
 #
 # In test + dev the service is local Disk — EmailImage#file hardcodes
 # `service: :email_media`, so without this branch every test that attaches
@@ -36,17 +37,14 @@ amazon:
 <% if Rails.env.test? %>
 email_media:
   service: Disk
-  public: true
   root: <%= Rails.root.join("tmp/storage_email_media#{ENV["TEST_ENV_NUMBER"]}") %>
 <% elsif Rails.env.development? %>
 email_media:
   service: Disk
-  public: true
   root: <%= Rails.root.join("storage_email_media") %>
 <% else %>
 email_media:
   service: S3
-  public: true
   access_key_id: <%= Rails.application.credentials.dig(:cloudflare, :r2_uploads, :access_key_id) %>
   secret_access_key: <%= Rails.application.credentials.dig(:cloudflare, :r2_uploads, :secret_access_key) %>
   region: auto

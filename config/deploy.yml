@@ -119,12 +119,6 @@ env:
     # Same env var also gates app/models/ability.rb's elevated CanCan
     # abilities. Self-hosters: override this with your own admin emails.
     DEVELOPER_EMAILS: "bruno@influencekit.com"
-    # Public host for email images (EmailImage#public_url). Must be a custom
-    # domain bound to the public R2 bucket `lewsnetter-email-media` — R2's
-    # raw S3 endpoint is NOT publicly readable. Self-hosters point this at
-    # their own bucket's public host. Leave unset to fall back to the
-    # (app-coupled, less durable) Active Storage proxy URL.
-    EMAIL_MEDIA_HOST: "media.lewsnetter.dev"
   secret:
     - RAILS_MASTER_KEY
     - LITESTREAM_REPLICA_ACCESS_KEY_ID

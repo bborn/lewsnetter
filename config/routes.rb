@@ -46,6 +46,14 @@ Rails.application.routes.draw do
   get "/track/o/:token.gif", to: "tracking/opens#show", as: :tracking_open, format: false, constraints: {token: /[^\/]+/}
   get "/track/c/:token", to: "tracking/clicks#show", as: :tracking_click, constraints: {token: /[^\/]+/}
 
+  # Email image redirect — permanent, branded URL for an EmailImage. No auth,
+  # signed-id token. Lives outside Account:: so an email in any inbox can hit
+  # it on the team's branded host. EmailImagesController 302s to a fresh,
+  # short-lived signed R2 URL — which is why the email_media bucket stays
+  # private (no public access / custom domain needed). Short path keeps the
+  # `<mj-image src>` compact.
+  get "/e/:id", to: "email_images#show", as: :email_image_file, constraints: {id: /[^\/]+/}
+
   # OAuth 2.1 discovery + RFC 7591 dynamic client registration for MCP.
   # Mounted BEFORE the BulletTrain engines so they're publicly readable
   # (no Devise auth required to fetch the metadata or register a client).
