@@ -70,9 +70,15 @@ class Suppression < ApplicationRecord
       note: note,
       suppressed_at: Time.current
     )
-  rescue ActiveRecord::RecordNotUnique
-    # Race with a concurrent SNS event for the same address. Refetch + return.
-    where(team_id: team.id, email: normalized).first
+  rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid => e
+    # Race with a concurrent SNS event for the same address: DB-level
+    # uniqueness raises RecordNotUnique; Rails' case-insensitive uniqueness
+    # validator raises RecordInvalid first. Both mean "row already exists" —
+    # refetch and return. Re-raise if it really was something else (e.g. a
+    # malformed email from a quirky bounce payload).
+    existing = where(team_id: team.id, email: normalized).first
+    raise e if existing.nil?
+    existing
   end
 
   private
