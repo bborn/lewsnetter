@@ -56,7 +56,9 @@ module AI
     end
 
     def stats
-      (@campaign.stats || {}).to_h
+      # `&.` so stub_markdown — which `call` falls back to when @campaign is
+      # nil — doesn't recrash here and defeat its own nil-guard.
+      (@campaign&.stats || {}).to_h
     end
 
     def baseline

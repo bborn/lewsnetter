@@ -48,5 +48,18 @@ module AI
       assert_match(/0\.0%/, md)
     end
 
+    # Regression for the production 500 on /campaigns/:id/postmortem when the
+    # controller's resource loader failed to populate @campaign. The service's
+    # `call` already guards with `return stub_markdown unless @campaign`, but
+    # `stub_markdown` itself reached through `@campaign.stats` and re-crashed.
+    test "stub mode renders without raising when @campaign is nil" do
+      md = nil
+      assert_nothing_raised do
+        md = AI::PostSendAnalyst.new(campaign: nil).call
+      end
+      assert_match(/## What worked/, md)
+      assert_match(/0 recipients/, md)
+      assert_match(/\(no subject\)/, md)
+    end
   end
 end
