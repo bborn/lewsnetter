@@ -7,6 +7,12 @@ class Account::CampaignsController < Account::ApplicationController
   # GET /account/teams/:team_id/campaigns
   # GET /account/teams/:team_id/campaigns.json
   def index
+    # Default index order: most-recently-touched first. Sent campaigns bubble
+    # up at send-time (`status`/`sent_at` writes bump `updated_at`), drafts
+    # bubble up when edited. Resource loader leaves @campaigns unordered, so
+    # without this the list comes back in `id ASC` — random-feeling once you
+    # have more than a handful of campaigns.
+    @campaigns = @campaigns.order(updated_at: :desc)
     delegate_json_to_api
   end
 
