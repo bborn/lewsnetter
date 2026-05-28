@@ -1,4 +1,4 @@
-require "csv"
+require "smarter_csv"
 
 # Streams a CSV file attached to a Subscribers::Import and upserts each row
 # as a Subscriber on the import's team. Idempotent: looks up by external_id
@@ -14,8 +14,21 @@ class ImportSubscribersJob < ApplicationJob
   queue_as :default
 
   PROGRESS_INTERVAL = 100
-  KNOWN_FIELDS = %w[external_id email name subscribed].freeze
+  CHUNK_SIZE = 500
+  KNOWN_FIELDS = %i[external_id email name subscribed].freeze
   MAX_ERRORS_LOGGED = 100
+
+  # SmarterCSV reads each row into a hash with downcased, symbolized keys
+  # (mirroring the old `header_converters: :downcase`). We keep its 1.x
+  # defaults — blank values are dropped from the row hash — but disable
+  # numeric coercion so every value stays a String, matching the stdlib CSV
+  # behavior the importer was written against (e.g. a numeric external_id or
+  # custom attribute isn't silently turned into an Integer). chunk_size lets
+  # us stream large files in batches rather than buffering the whole file.
+  CSV_OPTIONS = {
+    chunk_size: CHUNK_SIZE,
+    convert_values_to_numeric: false
+  }.freeze
 
   def perform(import_id)
     import = Subscribers::Import.find(import_id)
@@ -40,28 +53,30 @@ class ImportSubscribersJob < ApplicationJob
     errors_log = []
 
     import.csv.open do |tempfile|
-      CSV.foreach(tempfile.path, headers: true, header_converters: :downcase) do |row|
-        processed += 1
-        result = upsert_row(import.team, row)
+      SmarterCSV.process(tempfile.path, CSV_OPTIONS) do |chunk|
+        chunk.each do |row|
+          processed += 1
+          result = upsert_row(import.team, row)
 
-        case result[:outcome]
-        when :created then created += 1
-        when :updated then updated += 1
-        when :error
-          errors += 1
-          if errors_log.size < MAX_ERRORS_LOGGED
-            errors_log << {row: processed, email: result[:email], errors: result[:errors]}
+          case result[:outcome]
+          when :created then created += 1
+          when :updated then updated += 1
+          when :error
+            errors += 1
+            if errors_log.size < MAX_ERRORS_LOGGED
+              errors_log << {row: processed, email: result[:email], errors: result[:errors]}
+            end
           end
-        end
 
-        if (processed % PROGRESS_INTERVAL).zero?
-          import.update_columns(
-            processed: processed,
-            created_count: created,
-            updated_count: updated,
-            error_count: errors,
-            errors_log: errors_log
-          )
+          if (processed % PROGRESS_INTERVAL).zero?
+            import.update_columns(
+              processed: processed,
+              created_count: created,
+              updated_count: updated,
+              error_count: errors,
+              errors_log: errors_log
+            )
+          end
         end
       end
     end
@@ -90,10 +105,12 @@ class ImportSubscribersJob < ApplicationJob
   private
 
   # Find-or-initialize the Subscriber, assign mapped attributes, save.
-  # Returns {outcome: :created|:updated|:error, email:, errors:}.
+  # `row` is a SmarterCSV hash with downcased, symbolized keys; blank values
+  # are absent from the hash. Returns
+  # {outcome: :created|:updated|:error, email:, errors:}.
   def upsert_row(team, row)
-    external_id = row["external_id"].presence
-    email = row["email"]&.strip.presence
+    external_id = row[:external_id].presence
+    email = row[:email]&.strip.presence
 
     subscriber =
       if external_id
@@ -109,22 +126,21 @@ class ImportSubscribersJob < ApplicationJob
     # Always update email if provided (e.g. the row is keyed by external_id
     # but the email has changed in the source system).
     subscriber.email = email if email
-    subscriber.name = row["name"] if row.headers.include?("name")
+    subscriber.name = row[:name] if row.key?(:name)
     subscriber.external_id = external_id if external_id && subscriber.external_id.blank?
 
-    if row.headers.include?("subscribed")
-      subscriber.subscribed = parse_boolean(row["subscribed"])
+    if row.key?(:subscribed)
+      subscriber.subscribed = parse_boolean(row[:subscribed])
     end
 
     # Anything that isn't a known top-level field gets folded into
     # custom_attributes. Existing custom_attributes are preserved and merged.
+    # Keys are stringified since custom_attributes is a JSON column.
     custom = subscriber.custom_attributes || {}
-    row.headers.each do |header|
-      next if header.nil?
-      next if KNOWN_FIELDS.include?(header)
-      value = row[header]
+    row.each do |key, value|
+      next if KNOWN_FIELDS.include?(key)
       next if value.nil?
-      custom[header] = value
+      custom[key.to_s] = value
     end
     subscriber.custom_attributes = custom
 

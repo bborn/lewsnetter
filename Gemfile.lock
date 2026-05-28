@@ -778,6 +778,7 @@ GEM
       json
       simplecov
     simplecov_json_formatter (0.1.4)
+    smarter_csv (1.17.3)
     snaky_hash (2.0.3)
       hashie (>= 0.1.0, < 6)
       version_gem (>= 1.1.8, < 3)
@@ -946,6 +947,7 @@ DEPENDENCIES
   sidekiq
   simplecov
   simplecov-json
+  smarter_csv (~> 1.17)
   solid_cable
   solid_queue
   sqlite3 (~> 2.1)
