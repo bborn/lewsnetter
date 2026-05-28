@@ -65,6 +65,12 @@ class Webhooks::Ses::SnsController < ApplicationController
     # When true, the controller skips Aws::SNS::MessageVerifier. Default
     # false — verification is mandatory in every other env.
     attr_accessor :skip_signature_verification
+
+    # Verifier instance is cached on the class so cert PEM downloads are
+    # amortized across requests.
+    def message_verifier
+      @message_verifier ||= Aws::SNS::MessageVerifier.new
+    end
   end
 
   private
@@ -289,9 +295,5 @@ class Webhooks::Ses::SnsController < ApplicationController
   rescue => e
     Rails.logger.warn("[SNS] verifier raised #{e.class}: #{e.message}")
     false
-  end
-
-  def self.message_verifier
-    @message_verifier ||= Aws::SNS::MessageVerifier.new
   end
 end

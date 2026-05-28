@@ -34,7 +34,7 @@ class Team::SesDomain < ApplicationRecord
   # RFC 1035-ish: lowercase letters, digits, hyphens, dots. No protocol,
   # no path, no port. Up to 253 chars total. We accept user input that
   # included `https://` or a trailing slash and strip it in a before_validation.
-  DOMAIN_FORMAT = /\A[a-z0-9]([a-z0-9\-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9\-]{0,61}[a-z0-9])?)+\z/
+  DOMAIN_FORMAT = /\A[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+\z/
 
   validates :domain,
     presence: true,

@@ -28,8 +28,8 @@ module Ses
       identity = client.get_email_identity(email_identity: @ses_domain.domain)
 
       verification_status = identity.verification_status.to_s
-      dkim_status         = identity.dkim_attributes&.status.to_s
-      new_status          = domain_status_from(verification_status, dkim_status)
+      dkim_status = identity.dkim_attributes&.status.to_s
+      new_status = domain_status_from(verification_status, dkim_status)
 
       previously_verified = @ses_domain.verified?
 
@@ -71,7 +71,7 @@ module Ses
 
     def domain_status_from(verification_status, dkim_status)
       return "verified" if verification_status == "SUCCESS"
-      return "failed"   if verification_status == "FAILED" || dkim_status == "FAILED"
+      return "failed" if verification_status == "FAILED" || dkim_status == "FAILED"
       "pending"
     end
 

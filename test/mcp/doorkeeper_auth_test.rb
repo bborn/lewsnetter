@@ -19,7 +19,7 @@ module Mcp
     end
 
     test "passes through with valid Bearer token" do
-      env = Rack::MockRequest.env_for("/mcp", "HTTP_AUTHORIZATION" => "Bearer #{@token.token}", method: "POST")
+      env = Rack::MockRequest.env_for("/mcp", "HTTP_AUTHORIZATION" => "Bearer #{@token.token}", :method => "POST")
       status, _headers, body = @middleware.call(env)
       assert_equal 200, status
       payload = JSON.parse(body.first)
@@ -38,7 +38,7 @@ module Mcp
     end
 
     test "returns 401 when token is unknown" do
-      env = Rack::MockRequest.env_for("/mcp", "HTTP_AUTHORIZATION" => "Bearer not-a-real-token", method: "POST")
+      env = Rack::MockRequest.env_for("/mcp", "HTTP_AUTHORIZATION" => "Bearer not-a-real-token", :method => "POST")
       status, _headers, body = @middleware.call(env)
       assert_equal 401, status
       payload = JSON.parse(body.first)
@@ -47,7 +47,7 @@ module Mcp
 
     test "returns 401 when token is revoked" do
       @token.revoke
-      env = Rack::MockRequest.env_for("/mcp", "HTTP_AUTHORIZATION" => "Bearer #{@token.token}", method: "POST")
+      env = Rack::MockRequest.env_for("/mcp", "HTTP_AUTHORIZATION" => "Bearer #{@token.token}", :method => "POST")
       status, _headers, _body = @middleware.call(env)
       assert_equal 401, status
     end
@@ -71,7 +71,7 @@ module Mcp
       create(:membership, user: @user, team: other_team)
       @user.update!(current_team_id: other_team.id) # simulate UI flip
 
-      env = Rack::MockRequest.env_for("/mcp", "HTTP_AUTHORIZATION" => "Bearer #{@token.token}", method: "POST")
+      env = Rack::MockRequest.env_for("/mcp", "HTTP_AUTHORIZATION" => "Bearer #{@token.token}", :method => "POST")
       status, _headers, body = @middleware.call(env)
       assert_equal 200, status
       payload = JSON.parse(body.first)
@@ -96,7 +96,7 @@ module Mcp
         token: SecureRandom.hex
       )
 
-      env = Rack::MockRequest.env_for("/mcp", "HTTP_AUTHORIZATION" => "Bearer #{orphan_token.token}", method: "POST")
+      env = Rack::MockRequest.env_for("/mcp", "HTTP_AUTHORIZATION" => "Bearer #{orphan_token.token}", :method => "POST")
       status, _headers, body = @middleware.call(env)
       assert_equal 401, status
       payload = JSON.parse(body.first)

@@ -63,7 +63,7 @@ module Mcp
         end
 
         test "record is saved and ses_check returns error on unexpected checker exception" do
-          with_checker_stub(on_call: ->(_sa) { raise RuntimeError, "Network timeout" }) do
+          with_checker_stub(on_call: ->(_sa) { raise "Network timeout" }) do
             result = Create.new.invoke(
               arguments: {"email" => "error@example.com"},
               context: @ctx

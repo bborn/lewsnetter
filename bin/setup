@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 require "fileutils"
 
-require 'bundler/inline'
+require "bundler/inline"
 
 # First we require a util file that will install a few utility gems
 # and define some utility methods used by other scirpts.
@@ -39,7 +39,7 @@ FileUtils.chdir APP_ROOT do
   # Here we automatically run it if the conversations gem is installed. This is for setting up an
   # existing project on a new machine. Or for new developers joining the team.
   text = File.read("Gemfile")
-  if text.match "bullet_train-conversations"
+  if text.match? "bullet_train-conversations"
     require "#{__dir__}/setup-scripts/check_icu"
   else
     require "#{__dir__}/setup-scripts/skip_icu"

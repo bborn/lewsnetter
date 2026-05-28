@@ -15,7 +15,11 @@ module Llm
 
     def self.current
       new(
-        credentials: (Rails.application.credentials.config rescue {}),
+        credentials: begin
+          Rails.application.credentials.config
+        rescue
+          {}
+        end,
         env: ENV.to_h
       )
     end

@@ -34,9 +34,9 @@ module Subscribers
         "topic_tags" => "travel,food,family",
         "company_tabs" => "a,b"
       )
-      assert_equal %w[1 2 3],            out["subdomain_ids"]
+      assert_equal %w[1 2 3], out["subdomain_ids"]
       assert_equal %w[travel food family], out["topic_tags"]
-      assert_equal %w[a b],              out["company_tabs"]
+      assert_equal %w[a b], out["company_tabs"]
     end
 
     test "handles empty / nil input gracefully" do
@@ -46,9 +46,9 @@ module Subscribers
 
     test "preserves order and other keys" do
       out = AttributeNormalizer.call(
-        "email"  => "a@x.com",
+        "email" => "a@x.com",
         "tabs_enabled" => "x,y",
-        "plan"   => "growth"
+        "plan" => "growth"
       )
       assert_equal %w[email tabs_enabled plan], out.keys
       assert_equal %w[x y], out["tabs_enabled"]

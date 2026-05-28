@@ -30,7 +30,7 @@ class Account::SubscribersController < Account::ApplicationController
     like = "%#{ActiveRecord::Base.sanitize_sql_like(q.downcase)}%"
     scope = @team.subscribers
     exact_email_ids = scope.where(email: q).pluck(:id)
-    name_ids        = scope.where("LOWER(name) LIKE ?", like).pluck(:id)
+    name_ids = scope.where("LOWER(name) LIKE ?", like).pluck(:id)
     external_id_ids = scope.where("LOWER(external_id) LIKE ?", like).pluck(:id)
     results = scope
       .where(id: (exact_email_ids + name_ids + external_id_ids).uniq)

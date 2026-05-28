@@ -1,5 +1,8 @@
 ignore:
   - 'local/**/*'
+  # Agent scratch worktrees live under .claude/ and are never committed or
+  # checked out in CI; don't let their copies pollute local lint runs.
+  - '.claude/**/*'
   - '**/*':
     - Style/TrailingCommaInArguments
     - Style/TrailingCommaInArrayLiteral

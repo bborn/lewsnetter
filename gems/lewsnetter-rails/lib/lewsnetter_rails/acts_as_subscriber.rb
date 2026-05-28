@@ -39,10 +39,10 @@ module LewsnetterRails
       def acts_as_lewsnetter_subscriber(mapper:, only_if: nil)
         cattr_accessor :lewsnetter_mapper
         cattr_accessor :lewsnetter_only_if
-        self.lewsnetter_mapper  = mapper
+        self.lewsnetter_mapper = mapper
         self.lewsnetter_only_if = only_if
 
-        after_commit :enqueue_lewsnetter_sync,   on: %i[create update]
+        after_commit :enqueue_lewsnetter_sync, on: %i[create update]
         after_commit :enqueue_lewsnetter_delete, on: :destroy
       end
     end

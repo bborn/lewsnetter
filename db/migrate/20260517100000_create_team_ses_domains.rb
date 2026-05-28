@@ -15,7 +15,7 @@ class CreateTeamSesDomains < ActiveRecord::Migration[8.1]
       t.string :status, default: "unverified", null: false
       t.string :verification_status   # raw SES enum: PENDING/SUCCESS/FAILED/TEMPORARY_FAILURE/NOT_STARTED
       t.string :dkim_status           # raw SES DKIM enum: PENDING/SUCCESS/FAILED/TEMPORARY_FAILURE/NOT_STARTED
-      t.text   :dkim_tokens            # JSON-encoded array of 3 selector tokens
+      t.text :dkim_tokens            # JSON-encoded array of 3 selector tokens
       t.datetime :last_checked_at
       t.datetime :last_verification_requested_at
       t.datetime :verified_at

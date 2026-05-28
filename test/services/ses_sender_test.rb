@@ -66,7 +66,7 @@ class SesSenderTest < ActiveSupport::TestCase
     # original alias in ensure so the swap doesn't leak across tests.
     CampaignRenderer.class_eval do
       alias_method :__orig_call_for_test__, :call
-      define_method(:call) { raise RuntimeError, "boom" }
+      define_method(:call) { raise "boom" }
     end
 
     begin

@@ -28,7 +28,7 @@ module Mcp
             # external_id are plaintext, so substring LIKE works.
             like = "%#{ActiveRecord::Base.sanitize_sql_like(q)}%"
             exact_email_ids = scope.where(email: q).pluck(:id)
-            name_ids        = scope.where("name LIKE ?", like).pluck(:id)
+            name_ids = scope.where("name LIKE ?", like).pluck(:id)
             external_id_ids = scope.where("external_id LIKE ?", like).pluck(:id)
             scope = scope.where(id: (exact_email_ids + name_ids + external_id_ids).uniq)
           end

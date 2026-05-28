@@ -19,13 +19,11 @@ when "join-model"
   "join_model"
 when "oauth-provider"
   "oauth_provider"
-else
-  nil
 end
 
 if ARGV.first.match?(/^action-models/)
   if defined?(BulletTrain::ActionModels)
-    scaffolding_type = ARGV.first.gsub(/-/, "_")
+    scaffolding_type = ARGV.first.tr("-", "_")
   else
     puts ""
     puts "You must have Action Models installed if you want to use this generator.".red

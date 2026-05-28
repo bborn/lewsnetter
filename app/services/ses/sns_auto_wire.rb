@@ -120,7 +120,11 @@ module Ses
         @summary[:topics][kind] = {
           arn: arn,
           name: meta[:name],
-          action: (existing_arn == arn) ? :exists : (existing_arn.present? ? :replaced : :created),
+          action: if existing_arn == arn
+                    :exists
+                  else
+                    (existing_arn.present? ? :replaced : :created)
+                  end,
           error: nil
         }
       rescue Aws::SNS::Errors::ServiceError => e

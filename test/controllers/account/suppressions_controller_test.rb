@@ -17,9 +17,9 @@ class Account::SuppressionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "index lists suppressions ordered by suppressed_at desc" do
-    older = Suppression.create!(team: @team, email: "older@example.com", reason: "complaint",
+    Suppression.create!(team: @team, email: "older@example.com", reason: "complaint",
       suppressed_at: 2.days.ago)
-    newer = Suppression.create!(team: @team, email: "newer@example.com", reason: "hard_bounce",
+    Suppression.create!(team: @team, email: "newer@example.com", reason: "hard_bounce",
       suppressed_at: 1.hour.ago)
 
     get account_team_suppressions_url(@team)
@@ -80,7 +80,7 @@ class Account::SuppressionsControllerTest < ActionDispatch::IntegrationTest
   test "index is team-scoped — other teams' rows do not appear" do
     other_team = create(:team)
     Suppression.create!(team: other_team, email: "leak@example.com", reason: "complaint")
-    Suppression.create!(team: @team,      email: "ours@example.com",  reason: "manual")
+    Suppression.create!(team: @team, email: "ours@example.com", reason: "manual")
 
     get account_team_suppressions_url(@team)
     assert_response :success

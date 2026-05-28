@@ -38,7 +38,7 @@ shallow do
           # for backfills.
           post :bulk
           delete "by_external_id/:external_id" => "subscribers#destroy_by_external_id",
-            as: :destroy_by_external_id, constraints: {external_id: %r{[^/]+}}
+            :as => :destroy_by_external_id, :constraints => {external_id: %r{[^/]+}}
         end
 
         resources :events

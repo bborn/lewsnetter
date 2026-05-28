@@ -121,7 +121,7 @@ class CampaignRenderer
   def trackable_link?(href)
     return false if href.blank?
     return false if href.start_with?("#")
-    return false if href =~ /\A(mailto|tel|sms):/i
+    return false if /\A(mailto|tel|sms):/i.match?(href)
     return false if href.include?("/unsubscribe/")
     true
   end
@@ -270,7 +270,7 @@ class CampaignRenderer
   def rewrite_legacy_fallback_syntax(string)
     string.gsub(/\{\{\s*(\w+)\|([^}|:\s][^}|:]*?)\s*\}\}/) do
       key, fallback = $1, $2.strip
-      escaped = fallback.gsub('\\', '\\\\').gsub('"', '\\"')
+      escaped = fallback.gsub("\\", "\\\\").gsub('"', '\\"')
       %({{ #{key} | default: "#{escaped}" }})
     end
   end

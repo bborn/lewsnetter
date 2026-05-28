@@ -8,7 +8,7 @@ module Mcp
       class RenderPreviewTest < ActiveSupport::TestCase
         # A minimal valid MJML template with a {{body}} placeholder so the
         # markdown-path renderer can inject the sample body content.
-        PREVIEW_MJML = <<~MJML.freeze
+        PREVIEW_MJML = <<~MJML
           <mjml>
             <mj-body>
               <mj-section>

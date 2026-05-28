@@ -28,8 +28,6 @@ require "#{__dir__}/configure-scripts/commit_changes"
 # Now we can push to `origin` (if we have one, and you want to)
 require "#{__dir__}/configure-scripts/push_to_origin"
 
-
-
 announce_section "Configuration complete!"
 puts ""
 puts "OK, we're done, but at some point you should edit `config/locales/en/application.en.yml`!".yellow

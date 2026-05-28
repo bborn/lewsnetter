@@ -51,8 +51,6 @@ module Ses
     rescue => e
       Rails.logger.warn("[Ses::IdentityChecker] unexpected #{e.class}: #{e.message}")
       @sender_address.update!(verified: false, ses_status: "error")
-    ensure
-      @sender_address
     end
 
     private

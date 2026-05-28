@@ -292,12 +292,10 @@ namespace :migrations do
           next
         end
 
-        if dry_run
-          linked += 1
-        else
+        unless dry_run
           sub.update_columns(company_id: local_company_id, updated_at: Time.current)
-          linked += 1
         end
+        linked += 1
       rescue => e
         errors << {subscriber_id: sub.id, error: "#{e.class}: #{e.message}"}
       end
@@ -397,7 +395,7 @@ namespace :migrations do
       scope = scope.where("json_extract(custom_attributes, '$.tenant_type') = ?", only_tenant_type)
     end
     total = scope.count
-    puts "Enriching #{total} subscriber(s)#{only_tenant_type ? " with tenant_type=#{only_tenant_type}" : ""}"
+    puts "Enriching #{total} subscriber(s)#{" with tenant_type=#{only_tenant_type}" if only_tenant_type}"
     puts
 
     updated = 0

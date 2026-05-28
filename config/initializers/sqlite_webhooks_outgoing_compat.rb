@@ -37,7 +37,7 @@ if defined?(Roles::Support)
   # Models that already included Roles::Support before this initializer ran
   # (none in normal boot order, but be defensive against eager-load).
   ActiveRecord::Base.descendants.each do |klass|
-    next unless klass.included_modules.include?(Roles::Support)
+    next unless klass.include?(Roles::Support)
     klass.singleton_class.prepend(Module.new {
       define_method(:with_roles) do |roles|
         adapter = connection.adapter_name.downcase
@@ -62,17 +62,15 @@ Rails.application.config.to_prepare do
   next unless ActiveRecord::Base.connection.adapter_name.match?(/sqlite/i)
 
   endpoint_class = "Webhooks::Outgoing::Endpoint".safe_constantize
-  if endpoint_class
-    endpoint_class.singleton_class.class_eval do
-      # The gem version reads:
-      #   where("event_type_ids @> ? OR event_type_ids = '[]'::jsonb", "\"#{event_type_id}\"")
-      # We look for the literal value inside the JSON array, OR match endpoints
-      # with an empty array (the gem semantic: empty array = "listening to
-      # everything").
-      define_method(:listening_for_event_type_id) do |event_type_id|
-        sql = "EXISTS (SELECT 1 FROM json_each(event_type_ids) WHERE json_each.value = ?) OR event_type_ids = '[]'"
-        where(sql, event_type_id.to_s)
-      end
+  endpoint_class&.singleton_class&.class_eval do
+    # The gem version reads:
+    #   where("event_type_ids @> ? OR event_type_ids = '[]'::jsonb", "\"#{event_type_id}\"")
+    # We look for the literal value inside the JSON array, OR match endpoints
+    # with an empty array (the gem semantic: empty array = "listening to
+    # everything").
+    define_method(:listening_for_event_type_id) do |event_type_id|
+      sql = "EXISTS (SELECT 1 FROM json_each(event_type_ids) WHERE json_each.value = ?) OR event_type_ids = '[]'"
+      where(sql, event_type_id.to_s)
     end
   end
 end

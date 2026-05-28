@@ -19,6 +19,7 @@
 # blessed onboarding path.
 class Account::EmailSendingSetupController < Account::ApplicationController
   include Billing::RequiresSubscriptionForSes
+
   load_and_authorize_resource :team, class: "Team", parent: false, id_param: :team_id
 
   before_action :load_ses_configuration
@@ -148,10 +149,10 @@ class Account::EmailSendingSetupController < Account::ApplicationController
   # Drives the view. Reads the team's current state to decide which step
   # to show. Recomputed after every mutation so the wizard auto-advances.
   def current_step
-    return :credentials   unless @ses_configuration.persisted? && @ses_configuration.verified?
-    return :domain        if @ses_domain.nil?
+    return :credentials unless @ses_configuration.persisted? && @ses_configuration.verified?
+    return :domain if @ses_domain.nil?
     return :verify_domain unless @ses_domain.verified?
-    return :done          if @ses_configuration.last_test_sent_at.present?
+    return :done if @ses_configuration.last_test_sent_at.present?
     :test
   end
 
@@ -186,7 +187,7 @@ class Account::EmailSendingSetupController < Account::ApplicationController
       # Mirror EmailSendingController's masking logic — blank means "keep
       # what's already saved" so a user editing the form doesn't have to
       # re-paste the secret every time.
-      p.delete(:encrypted_access_key_id)     if p[:encrypted_access_key_id].blank?     && @ses_configuration.configured?
+      p.delete(:encrypted_access_key_id) if p[:encrypted_access_key_id].blank? && @ses_configuration.configured?
       p.delete(:encrypted_secret_access_key) if p[:encrypted_secret_access_key].blank? && @ses_configuration.configured?
       p[:status] = "verifying"
     end

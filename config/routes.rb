@@ -3,7 +3,7 @@ Rails.application.routes.draw do
   # Returns 200 if the app can boot; otherwise 500. BulletTrain's stock
   # routes.rb doesn't include this — adding it here keeps the deploy
   # healthcheck wired correctly.
-  get "up" => "rails/health#show", as: :rails_health_check
+  get "up" => "rails/health#show", :as => :rails_health_check
 
   # Public signup lockdown. Lewsnetter is in private alpha; only invited
   # users (via the BulletTrain invitation flow at /account/teams/:id/
@@ -25,9 +25,9 @@ Rails.application.routes.draw do
 
   # Public legal pages. Mounted at the top level so they're reachable
   # without auth + linkable from the landing-page footer.
-  get "/privacy",        to: "legal#privacy",        as: :privacy
-  get "/terms",          to: "legal#terms",          as: :terms
-  get "/dpa",            to: "legal#dpa",            as: :dpa
+  get "/privacy", to: "legal#privacy", as: :privacy
+  get "/terms", to: "legal#terms", as: :terms
+  get "/dpa", to: "legal#dpa", as: :dpa
   get "/acceptable-use", to: "legal#acceptable_use", as: :acceptable_use
 
   # Public SNS webhook for SES bounce + complaint notifications. Mounted
@@ -267,19 +267,19 @@ Rails.application.routes.draw do
         # API token + paste-ready initializer snippet). The raw Platform UI
         # is still available at /account/teams/:slug/platform/applications
         # for power users; this is the curated path.
-        get  "developers",                 to: "developers#show",        as: :developers
+        get "developers", to: "developers#show", as: :developers
         post "developers/create_sync_app", to: "developers#create_sync_app", as: :create_sync_app_developers
-        delete "developers/tokens/:id",    to: "developers#revoke_token", as: :revoke_token_developers
+        delete "developers/tokens/:id", to: "developers#revoke_token", as: :revoke_token_developers
 
         # SES setup wizard — the guided 4-step path for getting a brand-new
         # team from "no credentials" to "first verified send". See
         # Account::EmailSendingSetupController. Reachable any time; auto-
         # advances based on current state so users can drop out + resume.
-        get   "email_sending/setup",                to: "email_sending_setup#show",            as: :setup_email_sending
-        patch "email_sending/setup",                to: "email_sending_setup#update_credentials"
-        post  "email_sending/setup/domain",         to: "email_sending_setup#submit_domain",   as: :setup_domain_email_sending
-        get   "email_sending/setup/domain_status",  to: "email_sending_setup#domain_status",   as: :setup_domain_status_email_sending
-        post  "email_sending/setup/test",           to: "email_sending_setup#send_test",       as: :setup_test_email_sending
+        get "email_sending/setup", to: "email_sending_setup#show", as: :setup_email_sending
+        patch "email_sending/setup", to: "email_sending_setup#update_credentials"
+        post "email_sending/setup/domain", to: "email_sending_setup#submit_domain", as: :setup_domain_email_sending
+        get "email_sending/setup/domain_status", to: "email_sending_setup#domain_status", as: :setup_domain_status_email_sending
+        post "email_sending/setup/test", to: "email_sending_setup#send_test", as: :setup_test_email_sending
       end
     end
   end

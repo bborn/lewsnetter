@@ -36,16 +36,16 @@ module Teams
     private
 
     SAMPLE_SUBSCRIBERS = [
-      {email: "alice.demo@example.com",   name: "Alice Demo",   external_id: "demo-1",
-       attrs: {"plan" => "growth",     "tenant_type" => "brand",      "tabs_enabled" => "billing,reports,influencer_hub"}},
-      {email: "bob.demo@example.com",     name: "Bob Demo",     external_id: "demo-2",
-       attrs: {"plan" => "starter",    "tenant_type" => "brand",      "tabs_enabled" => "billing,reports"}},
-      {email: "carol.demo@example.com",   name: "Carol Demo",   external_id: "demo-3",
-       attrs: {"plan" => "enterprise", "tenant_type" => "brand",      "tabs_enabled" => "billing,reports,influencer_hub,events"}},
-      {email: "dave.demo@example.com",    name: "Dave Demo",    external_id: "demo-4",
-       attrs: {"plan" => "free",       "tenant_type" => "events"}},
-      {email: "eve.demo@example.com",     name: "Eve Demo",     external_id: "demo-5",
-       attrs: {"plan" => "growth",     "tenant_type" => "talent_manager"}}
+      {email: "alice.demo@example.com", name: "Alice Demo", external_id: "demo-1",
+       attrs: {"plan" => "growth", "tenant_type" => "brand", "tabs_enabled" => "billing,reports,influencer_hub"}},
+      {email: "bob.demo@example.com", name: "Bob Demo", external_id: "demo-2",
+       attrs: {"plan" => "starter", "tenant_type" => "brand", "tabs_enabled" => "billing,reports"}},
+      {email: "carol.demo@example.com", name: "Carol Demo", external_id: "demo-3",
+       attrs: {"plan" => "enterprise", "tenant_type" => "brand", "tabs_enabled" => "billing,reports,influencer_hub,events"}},
+      {email: "dave.demo@example.com", name: "Dave Demo", external_id: "demo-4",
+       attrs: {"plan" => "free", "tenant_type" => "events"}},
+      {email: "eve.demo@example.com", name: "Eve Demo", external_id: "demo-5",
+       attrs: {"plan" => "growth", "tenant_type" => "talent_manager"}}
     ].freeze
 
     def seed_subscribers

@@ -32,9 +32,7 @@ module Mcp
           @context = context
         end
 
-        def context
-          @context
-        end
+        attr_reader :context
 
         def get_binding
           binding

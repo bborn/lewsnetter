@@ -11,7 +11,7 @@ module LewsnetterRails
     queue_as { LewsnetterRails.configuration.job_queue }
 
     retry_on LewsnetterRails::TransportError, wait: :polynomially_longer, attempts: 5
-    retry_on Faraday::Error,                  wait: :polynomially_longer, attempts: 5
+    retry_on Faraday::Error, wait: :polynomially_longer, attempts: 5
 
     # Only registered if the host app actually has ActiveRecord loaded
     # (the gem itself doesn't depend on AR — works fine in non-AR Rack apps).

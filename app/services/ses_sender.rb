@@ -58,7 +58,6 @@ class SesSender
           next
         end
 
-
         # Phase 2: create the Delivery row BEFORE rendering so the renderer
         # can embed the row's tracking_token in the open pixel + click URLs.
         # The row starts with status="sent", ses_message_id=nil, sent_at=nil;
