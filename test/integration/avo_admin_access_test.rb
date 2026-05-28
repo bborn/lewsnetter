@@ -67,6 +67,33 @@ class AvoAdminAccessTest < ActionDispatch::IntegrationTest
       "Admin should reach the Users resource index, got #{response.status}"
   end
 
+  # Avo's dynamic router draws `resources <route_key>` for every registered
+  # resource (see config/routes/dynamic_routes.rb in the avo gem), and each of
+  # those routes points at an `Avo::<Plural>Controller` that we have to supply
+  # ourselves in app/controllers/avo/. If a resource is added without its
+  # matching controller, the route 500s at request time with
+  # `uninitialized constant Avo::<Plural>Controller` — which is exactly how
+  # /admin/avo/resources/suppressions and .../deliveries blew up in production.
+  # This guards every resource index at once so a missing controller is caught
+  # in CI instead of Sentry.
+  test "every Avo resource index renders for an admin" do
+    user = create(:onboarded_user)
+    ENV["DEVELOPER_EMAILS"] = user.email
+    assert user.reload.developer?, "user should match the DEVELOPER_EMAILS allowlist"
+
+    sign_in user
+
+    resources = Avo::Resources::ResourceManager.fetch_resources
+    assert resources.any?, "expected Avo to have registered resources"
+
+    resources.each do |resource|
+      get "/admin/avo/resources/#{resource.route_key}"
+      assert_response :success,
+        "Admin should reach the #{resource.route_key} resource index " \
+        "(needs Avo::#{resource.route_key.camelize}Controller), got #{response.status}"
+    end
+  end
+
   test "an unauthenticated visitor cannot reach /admin/avo" do
     ENV["DEVELOPER_EMAILS"] = "anyone@example.com"
     get "/admin/avo"
