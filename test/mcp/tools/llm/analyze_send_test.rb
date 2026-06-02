@@ -16,10 +16,18 @@ module Mcp
             sent_at: 1.day.ago,
             stats: {"sent" => 500, "opens" => 150, "clicks" => 30, "bounces" => 5, "complaints" => 1}
           )
+          # Tool guards on Llm::Configuration#usable? before checking stub
+          # mode, so we need ANTHROPIC_API_KEY set for the stub path to run.
+          # The real API call is short-circuited by force_stub.
+          @original_anthropic_key = ENV["ANTHROPIC_API_KEY"]
+          ENV["ANTHROPIC_API_KEY"] ||= "test-stub-key"
           AI::Base.force_stub = true
         end
 
-        teardown { AI::Base.force_stub = false }
+        teardown do
+          AI::Base.force_stub = false
+          ENV["ANTHROPIC_API_KEY"] = @original_anthropic_key
+        end
 
         test "returns markdown analysis in stub mode" do
           result = AnalyzeSend.new.invoke(
