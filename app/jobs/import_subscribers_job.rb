@@ -25,9 +25,17 @@ class ImportSubscribersJob < ApplicationJob
   # behavior the importer was written against (e.g. a numeric external_id or
   # custom attribute isn't silently turned into an Integer). chunk_size lets
   # us stream large files in batches rather than buffering the whole file.
+  #
+  # `acceleration: false` selects the pure-Ruby parser. The C extension is
+  # built with `-march=native` in its extconf.rb; when bundler-cache reuses a
+  # native build across GitHub Actions runners with different CPUs, the cached
+  # `.so` SIGILLs on first call. The Ruby path is still faster than the
+  # stdlib `CSV.foreach` the importer used to use, and import throughput is
+  # bounded by the DB upsert per row anyway — not the parser.
   CSV_OPTIONS = {
     chunk_size: CHUNK_SIZE,
-    convert_values_to_numeric: false
+    convert_values_to_numeric: false,
+    acceleration: false
   }.freeze
 
   def perform(import_id)
