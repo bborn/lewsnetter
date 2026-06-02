@@ -26,7 +26,7 @@ Sentry.init do |config|
   # (the image tag = commit SHA on our setup); fall back to a generic
   # GIT_COMMIT_SHA if a deployer wires that instead.
   config.release = ENV["KAMAL_VERSION"].presence ||
-                   ENV["GIT_COMMIT_SHA"].presence
+    ENV["GIT_COMMIT_SHA"].presence
 
   # Performance traces — 10% sample in production, off in dev/test.
   config.traces_sample_rate = Rails.env.production? ? 0.1 : 0.0

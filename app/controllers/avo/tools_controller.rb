@@ -22,7 +22,7 @@ class Avo::ToolsController < Avo::ApplicationController
     # calendar weeks/months — easier to reason about for a tiny org.
     now = Time.current
     @signups_24h = User.where(created_at: (now - 24.hours)..).count
-    @signups_7d  = User.where(created_at: (now - 7.days)..).count
+    @signups_7d = User.where(created_at: (now - 7.days)..).count
     @signups_30d = User.where(created_at: (now - 30.days)..).count
 
     # Per-entity counters. Spans all teams — this is the operator view of

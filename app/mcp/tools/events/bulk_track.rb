@@ -38,31 +38,29 @@ module Mcp
 
           ActiveRecord::Base.transaction do
             records.each_with_index do |row, i|
-              begin
-                sub = context.team.subscribers.find_by(external_id: row["external_subscriber_id"])
-                if sub.nil?
-                  errors << {index: i, error: "subscriber not found: #{row["external_subscriber_id"]}"}
-                  next
-                end
-
-                occurred_at = if row["occurred_at"].present?
-                  Time.parse(row["occurred_at"])
-                else
-                  Time.current
-                end
-
-                sub.events.create!(
-                  team: context.team,
-                  name: row["name"],
-                  occurred_at: occurred_at,
-                  properties: row["properties"] || {}
-                )
-                created += 1
-              rescue ActiveRecord::RecordInvalid => e
-                errors << {index: i, error: e.message}
-              rescue => e
-                errors << {index: i, error: "#{e.class}: #{e.message}"}
+              sub = context.team.subscribers.find_by(external_id: row["external_subscriber_id"])
+              if sub.nil?
+                errors << {index: i, error: "subscriber not found: #{row["external_subscriber_id"]}"}
+                next
               end
+
+              occurred_at = if row["occurred_at"].present?
+                Time.parse(row["occurred_at"])
+              else
+                Time.current
+              end
+
+              sub.events.create!(
+                team: context.team,
+                name: row["name"],
+                occurred_at: occurred_at,
+                properties: row["properties"] || {}
+              )
+              created += 1
+            rescue ActiveRecord::RecordInvalid => e
+              errors << {index: i, error: e.message}
+            rescue => e
+              errors << {index: i, error: "#{e.class}: #{e.message}"}
             end
           end
 

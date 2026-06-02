@@ -45,7 +45,7 @@ module LewsnetterRails
         f.request :retry, max: config.retries, interval: 0.5, backoff_factor: 2,
           retry_statuses: [429, 500, 502, 503, 504],
           methods: %i[get post put delete]
-        f.options.timeout      = config.timeout
+        f.options.timeout = config.timeout
         f.options.open_timeout = config.open_timeout
         f.adapter Faraday.default_adapter
       end

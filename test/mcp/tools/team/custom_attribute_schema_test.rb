@@ -27,7 +27,7 @@ module Mcp
         end
 
         test "limit argument is forwarded to service" do
-          3.times.with_index { |i| @team.subscribers.create!(email: "s#{i}@ex.com", custom_attributes: {"n" => i}) }
+          3.times { |i| @team.subscribers.create!(email: "s#{i}@ex.com", custom_attributes: {"n" => i}) }
           result = CustomAttributeSchema.new.invoke(arguments: {"limit" => 2}, context: @ctx)
           assert_equal 2, result[:sample_size]
         end

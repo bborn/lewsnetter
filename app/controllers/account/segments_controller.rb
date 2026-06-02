@@ -66,7 +66,11 @@ class Account::SegmentsController < Account::ApplicationController
   # so the user can verify their filter is doing what they expect).
   # Doesn't persist anything.
   def preview
-    tree = JSON.parse(params[:rules].to_s) rescue nil
+    tree = begin
+      JSON.parse(params[:rules].to_s)
+    rescue
+      nil
+    end
     sql = nil
     if tree.is_a?(Hash)
       begin
@@ -115,7 +119,7 @@ class Account::SegmentsController < Account::ApplicationController
     walk = ->(node) {
       case node["type"]
       when "group" then (node["rules"] || []).each(&walk)
-      when "rule"  then fields << node["field"] if node["field"].present?
+      when "rule" then fields << node["field"] if node["field"].present?
       end
     }
     walk.call(tree)
@@ -126,10 +130,10 @@ class Account::SegmentsController < Account::ApplicationController
 
   def humanize_field(key)
     case key
-    when /\Acustom_attributes\.(.+)\z/    then "#{$1}"
-    when /\Acompany_attributes\.(.+)\z/   then "company.#{$1}"
-    when /\Asubscribers\.(.+)\z/          then $1
-    when /\Acompanies\.(.+)\z/            then "company.#{$1}"
+    when /\Acustom_attributes\.(.+)\z/ then $1.to_s
+    when /\Acompany_attributes\.(.+)\z/ then "company.#{$1}"
+    when /\Asubscribers\.(.+)\z/ then $1
+    when /\Acompanies\.(.+)\z/ then "company.#{$1}"
     else key
     end
   end

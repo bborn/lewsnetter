@@ -33,7 +33,7 @@ class LegalController < Public::ApplicationController
     # need a real, working mailbox for GDPR / DMCA / abuse reports.
     # Defaults are the hosted-Lewsnetter values; self-hosters override.
     @contact_email = ENV.fetch("LEWSNETTER_LEGAL_EMAIL", "legal@lewsnetter.dev")
-    @abuse_email   = ENV.fetch("LEWSNETTER_ABUSE_EMAIL", "abuse@lewsnetter.dev")
-    @company_name  = ENV.fetch("LEWSNETTER_COMPANY", "Lewsnetter")
+    @abuse_email = ENV.fetch("LEWSNETTER_ABUSE_EMAIL", "abuse@lewsnetter.dev")
+    @company_name = ENV.fetch("LEWSNETTER_COMPANY", "Lewsnetter")
   end
 end

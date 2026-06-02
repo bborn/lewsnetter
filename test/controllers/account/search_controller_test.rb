@@ -80,7 +80,7 @@ class Account::SearchControllerTest < ActionDispatch::IntegrationTest
 
   test "search by segment name OR natural-language source" do
     by_name = @team.segments.create!(name: "Power users", natural_language_source: "x")
-    by_nls  = @team.segments.create!(name: "Other", natural_language_source: "everyone with churn signal")
+    by_nls = @team.segments.create!(name: "Other", natural_language_source: "everyone with churn signal")
 
     get account_team_search_url(@team, q: "churn", format: :json)
     assert_response :success

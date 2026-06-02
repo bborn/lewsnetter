@@ -19,7 +19,7 @@ class Team::SesConfiguration < ApplicationRecord
   validates :region, presence: true
   validates :status, inclusion: {in: STATUSES}
   validates :unsubscribe_host,
-    format: {with: /\A[a-z0-9.\-]+\z/i, allow_blank: true},
+    format: {with: /\A[a-z0-9.-]+\z/i, allow_blank: true},
     length: {maximum: 253}
   # CAN-SPAM physical postal address. Optional in the form (we don't want
   # to block setup) but campaigns inject this into the footer before send.

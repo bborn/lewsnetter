@@ -23,7 +23,7 @@ if ngrok_url
     puts "ngrok url has not changed".green
   else
     updated_config_data = config_data.merge("BASE_URL" => ngrok_url)
-    File.open("config/application.yml", "w" ) do |file|
+    File.open("config/application.yml", "w") do |file|
       if updated_config_data
         file.write(Psych.dump(updated_config_data).sub("---\n", ""))
       end

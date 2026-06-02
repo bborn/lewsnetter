@@ -64,7 +64,11 @@ module Mcp
 
       test "serialize_email_template returns id, name, and mjml_body field" do
         skip unless defined?(EmailTemplate)
-        t = @team.email_templates.create!(name: "Brand") rescue skip
+        t = begin
+          @team.email_templates.create!(name: "Brand")
+        rescue
+          skip
+        end
         h = serialize_email_template(t)
         assert_equal "Brand", h[:name]
         assert_equal t.id, h[:id]
@@ -74,7 +78,11 @@ module Mcp
 
       test "serialize_sender_address returns id, email, ses_status, verified" do
         skip unless defined?(SenderAddress)
-        s = @team.sender_addresses.create!(email: "team@example.com") rescue skip
+        s = begin
+          @team.sender_addresses.create!(email: "team@example.com")
+        rescue
+          skip
+        end
         h = serialize_sender_address(s)
         assert_equal "team@example.com", h[:email]
         assert_equal s.id, h[:id]

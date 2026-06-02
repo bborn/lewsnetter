@@ -365,7 +365,7 @@ class CampaignRendererTest < ActiveSupport::TestCase
     refute_includes result.html, %(href="https://example.com/landing")
     refute_includes result.html, %(href="https://other.example.org/page?utm=1")
     assert result.html.scan(%r{/track/c/[^"\s]+}).size >= 2,
-      "expected at least two /track/c/ URLs in #{result.html.scan(%r{href=\"[^\"]+\"}).inspect}"
+      "expected at least two /track/c/ URLs in #{result.html.scan(%r{href="[^"]+"}).inspect}"
   end
 
   test "preserves the unsubscribe link without rewriting it" do

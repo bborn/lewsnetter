@@ -60,7 +60,7 @@ class UnsubscribeController < ApplicationController
     # etc., and mass-unsubscribe every team's subscribers. The signed token is
     # now the only acceptable credential. See docs/security/2026-05-19-data-isolation-audit.md (C1).
     GlobalID::Locator.locate_signed(token, for: "unsubscribe")
-  rescue StandardError
+  rescue
     nil
   end
 end

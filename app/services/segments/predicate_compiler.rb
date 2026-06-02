@@ -46,34 +46,34 @@ module Segments
     # compares ciphertext-to-ciphertext) — for now external_id covers the
     # "this specific person" lookup.
     FIELDS = {
-      "subscribers.external_id"     => {sql: "subscribers.external_id",     type: :string,   label: "External ID"},
-      "subscribers.subscribed"      => {sql: "subscribers.subscribed",      type: :boolean,  label: "Subscribed"},
+      "subscribers.external_id" => {sql: "subscribers.external_id", type: :string, label: "External ID"},
+      "subscribers.subscribed" => {sql: "subscribers.subscribed", type: :boolean, label: "Subscribed"},
       "subscribers.unsubscribed_at" => {sql: "subscribers.unsubscribed_at", type: :datetime, label: "Unsubscribed at"},
-      "subscribers.bounced_at"      => {sql: "subscribers.bounced_at",      type: :datetime, label: "Bounced at"},
-      "subscribers.complained_at"   => {sql: "subscribers.complained_at",   type: :datetime, label: "Complained at"},
-      "subscribers.created_at"      => {sql: "subscribers.created_at",      type: :datetime, label: "Created at"},
-      "subscribers.updated_at"      => {sql: "subscribers.updated_at",      type: :datetime, label: "Updated at"},
+      "subscribers.bounced_at" => {sql: "subscribers.bounced_at", type: :datetime, label: "Bounced at"},
+      "subscribers.complained_at" => {sql: "subscribers.complained_at", type: :datetime, label: "Complained at"},
+      "subscribers.created_at" => {sql: "subscribers.created_at", type: :datetime, label: "Created at"},
+      "subscribers.updated_at" => {sql: "subscribers.updated_at", type: :datetime, label: "Updated at"},
       "subscribers.last_contacted_at" => {sql: "subscribers.last_contacted_at", type: :datetime, label: "Last contacted"},
-      "subscribers.times_contacted"   => {sql: "COALESCE(subscribers.times_contacted, 0)", type: :number, label: "Times contacted"},
-      "companies.name"              => {sql: "companies.name",              type: :string,   label: "Company name"},
-      "companies.external_id"       => {sql: "companies.external_id",       type: :string,   label: "Company external ID"}
+      "subscribers.times_contacted" => {sql: "COALESCE(subscribers.times_contacted, 0)", type: :number, label: "Times contacted"},
+      "companies.name" => {sql: "companies.name", type: :string, label: "Company name"},
+      "companies.external_id" => {sql: "companies.external_id", type: :string, label: "Company external ID"}
     }.freeze
 
     # Per-type operator catalog. Each operator declares the SQL form and
     # whether it expects a value (some, like is_set, do not).
     OPERATORS = {
-      string:   %w[equals not_equals contains not_contains starts_with ends_with is_set is_not_set in],
-      boolean:  %w[equals],
+      string: %w[equals not_equals contains not_contains starts_with ends_with is_set is_not_set in],
+      boolean: %w[equals],
       datetime: %w[before after within_last_days more_than_days_ago is_set is_not_set],
-      number:   %w[equals not_equals less_than greater_than less_than_or_equal greater_than_or_equal between is_set is_not_set],
-      array:    %w[contains not_contains is_set is_not_set],
+      number: %w[equals not_equals less_than greater_than less_than_or_equal greater_than_or_equal between is_set is_not_set],
+      array: %w[contains not_contains is_set is_not_set],
       # csv_list is for comma-separated string values like
       # "billing,brand_account,influencer_hub". Anchored matching prevents
       # "brand" from accidentally matching "brand_account".
       csv_list: %w[contains not_contains is_set is_not_set]
     }.freeze
 
-    SAFE_KEY = /\A[A-Za-z0-9_\-]+\z/
+    SAFE_KEY = /\A[A-Za-z0-9_-]+\z/
 
     def initialize(tree, team:)
       @tree = tree.is_a?(String) ? JSON.parse(tree) : tree
@@ -92,7 +92,7 @@ module Segments
       return nil if node.nil?
       case node["type"]
       when "group" then compile_group(node)
-      when "rule"  then compile_rule(node)
+      when "rule" then compile_rule(node)
       else raise InvalidTree, "unknown node type: #{node["type"].inspect}"
       end
     end
@@ -124,11 +124,11 @@ module Segments
     def resolve_field(key, hint = nil)
       return [FIELDS[key][:sql], FIELDS[key][:type]] if FIELDS.key?(key)
 
-      if (m = key.to_s.match(/\Acustom_attributes\.([\w\-]+)\z/))
+      if (m = key.to_s.match(/\Acustom_attributes\.([\w-]+)\z/))
         attr_key = m[1]
         raise InvalidTree, "unsafe custom attribute key" unless attr_key.match?(SAFE_KEY)
         [%(json_extract(subscribers.custom_attributes, '$.#{attr_key}')), coerce_type(hint)]
-      elsif (m = key.to_s.match(/\Acompany_attributes\.([\w\-]+)\z/))
+      elsif (m = key.to_s.match(/\Acompany_attributes\.([\w-]+)\z/))
         attr_key = m[1]
         raise InvalidTree, "unsafe company attribute key" unless attr_key.match?(SAFE_KEY)
         [%(json_extract(companies.custom_attributes, '$.#{attr_key}')), coerce_type(hint)]

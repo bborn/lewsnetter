@@ -109,10 +109,10 @@ module Segments
     # back to :string.
     def infer_type(values)
       non_null = values.reject(&:nil?)
-      return :string  if non_null.empty?
-      return :array   if non_null.any? { |v| v.is_a?(Array) }
+      return :string if non_null.empty?
+      return :array if non_null.any? { |v| v.is_a?(Array) }
       return :boolean if non_null.all? { |v| v == true || v == false }
-      return :number  if non_null.all? { |v| v.is_a?(Numeric) }
+      return :number if non_null.all? { |v| v.is_a?(Numeric) }
       return :csv_list if non_null.all? { |v| csv_shaped?(v) }
       :string
     end

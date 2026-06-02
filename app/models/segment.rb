@@ -7,7 +7,7 @@ class Segment < ApplicationRecord
   # how we answer "what predicate ran when we sent that?".
   # See ApplicationController#user_for_paper_trail for whodunnit.
   has_paper_trail on: [:create, :update, :destroy],
-                  ignore: [:updated_at]
+    ignore: [:updated_at]
 
   # Forbidden tokens kept in sync with AI::SegmentTranslator::FORBIDDEN_TOKENS —
   # defense in depth at the job/scope-application layer. If the AI service
@@ -54,10 +54,10 @@ class Segment < ApplicationRecord
   def predicate=(value)
     self.definition ||= {}
     new_pred = value.to_s.strip
-    if new_pred.blank?
-      self.definition = definition.is_a?(Hash) ? definition.except("predicate") : {}
+    self.definition = if new_pred.blank?
+      definition.is_a?(Hash) ? definition.except("predicate") : {}
     else
-      self.definition = (definition.is_a?(Hash) ? definition : {}).merge("predicate" => new_pred)
+      (definition.is_a?(Hash) ? definition : {}).merge("predicate" => new_pred)
     end
   end
 
@@ -70,7 +70,11 @@ class Segment < ApplicationRecord
 
   def rules=(value)
     self.definition ||= {}
-    tree = value.is_a?(String) ? (JSON.parse(value) rescue nil) : value
+    tree = value.is_a?(String) ? begin
+      JSON.parse(value)
+    rescue
+      nil
+    end : value
     self.definition = definition.merge("rules" => tree).compact
     @rules_changed = true
   end

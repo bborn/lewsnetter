@@ -8,10 +8,18 @@ module Mcp
           @user = create(:onboarded_user)
           @team = @user.current_team
           @ctx = Mcp::Tool::Context.new(user: @user, team: @team)
+          # Tool guards on Llm::Configuration#usable? before checking stub
+          # mode, so we need ANTHROPIC_API_KEY set for the stub path to run.
+          # The real API call is short-circuited by force_stub.
+          @original_anthropic_key = ENV["ANTHROPIC_API_KEY"]
+          ENV["ANTHROPIC_API_KEY"] ||= "test-stub-key"
           AI::Base.force_stub = true
         end
 
-        teardown { AI::Base.force_stub = false }
+        teardown do
+          AI::Base.force_stub = false
+          ENV["ANTHROPIC_API_KEY"] = @original_anthropic_key
+        end
 
         test "returns a draft when called with a brief" do
           result = DraftCampaign.new.invoke(

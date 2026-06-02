@@ -59,7 +59,11 @@ class ImportSubscribersJobTest < ActiveJob::TestCase
   end
 
   test "marks import as failed and re-raises if csv attachment is missing" do
-    import = Subscribers::Import.create!(team: @team, csv: nil) rescue nil
+    begin
+      Subscribers::Import.create!(team: @team, csv: nil)
+    rescue
+      nil
+    end
     # Validation prevents missing csv on create; simulate a record whose blob
     # vanished out from under it.
     import = Subscribers::Import.new(team: @team)

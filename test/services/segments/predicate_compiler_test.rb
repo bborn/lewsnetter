@@ -76,8 +76,8 @@ module Segments
 
     test "string starts_with / ends_with / contains / not_contains" do
       assert_includes rule("subscribers.external_id", "starts_with", "alice"), "LIKE 'alice%'"
-      assert_includes rule("subscribers.external_id", "ends_with", ".com"),   "LIKE '%.com'"
-      assert_includes rule("subscribers.external_id", "contains", "@"),       "LIKE '%@%'"
+      assert_includes rule("subscribers.external_id", "ends_with", ".com"), "LIKE '%.com'"
+      assert_includes rule("subscribers.external_id", "contains", "@"), "LIKE '%@%'"
       # NULL-permissive negative: row where email is NULL passes "doesn't
       # contain @" too. The user's bug on prod: tabs_enabled not_contains
       # 'brand' should include rows where tabs_enabled is missing entirely.
@@ -95,7 +95,7 @@ module Segments
     end
 
     test "string is_set / is_not_set" do
-      assert_includes rule("subscribers.external_id", "is_set", nil),     "subscribers.external_id IS NOT NULL AND subscribers.external_id != ''"
+      assert_includes rule("subscribers.external_id", "is_set", nil), "subscribers.external_id IS NOT NULL AND subscribers.external_id != ''"
       assert_includes rule("subscribers.external_id", "is_not_set", nil), "subscribers.external_id IS NULL OR subscribers.external_id = ''"
     end
 
@@ -124,8 +124,8 @@ module Segments
     # ── number type (Intercom-style numeric comparisons) ───────────────────
 
     test "number equals / not_equals / less_than / greater_than" do
-      assert_includes typed_rule("custom_attributes.score", :number, "equals", 42),       "CAST(json_extract(subscribers.custom_attributes, '$.score') AS REAL) = 42.0"
-      assert_includes typed_rule("custom_attributes.score", :number, "less_than", 10),    "< 10.0"
+      assert_includes typed_rule("custom_attributes.score", :number, "equals", 42), "CAST(json_extract(subscribers.custom_attributes, '$.score') AS REAL) = 42.0"
+      assert_includes typed_rule("custom_attributes.score", :number, "less_than", 10), "< 10.0"
       assert_includes typed_rule("custom_attributes.score", :number, "greater_than", 99), "> 99.0"
       # not_equals is NULL-permissive (consistent with strings).
       sql = typed_rule("custom_attributes.score", :number, "not_equals", 0)
@@ -158,7 +158,7 @@ module Segments
     end
 
     test "array is_set treats empty array as 'not set'" do
-      assert_includes typed_rule("custom_attributes.tabs_enabled", :array, "is_set",     nil), "json_array_length"
+      assert_includes typed_rule("custom_attributes.tabs_enabled", :array, "is_set", nil), "json_array_length"
       assert_includes typed_rule("custom_attributes.tabs_enabled", :array, "is_not_set", nil), "json_array_length"
     end
 

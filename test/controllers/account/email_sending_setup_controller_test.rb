@@ -177,7 +177,6 @@ class Account::EmailSendingSetupControllerTest < ActionDispatch::IntegrationTest
   private
 
   def stub_domain_identity_creator_ok!
-    domain_holder = nil
     result_proc = ->(ses_domain) {
       ses_domain.update!(status: "pending", last_verification_requested_at: Time.current)
       ses_domain.dkim_token_list = %w[a b c]

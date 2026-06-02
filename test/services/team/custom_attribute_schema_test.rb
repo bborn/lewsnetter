@@ -71,7 +71,7 @@ class Team
     end
 
     test "sample_size reflects number of rows sampled" do
-      3.times.with_index { |i| @team.subscribers.create!(email: "s#{i}@ex.com", custom_attributes: {"n" => i}) }
+      3.times { |i| @team.subscribers.create!(email: "s#{i}@ex.com", custom_attributes: {"n" => i}) }
       result = Team::CustomAttributeSchema.new(team: @team, limit: 2).call
       assert_equal 2, result[:sample_size]
     end

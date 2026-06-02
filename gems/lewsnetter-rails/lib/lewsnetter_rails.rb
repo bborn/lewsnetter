@@ -13,19 +13,19 @@ module LewsnetterRails
       :logger, :timeout, :open_timeout, :retries
 
     def initialize
-      @base_url     = ENV["LEWSNETTER_URL"]
-      @api_token    = ENV["LEWSNETTER_API_TOKEN"]
-      @team_slug    = ENV["LEWSNETTER_TEAM_SLUG"]
-      @enabled      = ENV.fetch("LEWSNETTER_ENABLED", "true") != "false"
-      @job_queue    = :default
-      @timeout      = 10
+      @base_url = ENV["LEWSNETTER_URL"]
+      @api_token = ENV["LEWSNETTER_API_TOKEN"]
+      @team_slug = ENV["LEWSNETTER_TEAM_SLUG"]
+      @enabled = ENV.fetch("LEWSNETTER_ENABLED", "true") != "false"
+      @job_queue = :default
+      @timeout = 10
       @open_timeout = 5
-      @retries      = 3
+      @retries = 3
     end
 
     def validate!
       missing = []
-      missing << "base_url"  if base_url.blank?
+      missing << "base_url" if base_url.blank?
       missing << "api_token" if api_token.blank?
       missing << "team_slug" if team_slug.blank?
       raise ConfigurationError, "LewsnetterRails missing: #{missing.join(", ")}" if missing.any?

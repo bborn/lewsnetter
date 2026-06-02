@@ -125,6 +125,14 @@ if defined?(Api::V1::ApplicationController)
           custom_attributes: {}
         )
 
+        # The OpenAPI doc generator (BulletTrain::Api::StrongParametersReporter)
+        # invokes this method with a synthetic `params` that only implements
+        # `require`/`permit`. Anything past the permit call (subscript access,
+        # process_params, etc.) blows up in that mode — and the reporter only
+        # needs the filter list anyway. Bail early when we're not in a real
+        # request.
+        return strong_params unless params.respond_to?(:[])
+
         # The API surfaces `attributes:` to source apps (Intercom-style); we
         # store it as `custom_attributes` because ActiveRecord reserves
         # `attributes` as an instance method name.

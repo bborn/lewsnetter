@@ -6,7 +6,7 @@ class EmailTemplate < ApplicationRecord
   # campaigns; the history lets the team trace which edit changed the look
   # of a send. See ApplicationController#user_for_paper_trail for whodunnit.
   has_paper_trail on: [:create, :update, :destroy],
-                  ignore: [:updated_at]
+    ignore: [:updated_at]
 
   # Max attached asset size, kept in sync with Campaign#assets validation.
   # Recipients open emails days/weeks after we send them, so we host the

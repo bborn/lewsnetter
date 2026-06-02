@@ -7,7 +7,7 @@ class Campaign < ApplicationRecord
   # edited it? when?" `updated_at` is filtered so save noise doesn't dilute
   # the history. See ApplicationController#user_for_paper_trail for whodunnit.
   has_paper_trail on: [:create, :update, :destroy],
-                  ignore: [:updated_at]
+    ignore: [:updated_at]
 
   STATUSES = %w[draft scheduled sending sent failed].freeze
 
@@ -199,16 +199,15 @@ class Campaign < ApplicationRecord
     anchor = sent_at || rel.minimum(:opened_at) || Time.current
     use_hourly = (Time.current - anchor) <= 3.days
 
+    parse = ->(s) { Time.zone.parse(s) }
     if use_hourly
       bucket_size = 1.hour
       bucket_count = (7 * 24)
       sql_expr = "strftime('%Y-%m-%d %H:00:00', opened_at)"
-      parse = ->(s) { Time.zone.parse(s) }
     else
       bucket_size = 1.day
       bucket_count = 7
       sql_expr = "strftime('%Y-%m-%d 00:00:00', opened_at)"
-      parse = ->(s) { Time.zone.parse(s) }
     end
 
     raw = rel.group(Arel.sql(sql_expr)).count

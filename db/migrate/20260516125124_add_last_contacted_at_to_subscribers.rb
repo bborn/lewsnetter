@@ -16,6 +16,6 @@ class AddLastContactedAtToSubscribers < ActiveRecord::Migration[8.1]
   def change
     add_column :subscribers, :last_contacted_at, :datetime
     add_column :subscribers, :times_contacted, :integer, default: 0, null: false
-    add_index  :subscribers, :last_contacted_at
+    add_index :subscribers, :last_contacted_at
   end
 end

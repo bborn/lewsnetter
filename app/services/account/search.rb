@@ -70,25 +70,25 @@ module Account
     def all_actions
       [
         # Create
-        action_row("Create new campaign",          "Create",   h.new_account_team_campaign_path(team)),
-        action_row("Add subscriber",               "Create",   h.new_account_team_subscriber_path(team)),
-        action_row("Import subscribers from CSV",  "Create",   h.new_account_team_subscribers_import_path(team)),
-        action_row("Create new segment",           "Create",   h.new_account_team_segment_path(team)),
-        action_row("Create new email template",    "Create",   h.new_account_team_email_template_path(team)),
-        action_row("Add new sender address",       "Create",   h.new_account_team_sender_address_path(team)),
+        action_row("Create new campaign", "Create", h.new_account_team_campaign_path(team)),
+        action_row("Add subscriber", "Create", h.new_account_team_subscriber_path(team)),
+        action_row("Import subscribers from CSV", "Create", h.new_account_team_subscribers_import_path(team)),
+        action_row("Create new segment", "Create", h.new_account_team_segment_path(team)),
+        action_row("Create new email template", "Create", h.new_account_team_email_template_path(team)),
+        action_row("Add new sender address", "Create", h.new_account_team_sender_address_path(team)),
 
         # Navigate
-        action_row("Go to dashboard",              "Navigate", h.account_dashboard_path),
-        action_row("Subscribers",                  "Navigate", h.account_team_subscribers_path(team)),
-        action_row("Segments",                     "Navigate", h.account_team_segments_path(team)),
-        action_row("Campaigns",                    "Navigate", h.account_team_campaigns_path(team)),
-        action_row("Email templates",              "Navigate", h.account_team_email_templates_path(team)),
-        action_row("Senders",                      "Navigate", h.account_team_sender_addresses_path(team)),
-        action_row("Email sending settings",       "Navigate", h.account_team_email_sending_path(team)),
-        action_row("SES setup wizard",             "Navigate", h.account_team_email_sending_setup_path(team)),
-        action_row("Developers / API tokens",      "Navigate", h.account_team_developers_path(team)),
-        action_row("Billing & subscription",       "Navigate", h.account_team_billing_subscriptions_path(team)),
-        action_row("Team settings",                "Navigate", h.edit_account_team_path(team))
+        action_row("Go to dashboard", "Navigate", h.account_dashboard_path),
+        action_row("Subscribers", "Navigate", h.account_team_subscribers_path(team)),
+        action_row("Segments", "Navigate", h.account_team_segments_path(team)),
+        action_row("Campaigns", "Navigate", h.account_team_campaigns_path(team)),
+        action_row("Email templates", "Navigate", h.account_team_email_templates_path(team)),
+        action_row("Senders", "Navigate", h.account_team_sender_addresses_path(team)),
+        action_row("Email sending settings", "Navigate", h.account_team_email_sending_path(team)),
+        action_row("SES setup wizard", "Navigate", h.account_team_email_sending_setup_path(team)),
+        action_row("Developers / API tokens", "Navigate", h.account_team_developers_path(team)),
+        action_row("Billing & subscription", "Navigate", h.account_team_billing_subscriptions_path(team)),
+        action_row("Team settings", "Navigate", h.edit_account_team_path(team))
       ]
     end
 
@@ -143,8 +143,8 @@ module Account
       needle = "%#{query.downcase}%"
 
       email_ids = scope.where(email: query).limit(PER_GROUP_LIMIT).pluck(:id)
-      name_ids  = scope.where("LOWER(name) LIKE :n", n: needle).limit(PER_GROUP_LIMIT).pluck(:id)
-      ext_ids   = scope.where("LOWER(external_id) LIKE :n", n: needle).limit(PER_GROUP_LIMIT).pluck(:id)
+      name_ids = scope.where("LOWER(name) LIKE :n", n: needle).limit(PER_GROUP_LIMIT).pluck(:id)
+      ext_ids = scope.where("LOWER(external_id) LIKE :n", n: needle).limit(PER_GROUP_LIMIT).pluck(:id)
 
       (email_ids + name_ids + ext_ids).uniq.first(PER_GROUP_LIMIT)
     end
@@ -274,7 +274,11 @@ module Account
 
       rows.map do |s|
         title = s.name.presence || s.email
-        subtitle = s.name.present? ? s.email : (s.verified? ? "Verified" : "Sender")
+        subtitle = if s.name.present?
+          s.email
+        else
+          (s.verified? ? "Verified" : "Sender")
+        end
         {
           title: title,
           subtitle: subtitle,

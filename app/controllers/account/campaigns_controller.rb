@@ -82,18 +82,18 @@ class Account::CampaignsController < Account::ApplicationController
   def upload_asset
     file = params[:file]
     if file.blank?
-      render json: { error: "No file provided" }, status: :unprocessable_entity
+      render json: {error: "No file provided"}, status: :unprocessable_entity
       return
     end
 
     unless file.content_type.to_s.start_with?("image/")
-      render json: { error: "Only image files are allowed." }, status: :unprocessable_entity
+      render json: {error: "Only image files are allowed."}, status: :unprocessable_entity
       return
     end
 
     if file.size > Campaign::ASSET_MAX_BYTES
       max_mb = (Campaign::ASSET_MAX_BYTES / 1.megabyte.to_f).round
-      render json: { error: "Image is too large. Max #{max_mb}MB." }, status: :unprocessable_entity
+      render json: {error: "Image is too large. Max #{max_mb}MB."}, status: :unprocessable_entity
       return
     end
 
@@ -105,7 +105,7 @@ class Account::CampaignsController < Account::ApplicationController
     email_image.file.attach(file)
 
     unless email_image.save
-      render json: { error: email_image.errors.full_messages.to_sentence.presence || "Upload failed" },
+      render json: {error: email_image.errors.full_messages.to_sentence.presence || "Upload failed"},
         status: :unprocessable_entity
       return
     end
@@ -119,7 +119,7 @@ class Account::CampaignsController < Account::ApplicationController
     }
   rescue => e
     Rails.logger.error("upload_asset failed: #{e.class}: #{e.message}")
-    render json: { error: "Upload failed" }, status: :unprocessable_entity
+    render json: {error: "Upload failed"}, status: :unprocessable_entity
   end
 
   # DELETE /account/campaigns/:id/assets/:asset_id

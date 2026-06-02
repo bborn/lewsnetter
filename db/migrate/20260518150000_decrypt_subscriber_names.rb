@@ -25,7 +25,7 @@ class DecryptSubscriberNames < ActiveRecord::Migration[8.1]
         begin
           encryptor.decrypt(raw)
         rescue ActiveRecord::Encryption::Errors::Decryption,
-               ActiveRecord::Encryption::Errors::Encoding
+          ActiveRecord::Encryption::Errors::Encoding
           # Already plaintext (support_unencrypted_data: true rows from
           # before the encryption rollout).
           nil

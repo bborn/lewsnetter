@@ -28,7 +28,7 @@ module Ses
         content: {
           simple: {
             subject: {data: "Lewsnetter is wired up"},
-            body:    {html: {data: html_body}, text: {data: text_body}}
+            body: {html: {data: html_body}, text: {data: text_body}}
           }
         }
       )

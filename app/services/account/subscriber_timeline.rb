@@ -183,7 +183,7 @@ module Account
     # account_event_path isn't reachable (e.g. tests without host config).
     def safe_event_url(event)
       Rails.application.routes.url_helpers.account_event_path(event)
-    rescue StandardError
+    rescue
       nil
     end
   end

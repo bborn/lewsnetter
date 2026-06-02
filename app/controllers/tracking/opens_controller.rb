@@ -20,10 +20,8 @@ class Tracking::OpensController < ApplicationController
   # constant so we don't reach for File.read on every request. ASCII-8BIT
   # encoding is important — these bytes are NOT UTF-8 and Rails will mangle
   # the response otherwise.
-  TRANSPARENT_GIF = (
-    "GIF89a\x01\x00\x01\x00\x00\x00\x00!\xF9\x04\x01\x00\x00\x00\x00," \
-    "\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x01D\x00;"
-  ).force_encoding(Encoding::ASCII_8BIT).freeze
+  TRANSPARENT_GIF = "GIF89a\x01\x00\x01\x00\x00\x00\x00!\xF9\x04\x01\x00\x00\x00\x00," \
+    "\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x01D\x00;".force_encoding(Encoding::ASCII_8BIT).freeze
 
   def show
     delivery = Delivery.find_by_tracking_token(params[:token].to_s, purpose: :delivery_open)

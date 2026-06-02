@@ -42,38 +42,11 @@ jobs:
       fail-fast: false
       matrix:
         parallel_test_groups: ${{ fromJson(needs.calculate_matrix.outputs.matrix) }}
-    services:
-      postgres:
-        image: postgres:11-alpine
-        ports:
-          - "5432:5432"
-        env:
-          POSTGRES_USER: rails
-          POSTGRES_PASSWORD: password
-        # Set health checks to wait until postgres has started
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-      redis:
-        image: redis
-        ports:
-          - "6379:6379"
-        # Set health checks to wait until redis has started
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+    # No postgres or redis services — sqlite app on solid_queue / solid_cache.
     env:
       RAILS_ENV: test
-      # Manually export your local RAILS_MASTER_KEY if using the credentials system.
-      # RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
       BUNDLE_JOBS: 2
       BUNDLE_RETRY: 3
-      POSTGRES_USER: rails
-      POSTGRES_PASSWORD: password
     steps:
       - name: Checkout code
         uses: actions/checkout@v6

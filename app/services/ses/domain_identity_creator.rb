@@ -109,7 +109,7 @@ module Ses
 
     def domain_status_from(verification_status, dkim_status)
       return "verified" if verification_status == "SUCCESS"
-      return "failed"   if verification_status == "FAILED" || dkim_status == "FAILED"
+      return "failed" if verification_status == "FAILED" || dkim_status == "FAILED"
       "pending"
     end
   end

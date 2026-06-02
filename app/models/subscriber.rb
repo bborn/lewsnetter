@@ -1,5 +1,6 @@
 class Subscriber < ApplicationRecord
   include Mailkick::Model
+
   has_subscriptions
   # 🚅 add concerns above.
 
