@@ -39,7 +39,11 @@ OK, you're self-hosting. Here's the walkthrough.
             └─────────────────────────┘
 ```
 
-Two container roles off one image: `web` and `worker`. SQLite on a Docker named volume. Litestream streams the DB files to Cloudflare R2 (or any S3-compatible target) so you can recover from a server loss.
+Two container roles off one image: `web` and `worker`. SQLite on a Docker named volume.
+
+**Cloudflare R2 is optional.** Out of the box (no R2 setup), SQLite databases and Active Storage uploads live entirely on the persistent `lewsnetter_storage` volume and survive redeploys — zero Cloudflare account required. If you opt in, Litestream streams the DB files to Cloudflare R2 (or any S3-compatible target) so you can recover from a total server loss, and uploads move to R2 too. Opt in by setting `LITESTREAM_REPLICA_BUCKET` (+ credentials) — see the two paths in Step 4.
+
+> The R2 backup path in the diagram above (the Litestream → R2 arrow) only exists when you enable it. The volume-only default stops at the SQLite-on-disk box.
 
 ## Prerequisites
 
@@ -49,7 +53,7 @@ Two container roles off one image: `web` and `worker`. SQLite on a Docker named 
 | **Domain** | Anything you control | You'll point it at the server's IP. |
 | **Cloudflare** | Free account | Used as proxy + Origin CA cert authority. |
 | **GHCR or Docker registry** | GitHub Container Registry works | Kamal pushes images here. |
-| **Backup target** | Cloudflare R2 (recommended) | Litestream supports S3, GCS, ABS, SFTP too. |
+| **Backup target** | _Optional_ — Cloudflare R2 or any S3-compatible bucket | Off-box DB backup via Litestream. Skip it and your data lives on the volume only (fine for low-stakes deploys; back the volume up yourself). |
 | **AWS** | An SES account | The product needs this to send. |
 
 ## Step 1: Provision the server + DNS
@@ -78,15 +82,20 @@ Or fork on GitHub and clone your fork — you'll probably want to commit your ow
 
 ## Step 4: Create `.kamal/secrets`
 
-The file format + every required variable is documented in [`config/deploy.yml`](../config/deploy.yml). Quick start:
+The file format + every required variable is documented in [`config/deploy.yml`](../config/deploy.yml). There are two paths — pick one.
+
+### Path A — Minimal (no R2, volume-only) — the default
+
+No Cloudflare R2 account needed. SQLite + uploads live on the persistent volume. Note the two `LITESTREAM_REPLICA_*` lines are still present but **left empty** — Kamal errors on a secret that's *missing* from this file, but an empty value is fine and keeps litestream dormant.
 
 ```sh
 cat > .kamal/secrets <<'EOF'
 KAMAL_REGISTRY_PASSWORD=$(gh auth token)
 RAILS_MASTER_KEY=$(cat config/master.key)
 
-LITESTREAM_REPLICA_ACCESS_KEY_ID=<r2-access-key>
-LITESTREAM_REPLICA_SECRET_ACCESS_KEY=<r2-secret-key>
+# Cloudflare R2 backup is OFF — leave these empty (don't delete the lines).
+LITESTREAM_REPLICA_ACCESS_KEY_ID=
+LITESTREAM_REPLICA_SECRET_ACCESS_KEY=
 
 STRIPE_PUBLISHABLE_KEY=<your-stripe-pk>      # only if you enable billing
 STRIPE_SECRET_KEY=<your-stripe-sk>
@@ -103,6 +112,19 @@ EOF
 chmod 600 .kamal/secrets
 ```
 
+Then in Step 5, **delete the `env.clear.LITESTREAM_REPLICA_*` block** from `config/deploy.yml`. With `LITESTREAM_REPLICA_BUCKET` unset, the entrypoint skips litestream entirely and Active Storage uses the local volume.
+
+### Path B — With R2 backup (optional)
+
+Same as Path A, but fill in real R2 credentials and keep the `LITESTREAM_REPLICA_*` block in `config/deploy.yml`:
+
+```sh
+LITESTREAM_REPLICA_ACCESS_KEY_ID=<r2-access-key>
+LITESTREAM_REPLICA_SECRET_ACCESS_KEY=<r2-secret-key>
+```
+
+You'll also need to point `config/deploy.yml`'s `env.clear.LITESTREAM_REPLICA_BUCKET` / `_ENDPOINT` / `_REGION` at your own bucket, and (for Active Storage uploads on R2) add `cloudflare.r2_uploads.*` to your encrypted credentials (`bin/rails credentials:edit`). See `config/storage.yml`.
+
 ## Step 5: Edit `config/deploy.yml`
 
 The shipped config is for the hosted Lewsnetter deployment. You'll want to change:
@@ -113,7 +135,7 @@ The shipped config is for the hosted Lewsnetter deployment. You'll want to chang
 - `env.clear.MARKETING_BASE_URL` → drop it unless you split marketing + app onto two hosts; single-host deployments leave it unset
 - `env.clear.BRANDED_HOST_CNAME_TARGET` → drop it unless tenants brand their unsubscribe/tracking subdomains; if you keep it, point it at a DNS-only host that resolves straight to your origin. Unset, it falls back to the `BASE_URL` host
 - `env.clear.LEWSNETTER_LEGAL_EMAIL` + `LEWSNETTER_ABUSE_EMAIL` → real mailboxes you check
-- `env.clear.LITESTREAM_REPLICA_*` → your R2 / S3 bucket details
+- `env.clear.LITESTREAM_REPLICA_*` → **Path A (no R2):** delete this block. **Path B (R2):** point it at your R2 / S3 bucket details
 - `registry.username` → your GHCR (or other) username
 
 ## Step 6: Deploy
@@ -137,7 +159,7 @@ There's a workflow at [`.github/workflows/deploy.yml`](../.github/workflows/depl
 - `SERVER_HOST` — server IP
 - `RAILS_MASTER_KEY`
 - `ORIGIN_CERT` + `ORIGIN_KEY`
-- `LITESTREAM_REPLICA_ACCESS_KEY_ID` + `_SECRET_ACCESS_KEY`
+- `LITESTREAM_REPLICA_ACCESS_KEY_ID` + `_SECRET_ACCESS_KEY` — **optional** (Path B only); leave unset for a volume-only deploy and the workflow writes empty values
 - `STRIPE_PUBLISHABLE_KEY` + `_SECRET_KEY` + `_WEBHOOKS_ENDPOINT_SECRET` (only if you enable billing)
 
 Add those, push to master, and CI redeploys on every commit.
@@ -158,7 +180,9 @@ The hosted Lewsnetter splits `lewsnetter.dev` (marketing) and `app.lewsnetter.de
 
 ## Backups + restore
 
-Litestream streams every SQLite write to R2 within seconds. To restore:
+**Path A (no R2):** your data lives only on the `lewsnetter_storage` volume. It survives container restarts and redeploys, but NOT a server loss. Back it up yourself — e.g. a cron'd `sqlite3 .backup` of `/rails/storage/*.sqlite3` to off-box storage, or snapshot the Docker volume. If you outgrow this, switch to Path B.
+
+**Path B (R2):** Litestream streams every SQLite write to R2 within seconds. To restore:
 
 ```sh
 litestream restore -config /etc/litestream.yml /rails/storage/lewsnetter_production.sqlite3

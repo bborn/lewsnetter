@@ -5,6 +5,11 @@
 #   SSH_PRIVATE_KEY                     deploy key for Kamal SSH
 #   SERVER_HOST                         the production server IP/hostname
 #   RAILS_MASTER_KEY                    decrypts config/credentials.yml.enc
+#
+# Optional repo secrets — only needed if you enable Cloudflare R2 backup
+# (see config/deploy.yml's LITESTREAM_REPLICA_BUCKET). Leave them unset for a
+# volume-only deploy; the step below writes empty values and litestream stays
+# dormant:
 #   LITESTREAM_REPLICA_ACCESS_KEY_ID    Cloudflare R2 access key
 #   LITESTREAM_REPLICA_SECRET_ACCESS_KEY  Cloudflare R2 secret
 

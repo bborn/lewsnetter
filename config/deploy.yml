@@ -118,11 +118,26 @@ env:
     LEWSNETTER_ABUSE_EMAIL: "abuse@lewsnetter.dev"
     HIDE_THINGS: "true"
     HIDE_EXAMPLES: "true"
-    # Litestream → Cloudflare R2. Bucket `lewsnetter-litestream` was
-    # provisioned in CF account 407493dfba8306ff79bb5cd68f609eb0 (ENAM).
+    # ── OPTIONAL: Cloudflare R2 backup (Litestream) ───────────────────────
+    # R2 is OPT-IN. Setting LITESTREAM_REPLICA_BUCKET is the single switch
+    # that turns on R2 for both Litestream DB backups AND Active Storage
+    # uploads — bin/docker-entrypoint gates the litestream restore/replicate
+    # on this var, and config/environments/production.rb routes Active Storage
+    # to R2 when it's present (else to the /rails/storage volume).
+    #
+    # For a MINIMAL, volume-only deploy (no Cloudflare account needed),
+    # DELETE these three lines — SQLite + uploads then live entirely on the
+    # persistent lewsnetter_storage volume and survive redeploys.
+    #
+    # The matching R2 credentials live in env.secret below; with R2 enabled
+    # they must also be set in .kamal/secrets.
+    #
+    # Bucket `lewsnetter-litestream` was provisioned in CF account
+    # 407493dfba8306ff79bb5cd68f609eb0 (ENAM) for the hosted deployment.
     LITESTREAM_REPLICA_BUCKET: lewsnetter-litestream
     LITESTREAM_REPLICA_ENDPOINT: https://407493dfba8306ff79bb5cd68f609eb0.r2.cloudflarestorage.com
     LITESTREAM_REPLICA_REGION: auto
+    # ──────────────────────────────────────────────────────────────────────
     # Stripe price IDs aren't sensitive (they're public refs to your
     # pricing config). The secret keys live in env.secret below.
     STRIPE_PRODUCT_PRO_MONTHLY_2026_PRICE_ID: price_1TYDKzJJh96TtdCTaNDgbtqa
@@ -138,13 +153,26 @@ env:
     # abilities. Self-hosters: override this with your own admin emails.
     DEVELOPER_EMAILS: "bruno@influencekit.com"
   secret:
+    # Required for any deploy.
     - RAILS_MASTER_KEY
-    - LITESTREAM_REPLICA_ACCESS_KEY_ID
-    - LITESTREAM_REPLICA_SECRET_ACCESS_KEY
     - STRIPE_PUBLISHABLE_KEY
     - STRIPE_SECRET_KEY
     - STRIPE_WEBHOOKS_ENDPOINT_SECRET
     - SENTRY_DSN
+    # OPTIONAL: Cloudflare R2 backup credentials (paired with the
+    # LITESTREAM_REPLICA_* block in env.clear above). These are listed so the
+    # hosted deployment injects them, but they are NOT mandatory — for a
+    # volume-only deploy leave them EMPTY in .kamal/secrets:
+    #
+    #   LITESTREAM_REPLICA_ACCESS_KEY_ID=
+    #   LITESTREAM_REPLICA_SECRET_ACCESS_KEY=
+    #
+    # Kamal injects the empty values, litestream is never invoked (the
+    # entrypoint gates on LITESTREAM_REPLICA_BUCKET), and nothing breaks.
+    # An empty value is fine; a key MISSING from .kamal/secrets makes Kamal
+    # error — so keep the lines, just blank, on the no-R2 path.
+    - LITESTREAM_REPLICA_ACCESS_KEY_ID
+    - LITESTREAM_REPLICA_SECRET_ACCESS_KEY
     # Note: ORIGIN_CERT / ORIGIN_KEY are NOT exposed to the app containers.
     # They're consumed by the proxy block above via Kamal's native
     # `proxy.ssl.{certificate_pem,private_key_pem}` mechanism, which reads
