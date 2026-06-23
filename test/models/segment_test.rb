@@ -74,6 +74,18 @@ class SegmentTest < ActiveSupport::TestCase
     assert errs.any? { |e| e.include?("disallowed table") }
   end
 
+  test "validate_predicate allows dotted domain literals (e.g. gmail.com)" do
+    errs = Segment.validate_predicate(
+      "email_domain NOT IN ('gmail.com', 'yahoo.com', 'reports.acme.co.uk')"
+    )
+    assert_equal [], errs
+  end
+
+  test "validate_predicate still catches a disallowed table outside string literals" do
+    errs = Segment.validate_predicate("email_domain != 'gmail.com' AND events.x = 1")
+    assert errs.any? { |e| e.include?("disallowed table: events") }
+  end
+
   test "applies_to raises InvalidPredicate on a forbidden token" do
     segment = @team.segments.create!(
       name: "Bad",

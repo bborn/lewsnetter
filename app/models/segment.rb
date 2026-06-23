@@ -125,7 +125,14 @@ class Segment < ApplicationRecord
       errors << "Predicate contains forbidden token: #{tok}" if upcased.include?(tok)
     end
 
-    predicate.scan(/\b([a-zA-Z_][a-zA-Z0-9_]*)\.([a-zA-Z_][a-zA-Z0-9_]*)/) do |left, _right|
+    # Ignore single-quoted string literals when scanning for table references.
+    # A quoted value like 'gmail.com' or 'reports.acme.com' is data, not a
+    # `table.column` reference, and would otherwise be rejected as a disallowed
+    # table — which blocks legitimate domain/email segments. Handles SQL-escaped
+    # quotes ('') inside the literal. (The forbidden-token check above still
+    # scans the full predicate.)
+    scannable = predicate.gsub(/'(?:[^']|'')*'/, "''")
+    scannable.scan(/\b([a-zA-Z_][a-zA-Z0-9_]*)\.([a-zA-Z_][a-zA-Z0-9_]*)/) do |left, _right|
       next if left.casecmp("subscribers").zero?
       next if left.casecmp("companies").zero?
       errors << "Predicate references disallowed table: #{left}"
