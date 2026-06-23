@@ -77,11 +77,15 @@ if defined?(Api::V1::ApplicationController)
           row[:custom_attributes] = row.delete(:attributes) if row.key?(:attributes)
           row[:custom_attributes] = ::Subscribers::AttributeNormalizer.call(row[:custom_attributes]) if row[:custom_attributes].present?
 
+          company = upsert_company(row.delete(:company))
+          fields = row.slice(:email, :name, :subscribed, :custom_attributes)
+          fields[:company] = company if company
+
           if row[:external_id].present? && (existing = @team.subscribers.find_by(external_id: row[:external_id]))
-            existing.update!(row.slice(:email, :name, :subscribed, :custom_attributes))
+            existing.update!(fields)
             summary[:updated] += 1
           else
-            @team.subscribers.create!(row.slice(:external_id, :email, :name, :subscribed, :custom_attributes))
+            @team.subscribers.create!(fields.merge(external_id: row[:external_id]))
             summary[:created] += 1
           end
         rescue JSON::ParserError => e
@@ -109,6 +113,32 @@ if defined?(Api::V1::ApplicationController)
     end
 
     private
+
+    # Upsert a Company from a subscriber payload's optional `company` block and
+    # return it (or nil when absent / lacking an external_id). Generic and
+    # source-agnostic: keyed on external_id, scoped to the team, custom
+    # attributes merged (last write wins). Mirrors the Intercom-style pattern
+    # where each contact carries its company inline, so the receiver
+    # find-or-creates and links — no separate company endpoint required.
+    #
+    #   {"external_id": "u_1", "email": "...", "company": {
+    #      "external_id": "t_42", "name": "Acme", "attributes": {"plan": "pro"}}}
+    def upsert_company(payload)
+      return nil if payload.blank?
+      payload = payload.deep_symbolize_keys
+      external_id = payload[:external_id].presence
+      return nil if external_id.nil?
+
+      attrs = payload[:attributes] || payload[:custom_attributes] || {}
+      attrs = ::Subscribers::AttributeNormalizer.call(attrs) if attrs.present?
+
+      company = @team.companies.find_or_initialize_by(external_id: external_id)
+      company.name = payload[:name].presence || company.name.presence || external_id
+      company.custom_attributes = (company.custom_attributes || {}).deep_stringify_keys
+        .merge(attrs.deep_stringify_keys)
+      company.save!
+      company
+    end
 
     module StrongParameters
       # Only allow a list of trusted parameters through.
