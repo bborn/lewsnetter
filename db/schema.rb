@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_20_141958) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_23_144610) do
   create_table "account_onboarding_invitation_lists", force: :cascade do |t|
     t.integer "team_id", null: false
     t.json "invitations"
@@ -461,9 +461,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_20_141958) do
     t.integer "company_id"
     t.datetime "last_contacted_at"
     t.integer "times_contacted", default: 0, null: false
+    t.string "email_domain"
     t.index ["company_id"], name: "index_subscribers_on_company_id"
     t.index ["last_contacted_at"], name: "index_subscribers_on_last_contacted_at"
     t.index ["team_id", "email"], name: "index_subscribers_on_team_id_and_email"
+    t.index ["team_id", "email_domain"], name: "index_subscribers_on_team_id_and_email_domain"
     t.index ["team_id", "external_id"], name: "index_subscribers_on_team_id_and_external_id", unique: true, where: "external_id IS NOT NULL"
     t.index ["team_id", "subscribed"], name: "index_subscribers_on_team_id_and_subscribed"
     t.index ["team_id"], name: "index_subscribers_on_team_id"

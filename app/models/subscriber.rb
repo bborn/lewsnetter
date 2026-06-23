@@ -44,9 +44,21 @@ class Subscriber < ApplicationRecord
   validates :external_id, uniqueness: {scope: :team_id, allow_nil: true}
   # 🚅 add validations above.
 
+  before_save :set_email_domain
   # 🚅 add callbacks above.
 
   # 🚅 add delegations above.
 
   # 🚅 add methods above.
+
+  private
+
+  # Derive the email's domain into a plaintext, indexable column so segments
+  # can filter by domain (e.g. everyone @acme.com) without decrypting the
+  # `email` column. The full address stays encrypted (deterministic); only the
+  # lower-stakes domain part is materialized for querying. Runs on every save
+  # so it tracks email changes.
+  def set_email_domain
+    self.email_domain = email.to_s.split("@", 2)[1]&.downcase
+  end
 end
