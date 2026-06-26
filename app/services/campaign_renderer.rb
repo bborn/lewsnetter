@@ -41,6 +41,8 @@ class CampaignRenderer
   end
 
   def call
+    return plain_text_result if @campaign.plain_text_only?
+
     html = render_html
     html = inject_tracking(html) if @delivery
     Result.new(
@@ -52,6 +54,21 @@ class CampaignRenderer
   end
 
   private
+
+  # Pure plain-text path: `body_markdown` IS the email body, sent verbatim as
+  # text/plain. No MJML, no email_template, no HTML part, and no open-pixel /
+  # click-tracking — a plain-text email is intentionally tracker-free. Liquid
+  # variable substitution still runs (personalization + {{unsubscribe_url}}),
+  # and the author's line breaks are preserved (no whitespace collapsing the
+  # way strip_to_text does for the HTML alternative).
+  def plain_text_result
+    Result.new(
+      html: nil,
+      text: substitute(@campaign.body_markdown.to_s),
+      subject: substitute(@campaign.subject.to_s),
+      preheader: substitute(@campaign.preheader.to_s)
+    )
+  end
 
   def render_html
     @render_html ||= begin

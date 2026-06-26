@@ -9,7 +9,9 @@ module Mcp
         tool_name "campaigns_update"
         description <<~DESC
           Updates an existing campaign. The model enforces that sent campaigns cannot
-          have their body changed. Validation errors raise ActiveRecord::RecordInvalid.
+          have their body changed. Set plain_text_only: true to send a pure plain-text
+          email (body_markdown sent verbatim, no HTML part, template, or tracking).
+          Validation errors raise ActiveRecord::RecordInvalid.
         DESC
         arguments_schema(
           type: "object",
@@ -21,6 +23,7 @@ module Mcp
             preheader: {type: "string"},
             body_markdown: {type: "string"},
             body_mjml: {type: "string"},
+            plain_text_only: {type: "boolean", description: "Send a pure plain-text email (body_markdown sent verbatim, no HTML part). Requires body_markdown."},
             email_template_id: {type: "integer"},
             segment_id: {type: "integer"},
             sender_address_id: {type: "integer"},
@@ -28,8 +31,8 @@ module Mcp
           }
         )
 
-        PERMITTED = %w[subject preheader body_markdown body_mjml email_template_id
-          segment_id sender_address_id scheduled_for].freeze
+        PERMITTED = %w[subject preheader body_markdown body_mjml plain_text_only
+          email_template_id segment_id sender_address_id scheduled_for].freeze
 
         def call(arguments:, context:)
           campaign = context.team.campaigns.find_by!(id: arguments["id"])

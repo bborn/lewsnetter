@@ -196,4 +196,24 @@ class SesSenderTest < ActiveSupport::TestCase
       assert_equal "SES said no", d.error_message
     end
   end
+
+  test "plain_text_only campaign sends a text-only SES body with no HTML part" do
+    @campaign.update!(plain_text_only: true, body_markdown: "Just text", body_mjml: nil, email_template: nil)
+
+    captured = nil
+    fake_client = Object.new
+    fake_client.define_singleton_method(:send_email) do |**args|
+      captured = args
+      Struct.new(:message_id).new("plain-1")
+    end
+
+    with_fake_ses_client(fake_client) do
+      SesSender.send_bulk(campaign: @campaign, subscribers: [@s1])
+    end
+
+    body = captured.dig(:content, :simple, :body)
+    assert body.key?(:text), "expected a text part"
+    refute body.key?(:html), "plain-text campaign must omit the HTML part"
+    assert_equal "Just text", body.dig(:text, :data)
+  end
 end
