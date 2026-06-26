@@ -48,16 +48,13 @@ fi
 # loaded). Only run if we're about to start the Rails server; workers should
 # wait for the web role to handle migrations.
 if [ "${1}" = "./bin/rails" ] && [ "${2}" = "server" ]; then
-  ./bin/rails db:prepare
-  # Seed the ruby_llm Model registry on first boot. Idempotent — load_models
-  # finds-or-creates each entry, so re-running is cheap. Gating on the count
-  # keeps boot fast on subsequent restarts.
-  if [ "$(./bin/rails runner 'print Model.count' 2>/dev/null)" = "0" ]; then
-    ./bin/rails ruby_llm:load_models
-  fi
-  # Upgrade any plaintext subscriber email/name rows to encrypted storage.
-  # Idempotent — exits in <100ms when there's nothing to upgrade.
-  ./bin/rails subscribers:encrypt_at_rest
+  # Run migrations + the one-time idempotent backfills (model-registry seed on
+  # first boot, subscriber encryption upgrade) in a SINGLE Rails boot. Rake
+  # runs both tasks in one process — the same way `db:migrate db:seed` works —
+  # so the web container pays the ~6-8s Rails boot cost ONCE instead of three
+  # or four times and starts listening well within the proxy health-check
+  # window. See lib/tasks/boot_backfills.rake.
+  ./bin/rails db:prepare app:boot_backfills
 fi
 
 # Web role with R2 enabled: wrap the server in litestream replicate so the

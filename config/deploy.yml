@@ -16,11 +16,11 @@ service: lewsnetter
 # Container image — pushed to GHCR by the build step on each deploy.
 image: bborn/lewsnetter
 
-# The web container cold-boots Rails several times in bin/docker-entrypoint
-# (db:prepare, model seed, encrypt_at_rest) before Puma starts listening, so
-# it isn't ready until ~20s in. Give the health check generous headroom (vs.
-# the 30s default) so a slow-but-fine boot doesn't fail the deploy. Paired
-# with proxy.healthcheck.interval below, which polls /up every 5s.
+# The web container runs migrations + idempotent backfills (db:prepare +
+# app:boot_backfills) in one Rails boot before Puma starts listening, so
+# first-boot readiness still takes ~10s+. Give the health check generous
+# headroom (vs. the 30s default) so a slow-but-fine boot doesn't fail the
+# deploy. Paired with proxy.healthcheck.interval below, which polls /up every 5s.
 deploy_timeout: 60
 
 servers:
