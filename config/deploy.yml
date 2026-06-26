@@ -16,6 +16,13 @@ service: lewsnetter
 # Container image — pushed to GHCR by the build step on each deploy.
 image: bborn/lewsnetter
 
+# The web container cold-boots Rails several times in bin/docker-entrypoint
+# (db:prepare, model seed, encrypt_at_rest) before Puma starts listening, so
+# it isn't ready until ~20s in. Give the health check generous headroom (vs.
+# the 30s default) so a slow-but-fine boot doesn't fail the deploy. Paired
+# with proxy.healthcheck.interval below, which polls /up every 5s.
+deploy_timeout: 60
+
 servers:
   web:
     hosts:
@@ -80,9 +87,11 @@ proxy:
     - e.influencekit.com      # tenant (InfluenceKit) — unsub, tracking, images
   forward_headers: true
   app_port: 3000
+  # Poll /up every 5s (vs Kamal's default) so the proxy catches Puma as soon
+  # as it's listening — see the deploy_timeout note above re: slow boot.
   healthcheck:
     path: /up
-    interval: 20
+    interval: 5
 
 # Credentials for the image registry.
 registry:
