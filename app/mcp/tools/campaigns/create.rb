@@ -10,7 +10,9 @@ module Mcp
         description <<~DESC
           Creates a new campaign (status defaults to "draft"). Requires a subject.
           Provide body_markdown, body_mjml, or an email_template_id with body content —
-          at least one body source is required. Raises ActiveRecord::RecordInvalid on
+          at least one body source is required. Set plain_text_only: true to send a
+          pure plain-text email: body_markdown is sent verbatim as the text body with
+          no HTML part, template, or tracking. Raises ActiveRecord::RecordInvalid on
           validation failure.
         DESC
         arguments_schema(
@@ -22,6 +24,7 @@ module Mcp
             preheader: {type: "string"},
             body_markdown: {type: "string"},
             body_mjml: {type: "string"},
+            plain_text_only: {type: "boolean", description: "Send a pure plain-text email (body_markdown sent verbatim, no HTML part). Requires body_markdown."},
             email_template_id: {type: "integer"},
             segment_id: {type: "integer"},
             sender_address_id: {type: "integer"},
@@ -29,8 +32,8 @@ module Mcp
           }
         )
 
-        PERMITTED = %w[subject preheader body_markdown body_mjml email_template_id
-          segment_id sender_address_id scheduled_for].freeze
+        PERMITTED = %w[subject preheader body_markdown body_mjml plain_text_only
+          email_template_id segment_id sender_address_id scheduled_for].freeze
 
         def call(arguments:, context:)
           attrs = arguments.slice(*PERMITTED)

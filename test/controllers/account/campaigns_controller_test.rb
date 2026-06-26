@@ -72,6 +72,16 @@ class Account::CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_equal @template.mjml_body, @campaign.body_mjml
   end
 
+  test "update persists plain_text_only through campaign_params" do
+    refute @campaign.plain_text_only?
+
+    patch account_campaign_url(@campaign), params: {
+      campaign: {plain_text_only: "1", body_markdown: "Just text"}
+    }
+
+    assert @campaign.reload.plain_text_only?
+  end
+
   test "show disables send when recipient_count is 0" do
     # No subscribers on the team, no segment — recipient_count resolves to 0.
     assert_equal 0, @campaign.recipient_count

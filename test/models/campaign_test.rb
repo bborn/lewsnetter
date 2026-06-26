@@ -263,6 +263,54 @@ class CampaignTest < ActiveSupport::TestCase
     end
   end
 
+  # ---------------------------------------------------------------------
+  # Plain-text-only campaigns
+  # ---------------------------------------------------------------------
+  test "plain_text_only campaign is valid with a markdown body and no template" do
+    campaign = @team.campaigns.new(
+      sender_address: @sender,
+      subject: "Plain",
+      plain_text_only: true,
+      body_markdown: "Just text",
+      status: "draft"
+    )
+    assert campaign.valid?, campaign.errors.full_messages.to_sentence
+  end
+
+  test "plain_text_only campaign requires a plain-text (markdown) body" do
+    # body_mjml satisfies the generic body-presence check, so this isolates the
+    # plain-text-specific rule: a plain-text campaign needs its own text body.
+    campaign = @team.campaigns.new(
+      email_template: @template,
+      sender_address: @sender,
+      subject: "Plain",
+      body_mjml: @template.mjml_body,
+      plain_text_only: true,
+      body_markdown: ""
+    )
+    refute campaign.valid?
+    assert(campaign.errors[:base].any? { |m| m =~ /plain.?text/i },
+      "expected a base error about the missing plain-text body, got #{campaign.errors[:base].inspect}")
+  end
+
+  test "preview_html for a plain-text campaign returns escaped text, not MJML chrome" do
+    @team.subscribers.create!(
+      email: "pv@example.com", external_id: "pv", subscribed: true, name: "Pat Lee"
+    )
+    @campaign.update!(
+      plain_text_only: true,
+      body_markdown: "Hello {{first_name}}\n\nLine two",
+      body_mjml: nil,
+      email_template: nil
+    )
+
+    html = @campaign.preview_html
+
+    assert_includes html, "Hello Pat"
+    assert_includes html, "<pre"
+    refute_includes html, "mj-", "preview must not render MJML for a plain-text campaign"
+  end
+
   test "paper_trail records a version on destroy" do
     id = @campaign.id
     @campaign.destroy!

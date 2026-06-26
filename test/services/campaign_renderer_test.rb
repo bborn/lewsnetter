@@ -490,4 +490,45 @@ class CampaignRendererTest < ActiveSupport::TestCase
     refute_includes result.html, %(href="https://example.com/real")
     assert_match(%r{/track/c/[^"]+}, result.html)
   end
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Plain-text-only campaigns
+  # ──────────────────────────────────────────────────────────────────────
+
+  test "plain_text_only campaign renders text-only with no HTML and no template required" do
+    campaign = @team.campaigns.create!(
+      sender_address: @sender,
+      subject: "Plain hi {{first_name}}",
+      body_markdown: "Hey {{first_name}},\n\nThis is a plain note.\n\nThanks!",
+      plain_text_only: true,
+      status: "draft"
+    )
+
+    result = CampaignRenderer.new(campaign: campaign, subscriber: @subscriber).call
+
+    assert_nil result.html, "plain-text campaigns must not produce an HTML part"
+    assert_includes result.text, "Hey Alice,"
+    assert_includes result.text, "This is a plain note."
+    # Subject still gets variable substitution.
+    assert_equal "Plain hi Alice", result.subject
+    # The body is NOT run through markdown/MJML — raw text is preserved, and
+    # paragraph line breaks survive (not collapsed to a single line).
+    assert_includes result.text, "\n"
+    refute_match(/<[a-z]/i, result.text)
+  end
+
+  test "plain_text_only body still substitutes {{unsubscribe_url}}" do
+    campaign = @team.campaigns.create!(
+      sender_address: @sender,
+      subject: "Plain",
+      body_markdown: "Bye {{first_name}}. Unsubscribe: {{unsubscribe_url}}",
+      plain_text_only: true,
+      status: "draft"
+    )
+
+    result = CampaignRenderer.new(campaign: campaign, subscriber: @subscriber).call
+
+    refute_includes result.text, "{{unsubscribe_url}}"
+    assert_match %r{/unsubscribe/}, result.text
+  end
 end

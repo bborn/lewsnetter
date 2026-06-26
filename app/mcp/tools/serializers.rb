@@ -70,6 +70,7 @@ module Mcp
           status: c.status,
           body_markdown: c.body_markdown,
           body_mjml: c.body_mjml,
+          plain_text_only: c.plain_text_only,
           email_template_id: c.email_template_id,
           segment_id: c.segment_id,
           sender_address_id: c.sender_address_id,

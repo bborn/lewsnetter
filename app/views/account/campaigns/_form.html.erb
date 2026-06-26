@@ -327,6 +327,27 @@ select_classes = "block w-full rounded-md shadow-sm font-light text-base md:text
               <span class="campaign-edit-field-hint__mono"><%= Time.zone.name %></span>.
             </p>
           </div>
+
+          <%# Plain-text-only toggle. When on, the markdown body is sent verbatim
+              as a pure text/plain email — no template chrome, no HTML part, and
+              no open/click tracking. Spans both grid columns so the hint isn't
+              cramped. %>
+          <div class="campaign-edit-field md:col-span-2">
+            <%= form.label :plain_text_only, "Format", class: "campaign-edit-field-label" %>
+            <label class="flex items-center gap-2 mt-1">
+              <%= form.check_box :plain_text_only,
+                    class: "rounded border-base-300 dark:border-base-900 text-primary-500 focus:ring-primary-500" %>
+              <span class="text-base md:text-sm font-light dark:text-base-300">Send as plain text only</span>
+            </label>
+            <p class="campaign-edit-field-hint">
+              Sends a pure plain-text email — no template, no HTML, no open/click
+              tracking. Your body is sent <em>verbatim</em> (markdown isn't rendered),
+              so write it as plain text. Personalization like
+              <span class="campaign-edit-field-hint__mono">{{first_name}}</span> and
+              <span class="campaign-edit-field-hint__mono">{{unsubscribe_url}}</span>
+              still work. Often lands better in the inbox and reads more personally.
+            </p>
+          </div>
           <%# 🚅 super scaffolding will insert new fields above this line. %>
         </div>
       </section>

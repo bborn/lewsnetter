@@ -46,6 +46,19 @@ module Mcp
           end
         end
 
+        test "creates a plain_text_only campaign" do
+          result = Create.new.invoke(
+            arguments: {
+              "subject" => "Plain",
+              "body_markdown" => "Just text",
+              "plain_text_only" => true
+            },
+            context: @ctx
+          )
+          assert_equal true, result[:campaign][:plain_text_only]
+          assert Campaign.find(result[:campaign][:id]).plain_text_only?
+        end
+
         test "campaign is scoped to the calling team" do
           result = Create.new.invoke(
             arguments: {"subject" => "Scoped", "body_markdown" => "text"},

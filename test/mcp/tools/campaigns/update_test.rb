@@ -30,6 +30,15 @@ module Mcp
           assert_equal "New body", result[:campaign][:body_markdown]
         end
 
+        test "updates plain_text_only" do
+          result = Update.new.invoke(
+            arguments: {"id" => @campaign.id, "plain_text_only" => true},
+            context: @ctx
+          )
+          assert_equal true, result[:campaign][:plain_text_only]
+          assert @campaign.reload.plain_text_only?
+        end
+
         test "raises RecordNotFound for campaign on another team" do
           other_team = create(:team)
           other = other_team.campaigns.create!(subject: "Other", status: "draft", body_markdown: "body")

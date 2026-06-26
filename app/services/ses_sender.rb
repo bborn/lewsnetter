@@ -94,16 +94,19 @@ class SesSender
         end
 
         begin
+          # Always include the text part; only include the HTML part when the
+          # renderer produced one. Plain-text-only campaigns return html=nil,
+          # so they go out as a true text/plain message (no multipart HTML).
+          email_body = {text: {data: rendered.text}}
+          email_body[:html] = {data: rendered.html} if rendered.html.present?
+
           send_args = {
             from_email_address: from_address,
             destination: {to_addresses: [subscriber.email]},
             content: {
               simple: {
                 subject: {data: rendered.subject},
-                body: {
-                  html: {data: rendered.html},
-                  text: {data: rendered.text}
-                }
+                body: email_body
               }
             }
           }

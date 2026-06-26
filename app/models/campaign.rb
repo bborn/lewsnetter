@@ -49,6 +49,7 @@ class Campaign < ApplicationRecord
   validates :email_template, scope: true
   validates :segment, scope: true
   validate :body_present_in_some_form
+  validate :plain_text_requires_markdown_body
   validate :assets_must_be_images_under_max_size
   # 🚅 add validations above.
 
@@ -109,7 +110,13 @@ class Campaign < ApplicationRecord
       team.subscribers.subscribed.order(:id).first ||
       placeholder_preview_subscriber
 
-    CampaignRenderer.new(campaign: self, subscriber: subscriber).call.html
+    rendered = CampaignRenderer.new(campaign: self, subscriber: subscriber).call
+    # Plain-text campaigns have no HTML part; wrap the rendered text in a <pre>
+    # so the live-preview iframe shows exactly what subscribers will read,
+    # whitespace and line breaks intact.
+    return plain_text_preview_html(rendered.text) if plain_text_only?
+
+    rendered.html
   rescue => _e
     nil
   end
@@ -246,6 +253,22 @@ class Campaign < ApplicationRecord
   def body_present_in_some_form
     return if body_markdown.present? || body_mjml.present? || email_template&.mjml_body.present?
     errors.add(:base, "Campaign needs a body (markdown), a raw MJML body, or an email template with body content.")
+  end
+
+  # Plain-text campaigns send `body_markdown` verbatim as the text body, so it
+  # must be present — an MJML body or template can't stand in for it.
+  def plain_text_requires_markdown_body
+    return unless plain_text_only?
+    return if body_markdown.present?
+    errors.add(:base, "Plain-text campaigns need a plain-text body.")
+  end
+
+  # Renders the plain-text body inside a <pre> for the in-app preview iframe.
+  # Escapes the text so a stray "<" in the copy can't inject markup.
+  def plain_text_preview_html(text)
+    <<~HTML
+      <pre style="font-family: ui-sans-serif, system-ui, sans-serif; font-size: 14px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; margin: 0; padding: 16px; color: #111;">#{ERB::Util.html_escape(text)}</pre>
+    HTML
   end
 
   # See EmailTemplate#assets_must_be_images_under_max_size — kept parallel.
