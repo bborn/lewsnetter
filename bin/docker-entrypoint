@@ -2,15 +2,25 @@
 
 # Lewsnetter production entrypoint.
 #
-# Responsibilities:
-#   1. Restore each SQLite database from R2 if the local file is missing
-#      (litestream-restore is a no-op when no replica or no local file exists).
-#   2. Run db:prepare on first boot so a fresh server has schema + seeds.
-#   3. If the command is `bin/rails server`, wrap it in `litestream replicate
-#      -exec` so the replicator runs alongside Puma and dies with it.
-#      Otherwise (e.g. worker role running `bin/rake solid_queue:start`),
-#      just exec the command directly — the web role's replicate covers all
-#      three databases.
+# R2 / Litestream backup is OPTIONAL. We detect "R2 enabled" by the presence
+# of $LITESTREAM_REPLICA_BUCKET (set in config/deploy.yml's env.clear when the
+# operator opts into Cloudflare R2 / any S3-compatible backup target).
+#
+#   R2 ENABLED  ($LITESTREAM_REPLICA_BUCKET set):
+#     1. Restore each SQLite database from R2 if the local file is missing
+#        (litestream-restore is a no-op when no replica or no local file exists).
+#     2. If the command is `bin/rails server`, wrap it in `litestream replicate
+#        -exec` so the replicator runs alongside Puma and dies with it.
+#        Otherwise (e.g. worker role running `bin/rake solid_queue:start`),
+#        exec directly — the web role's replicate covers all three databases.
+#
+#   R2 DISABLED ($LITESTREAM_REPLICA_BUCKET unset — the default):
+#     Skip restore and the replicate wrap entirely; exec the command directly.
+#     SQLite lives on the /rails/storage named volume and survives redeploys,
+#     so the box is durable as long as the volume is. No Cloudflare account
+#     required — this is the zero-setup path for OSS self-hosters.
+#
+# Either way, db:prepare + first-boot model seeding run unconditionally.
 
 # Enable jemalloc for reduced memory usage and latency.
 if [ -z "${LD_PRELOAD+x}" ]; then
@@ -26,10 +36,13 @@ restore_if_missing() {
   fi
 }
 
-# Restore each of the three SQLite databases if local file doesn't exist.
-restore_if_missing /rails/storage/lewsnetter_production.sqlite3
-restore_if_missing /rails/storage/lewsnetter_production_queue.sqlite3
-restore_if_missing /rails/storage/lewsnetter_production_cable.sqlite3
+# Restore each of the three SQLite databases from R2 if the local file is
+# missing — only when R2 backup is enabled.
+if [ -n "$LITESTREAM_REPLICA_BUCKET" ]; then
+  restore_if_missing /rails/storage/lewsnetter_production.sqlite3
+  restore_if_missing /rails/storage/lewsnetter_production_queue.sqlite3
+  restore_if_missing /rails/storage/lewsnetter_production_cable.sqlite3
+fi
 
 # Prepare DBs on first boot (idempotent — does nothing if schema already
 # loaded). Only run if we're about to start the Rails server; workers should
@@ -47,9 +60,10 @@ if [ "${1}" = "./bin/rails" ] && [ "${2}" = "server" ]; then
   ./bin/rails subscribers:encrypt_at_rest
 fi
 
-# Web role: wrap the server in litestream replicate so the replicator
-# streams writes to R2. Worker role: exec directly.
-if [ "${1}" = "./bin/rails" ] && [ "${2}" = "server" ]; then
+# Web role with R2 enabled: wrap the server in litestream replicate so the
+# replicator streams writes to R2. Otherwise (R2 disabled, or the worker
+# role) exec the command directly.
+if [ -n "$LITESTREAM_REPLICA_BUCKET" ] && [ "${1}" = "./bin/rails" ] && [ "${2}" = "server" ]; then
   exec litestream replicate -config /etc/litestream.yml -exec "$*"
 else
   exec "$@"

@@ -21,8 +21,8 @@ Rails.application.configure do
   # Enable serving of images, stylesheets, and JavaScripts from an asset server.
   # config.asset_host = "http://assets.example.com"
 
-  # Store uploaded files on Cloudflare R2 (S3-compatible). See config/storage.yml.
-  config.active_storage.service = :amazon
+  # Active Storage service is wired below (search "r2_configured?"). It uses
+  # Cloudflare R2 when R2 is configured, else the local /rails/storage volume.
 
   # Assume all access to the app is happening through a SSL-terminating reverse proxy.
   config.assume_ssl = true
@@ -101,11 +101,20 @@ Rails.application.configure do
   # part of the Postgres → SQLite swap so background jobs run on the same
   # SQLite-backed queue database.
 
-  # Active Storage is wired to Cloudflare R2 via the `:amazon` service in
-  # config/storage.yml (credentials live in cloudflare.r2_uploads). The legacy
-  # AWS / Bucketeer / Cloudinary env-var sniffing has been replaced because
-  # without it production silently falls back to local disk.
-  config.active_storage.service = :amazon
+  # Active Storage: Cloudflare R2 is OPTIONAL. Use the R2 `:amazon` service
+  # (config/storage.yml, credentials in cloudflare.r2_uploads) when R2 is
+  # configured; otherwise fall back to `:local` Disk pointed at the persistent
+  # /rails/storage volume. This lets an OSS self-hoster deploy with zero
+  # Cloudflare/R2 setup — uploads just live on the same volume as the SQLite
+  # databases and survive redeploys.
+  #
+  # "R2 configured" = R2 upload credentials present, OR the Litestream backup
+  # env is set (an operator who turned on R2 for backups almost certainly
+  # wants it for uploads too). Power users set either and keep full R2.
+  r2_configured =
+    Rails.application.credentials.dig(:cloudflare, :r2_uploads, :access_key_id).present? ||
+    ENV["LITESTREAM_REPLICA_BUCKET"].present?
+  config.active_storage.service = r2_configured ? :amazon : :local
 
   config.action_mailer.perform_deliveries = true
   config.action_mailer.raise_delivery_errors = true

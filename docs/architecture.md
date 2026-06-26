@@ -8,7 +8,7 @@ The "why we built it this way" doc. For evaluators, contributors, and future-Bru
 |---|---|---|
 | Framework | Rails 8.1 + [BulletTrain](https://bullettrain.co) 1.45 | Boring, fast, the team-multitenancy + admin scaffolding from BT is worth more than a custom framework. |
 | Database | SQLite | One file per database, fast, no separate process to operate. Modern SQLite handles way more concurrent writers than the 2010-era takes suggest. |
-| Backup | [Litestream](https://litestream.io) → Cloudflare R2 | Streams every WAL frame to R2 within seconds. Point-in-time restore. R2 has no egress fees. |
+| Backup | _Optional_ [Litestream](https://litestream.io) → Cloudflare R2 | Opt-in (set `LITESTREAM_REPLICA_BUCKET`): streams every WAL frame to R2 within seconds for point-in-time restore. R2 has no egress fees. Off by default — SQLite + uploads then live on the persistent volume only. See [self-hosting](self-hosting.md). |
 | Background jobs | Solid Queue (Rails 8 built-in) | Lives in SQLite, no Redis dependency. |
 | WebSockets | Solid Cable | Same logic — no Redis. |
 | Deploy | [Kamal 2](https://kamal-deploy.org) + kamal-proxy | One-box Docker with rolling deploys + TLS termination at the proxy. |

@@ -93,7 +93,7 @@ The MCP server exposes 43 tools spanning subscribers, segments, email templates,
 ## Stack
 
 - **Rails 8.1** on Ruby 4
-- **SQLite** primary + queue + Cable, [Litestream](https://litestream.io) → Cloudflare R2 backup
+- **SQLite** primary + queue + Cable, with optional [Litestream](https://litestream.io) → Cloudflare R2 backup (opt-in; defaults to volume-only)
 - **[BulletTrain](https://bullettrain.co)** for teams, Devise auth, CanCanCan, billing scaffolding
 - **AWS SES v2** (`aws-sdk-sesv2`) for sending; per-team credentials
 - **MJML** for responsive email templates; **Liquid** for body interpolation
