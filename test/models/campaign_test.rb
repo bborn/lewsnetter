@@ -311,6 +311,46 @@ class CampaignTest < ActiveSupport::TestCase
     refute_includes html, "mj-", "preview must not render MJML for a plain-text campaign"
   end
 
+  # ---------------------------------------------------------------------
+  # delivery_format — the single "Format" control that unifies the template
+  # choice and the plain-text option (no separate checkbox).
+  # ---------------------------------------------------------------------
+  test "delivery_format reports plain_text when plain_text_only" do
+    @campaign.plain_text_only = true
+    assert_equal "plain_text", @campaign.delivery_format
+  end
+
+  test "delivery_format reports the selected template id" do
+    assert_equal @template.id.to_s, @campaign.delivery_format
+  end
+
+  test "delivery_format is blank when there is no template and not plain text" do
+    @campaign.email_template = nil
+    @campaign.plain_text_only = false
+    assert_equal "", @campaign.delivery_format
+  end
+
+  test "setting delivery_format to plain_text enables plain text and clears the template" do
+    @campaign.delivery_format = "plain_text"
+    assert @campaign.plain_text_only?
+    assert_nil @campaign.email_template_id
+  end
+
+  test "setting delivery_format to a template id selects it and disables plain text" do
+    @campaign.update!(plain_text_only: true, body_markdown: "x")
+    @campaign.delivery_format = @template.id.to_s
+    assert_equal @template.id, @campaign.email_template_id
+    refute @campaign.plain_text_only?
+  end
+
+  test "a plain-text campaign cannot also keep a template (single-axis invariant)" do
+    @campaign.update!(email_template: @template, plain_text_only: true, body_markdown: "x")
+    @campaign.reload
+    assert @campaign.plain_text_only?
+    assert_nil @campaign.email_template_id,
+      "plain_text_only must clear email_template_id on save, even when set directly (MCP/API path)"
+  end
+
   test "paper_trail records a version on destroy" do
     id = @campaign.id
     @campaign.destroy!

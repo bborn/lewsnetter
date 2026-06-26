@@ -305,7 +305,8 @@ class Account::CampaignsController < Account::ApplicationController
       body_mjml: @campaign.body_mjml,
       subject: @campaign.subject,
       preheader: @campaign.preheader,
-      email_template_id: @campaign.email_template_id
+      email_template_id: @campaign.email_template_id,
+      plain_text_only: @campaign.plain_text_only
     }
 
     begin
@@ -313,10 +314,11 @@ class Account::CampaignsController < Account::ApplicationController
       @campaign.body_mjml = overrides[:body_mjml] if overrides.key?(:body_mjml)
       @campaign.subject = overrides[:subject] if overrides.key?(:subject)
       @campaign.preheader = overrides[:preheader] if overrides.key?(:preheader)
-      if overrides.key?(:email_template_id)
-        @campaign.email_template_id = overrides[:email_template_id].presence
-        # Bust the belongs_to cache without touching the FK — setting
-        # `email_template = nil` would null the id we just set.
+      if overrides.key?(:delivery_format)
+        # delivery_format= sets BOTH plain_text_only and email_template_id, so
+        # the preview reflects a switch to plain text (or to a template) live,
+        # before save. Bust the belongs_to cache so the new FK is re-loaded.
+        @campaign.delivery_format = overrides[:delivery_format]
         @campaign.association(:email_template).reset
       end
 
@@ -349,7 +351,7 @@ class Account::CampaignsController < Account::ApplicationController
     src = json_body.is_a?(Hash) ? json_body : params.to_unsafe_h
 
     {}.tap do |h|
-      %w[body_markdown body_mjml subject preheader email_template_id].each do |key|
+      %w[body_markdown body_mjml subject preheader delivery_format].each do |key|
         h[key.to_sym] = src[key].to_s if src.key?(key)
       end
     end

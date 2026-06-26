@@ -82,6 +82,39 @@ class Account::CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert @campaign.reload.plain_text_only?
   end
 
+  test "Format select sets plain text via delivery_format" do
+    refute @campaign.plain_text_only?
+
+    patch account_campaign_url(@campaign), params: {
+      campaign: {delivery_format: "plain_text", body_markdown: "Just text"}
+    }
+
+    @campaign.reload
+    assert @campaign.plain_text_only?
+    assert_nil @campaign.email_template_id, "picking plain text must clear the template"
+  end
+
+  test "Format select picks a template via delivery_format" do
+    other = @team.email_templates.create!(
+      name: "T2", mjml_body: "<mjml><mj-body>{{body}}</mj-body></mjml>"
+    )
+
+    patch account_campaign_url(@campaign), params: {
+      campaign: {delivery_format: other.id.to_s, plain_text_only: nil}
+    }
+
+    @campaign.reload
+    assert_equal other.id, @campaign.email_template_id
+    refute @campaign.plain_text_only?
+  end
+
+  test "edit page renders the Format select with a plain-text option and no standalone checkbox" do
+    get edit_account_campaign_url(@campaign)
+    assert_response :success
+    assert_select 'select[name="campaign[delivery_format]"] option[value="plain_text"]', 1
+    assert_select 'input[type="checkbox"][name="campaign[plain_text_only]"]', false
+  end
+
   test "show disables send when recipient_count is 0" do
     # No subscribers on the team, no segment — recipient_count resolves to 0.
     assert_equal 0, @campaign.recipient_count
@@ -133,7 +166,8 @@ class Account::CampaignsControllerTest < ActionDispatch::IntegrationTest
     # Native <select> elements with the matching name attribute MUST be present.
     assert_select 'select[name="campaign[segment_id]"]', 1
     assert_select 'select[name="campaign[sender_address_id]"]', 1
-    assert_select 'select[name="campaign[email_template_id]"]', 1
+    # The template choice is now folded into the single "Format" select.
+    assert_select 'select[name="campaign[delivery_format]"]', 1
 
     # And only one "(optional)" suffix per label — no double-marker bug.
     refute_match(/Segment\s*\(optional\).*\(optional\)/m, response.body)

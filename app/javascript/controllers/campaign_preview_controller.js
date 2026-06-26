@@ -29,7 +29,9 @@ export default class extends Controller {
     mjmlSelector: { type: String, default: 'textarea[name="campaign[body_mjml]"]' },
     subjectSelector: { type: String, default: 'input[name="campaign[subject]"]' },
     preheaderSelector: { type: String, default: 'input[name="campaign[preheader]"]' },
-    templateSelector: { type: String, default: 'select[name="campaign[email_template_id]"]' }
+    // The single "Format" select (plain text + template choice). See
+    // Campaign#delivery_format.
+    formatSelector: { type: String, default: 'select[name="campaign[delivery_format]"]' }
   }
 
   connect() {
@@ -108,7 +110,7 @@ export default class extends Controller {
       body_mjml: get(this.mjmlSelectorValue),
       subject: get(this.subjectSelectorValue),
       preheader: get(this.preheaderSelectorValue),
-      email_template_id: get(this.templateSelectorValue)
+      delivery_format: get(this.formatSelectorValue)
     }
   }
 

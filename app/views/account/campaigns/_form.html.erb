@@ -298,14 +298,28 @@ select_classes = "block w-full rounded-md shadow-sm font-light text-base md:text
         </header>
         <div class="campaign-edit-section__body campaign-edit-grid">
 
+          <%# Format — one control that folds the template choice and the
+              plain-text option together, because they're a single decision:
+              "how is this email formatted?". "Plain text" maps to
+              plain_text_only; a template id selects that template; "None" is
+              no template (raw MJML/HTML body). Backed by Campaign#delivery_format,
+              so the plain_text_only + email_template_id columns stay the source
+              of truth and can never contradict. %>
           <div class="campaign-edit-field">
-            <%= form.label :email_template_id, "Template", class: "campaign-edit-field-label" %>
-            <%= form.select :email_template_id,
-                  @campaign.valid_email_templates.map { |template| [template.label_string, template.id] },
-                  {include_blank: t('campaigns.fields.email_template_id.placeholder', default: 'None')},
-                  class: "campaign-edit-select" %>
+            <%= form.label :delivery_format, "Format", class: "campaign-edit-field-label" %>
+            <% format_options = [
+                 ["Plain text — no template, no HTML", "plain_text"],
+                 ["None", ""]
+               ] + @campaign.valid_email_templates.map { |template| [template.label_string, template.id.to_s] } %>
+            <%= form.select :delivery_format, format_options, {}, class: "campaign-edit-select" %>
             <p class="campaign-edit-field-hint">
-              The template wraps your body with header + footer chrome (logo, footer, unsubscribe).
+              How this email is formatted. <strong>Plain text</strong> sends your body
+              <em>verbatim</em> — no template, no HTML, no open/click tracking (often lands
+              better in the inbox and reads more personally). A <strong>template</strong> wraps
+              your body with header + footer chrome (logo, footer, unsubscribe). Personalization
+              like <span class="campaign-edit-field-hint__mono">{{first_name}}</span> and
+              <span class="campaign-edit-field-hint__mono">{{unsubscribe_url}}</span> work in
+              every format.
             </p>
           </div>
 
@@ -328,26 +342,6 @@ select_classes = "block w-full rounded-md shadow-sm font-light text-base md:text
             </p>
           </div>
 
-          <%# Plain-text-only toggle. When on, the markdown body is sent verbatim
-              as a pure text/plain email — no template chrome, no HTML part, and
-              no open/click tracking. Spans both grid columns so the hint isn't
-              cramped. %>
-          <div class="campaign-edit-field md:col-span-2">
-            <%= form.label :plain_text_only, "Format", class: "campaign-edit-field-label" %>
-            <label class="flex items-center gap-2 mt-1">
-              <%= form.check_box :plain_text_only,
-                    class: "rounded border-base-300 dark:border-base-900 text-primary-500 focus:ring-primary-500" %>
-              <span class="text-base md:text-sm font-light dark:text-base-300">Send as plain text only</span>
-            </label>
-            <p class="campaign-edit-field-hint">
-              Sends a pure plain-text email — no template, no HTML, no open/click
-              tracking. Your body is sent <em>verbatim</em> (markdown isn't rendered),
-              so write it as plain text. Personalization like
-              <span class="campaign-edit-field-hint__mono">{{first_name}}</span> and
-              <span class="campaign-edit-field-hint__mono">{{unsubscribe_url}}</span>
-              still work. Often lands better in the inbox and reads more personally.
-            </p>
-          </div>
           <%# 🚅 super scaffolding will insert new fields above this line. %>
         </div>
       </section>

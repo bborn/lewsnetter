@@ -49,6 +49,7 @@ if defined?(Api::V1::ApplicationController)
           :body_markdown,
           :body_mjml,
           :plain_text_only,
+          :delivery_format,
           :status,
           :scheduled_for,
           :email_template_id,

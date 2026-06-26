@@ -53,6 +53,10 @@ class Campaign < ApplicationRecord
   validate :assets_must_be_images_under_max_size
   # 🚅 add validations above.
 
+  # Single-axis invariant for the Format control: a plain-text campaign never
+  # carries a template. Enforced as a callback (not just in the form) so the
+  # MCP/API path can't persist the contradictory state either.
+  before_validation :clear_template_when_plain_text
   # 🚅 add callbacks above.
 
   # 🚅 add delegations above.
@@ -125,6 +129,29 @@ class Campaign < ApplicationRecord
   # + AI drafter output target.
   def markdown_body?
     body_markdown.present?
+  end
+
+  # The single "Format" control on the edit form folds the template choice and
+  # the plain-text option into one select, so they can't contradict. Values:
+  #   "plain_text" → pure text/plain (no template, no HTML, no tracking)
+  #   ""           → no template (raw MJML / HTML body)
+  #   "<id>"       → that EmailTemplate provides the header/footer chrome
+  # The underlying columns (plain_text_only + email_template_id) stay the
+  # source of truth — this is just a humane single-axis projection of them,
+  # so the renderer, MCP tools, and API keep using the real attributes.
+  def delivery_format
+    return "plain_text" if plain_text_only?
+    email_template_id&.to_s || ""
+  end
+
+  def delivery_format=(value)
+    if value.to_s == "plain_text"
+      self.plain_text_only = true
+      self.email_template_id = nil
+    else
+      self.plain_text_only = false
+      self.email_template_id = value.presence
+    end
   end
 
   # Aggregated per-recipient stats sourced from the Delivery table. This is
@@ -253,6 +280,13 @@ class Campaign < ApplicationRecord
   def body_present_in_some_form
     return if body_markdown.present? || body_mjml.present? || email_template&.mjml_body.present?
     errors.add(:base, "Campaign needs a body (markdown), a raw MJML body, or an email template with body content.")
+  end
+
+  # See the `before_validation` above — keeps plain-text campaigns from also
+  # carrying a template, the contradictory state the unified Format control
+  # is meant to make unrepresentable.
+  def clear_template_when_plain_text
+    self.email_template_id = nil if plain_text_only?
   end
 
   # Plain-text campaigns send `body_markdown` verbatim as the text body, so it
