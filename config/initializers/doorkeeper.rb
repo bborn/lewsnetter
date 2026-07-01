@@ -101,7 +101,10 @@ Doorkeeper.configure do
   # Access token expiration time (default: 2 hours).
   # If you want to disable expiration, set this to `nil`.
   #
-  # access_token_expires_in 2.hours
+  # Kept at the 2h default explicitly. Do NOT lengthen this to work around
+  # session drops — refresh tokens (see `use_refresh_token` below) are the
+  # correct mechanism for keeping long-running MCP sessions alive.
+  access_token_expires_in 2.hours
 
   # Assign custom TTL for access tokens. Will be used instead of access_token_expires_in
   # option if defined. In case the block returns `nil` value Doorkeeper fallbacks to
@@ -138,9 +141,12 @@ Doorkeeper.configure do
   # doesn't updates existing token expiration time, it will create a new token instead.
   # Rationale: https://github.com/doorkeeper-gem/doorkeeper/issues/383
   #
-  # You can not enable this option together with +hash_token_secrets+.
-  #
-  # reuse_access_token
+  # You can not enable this option together with +hash_token_secrets+
+  # (we don't use it, so this is safe). Enabled to cut token churn: an MCP
+  # client that re-authorizes while it still holds a valid token gets that
+  # same token back instead of minting a new row each time. Does not affect
+  # the refresh grant, which always issues a fresh, rotated token.
+  reuse_access_token
 
   # In case you enabled `reuse_access_token` option Doorkeeper will try to find matching
   # token using `matching_token_for` Access Token API that searches for valid records
@@ -221,7 +227,18 @@ Doorkeeper.configure do
   # `grant_type` - the grant type of the request (see Doorkeeper::OAuth)
   # `scopes` - the requested scopes (see Doorkeeper::OAuth::Scopes)
   #
-  # use_refresh_token
+  # Enabled so long-running MCP sessions (Claude Desktop/Code, Cursor) can
+  # silently exchange a refresh token for a fresh access token when the 2h
+  # access token expires, instead of being forced back through full
+  # re-authorization ("server disconnected" / "token expired").
+  #
+  # This single option does two things in Doorkeeper 5.x:
+  #   1. issues a refresh_token alongside every new access token, and
+  #   2. auto-registers the `refresh_token` grant at /oauth/token
+  #      (see calculate_token_grant_flows in doorkeeper/config.rb).
+  # Rotation is on (previous_refresh_token column present), so each refresh
+  # invalidates the prior refresh token — revoked-on-use, concurrency-safe.
+  use_refresh_token
 
   # Provide support for an owner to be assigned to each registered application (disabled by default)
   # Optional parameter confirmation: true (default: false) if you want to enforce ownership of
@@ -379,6 +396,11 @@ Doorkeeper.configure do
   # The user doesn't have control over the authorization process, so clients
   # aren't limited by scope, and could potentially have the same capabilities
   # as the user themselves. See the second link above for countermeasures.
+  #
+  # NOTE: `refresh_token` is intentionally NOT listed here. Doorkeeper 5.x
+  # auto-registers the refresh_token grant at the token endpoint whenever
+  # `use_refresh_token` is enabled (see above); adding it here would only
+  # create a duplicate entry in token_grant_flows.
   grant_flows %w[authorization_code client_credentials]
 
   # Allows to customize OAuth grant flows that +each+ application support.
