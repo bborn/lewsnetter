@@ -323,10 +323,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"diff@npm:^7.0.0":
-  version: 7.0.0
-  resolution: "diff@npm:7.0.0"
-  checksum: 10c0/251fd15f85ffdf814cfc35a728d526b8d2ad3de338dcbd011ac6e57c461417090766b28995f8ff733135b5fbc3699c392db1d5e27711ac4e00244768cd1d577b
+"diff@npm:^8.0.3":
+  version: 8.0.4
+  resolution: "diff@npm:8.0.4"
+  checksum: 10c0/7ee5d03926db4039be7252ac3b0abaae1bd122a2ca971e5ca7270e444e36ff83dd906fad1a719740ca347e97ed5dc8f458a76a8391dbcd7aff363bdafb348a00
   languageName: node
   linkType: hard
 
@@ -466,16 +466,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"form-data@npm:4.0.5":
-  version: 4.0.5
-  resolution: "form-data@npm:4.0.5"
+"form-data@npm:^4.0.6":
+  version: 4.0.6
+  resolution: "form-data@npm:4.0.6"
   dependencies:
     asynckit: "npm:^0.4.0"
     combined-stream: "npm:^1.0.8"
     es-set-tostringtag: "npm:^2.1.0"
-    hasown: "npm:^2.0.2"
-    mime-types: "npm:^2.1.12"
-  checksum: 10c0/dd6b767ee0bbd6d84039db12a0fa5a2028160ffbfaba1800695713b46ae974a5f6e08b3356c3195137f8530dcd9dfcb5d5ae1eeff53d0db1e5aad863b619ce3b
+    hasown: "npm:^2.0.4"
+    mime-types: "npm:^2.1.35"
+  checksum: 10c0/43947a77bf0ff45c6ceed789778982d47a3f3e720a74b71721174ebf3310a5f1a8be1d6b38a3ee3688e8a18a2c4273073ec0844cd37efda3eaf46d41c9c318ff
   languageName: node
   linkType: hard
 
@@ -500,25 +500,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"get-intrinsic@npm:^1.2.4, get-intrinsic@npm:^1.3.0":
-  version: 1.3.0
-  resolution: "get-intrinsic@npm:1.3.0"
-  dependencies:
-    call-bind-apply-helpers: "npm:^1.0.2"
-    es-define-property: "npm:^1.0.1"
-    es-errors: "npm:^1.3.0"
-    es-object-atoms: "npm:^1.1.1"
-    function-bind: "npm:^1.1.2"
-    get-proto: "npm:^1.0.1"
-    gopd: "npm:^1.2.0"
-    has-symbols: "npm:^1.1.0"
-    hasown: "npm:^2.0.2"
-    math-intrinsics: "npm:^1.1.0"
-  checksum: 10c0/52c81808af9a8130f581e6a6a83e1ba4a9f703359e7a438d1369a5267a25412322f03dcbd7c549edaef0b6214a0630a28511d7df0130c93cfd380f4fa0b5b66a
-  languageName: node
-  linkType: hard
-
-"get-intrinsic@npm:^1.2.6":
+"get-intrinsic@npm:^1.2.4, get-intrinsic@npm:^1.2.6, get-intrinsic@npm:^1.3.0":
   version: 1.3.1
   resolution: "get-intrinsic@npm:1.3.1"
   dependencies:
@@ -621,6 +603,15 @@ __metadata:
   dependencies:
     function-bind: "npm:^1.1.2"
   checksum: 10c0/3769d434703b8ac66b209a4cca0737519925bbdb61dd887f93a16372b14694c63ff4e797686d87c90f08168e81082248b9b028bad60d4da9e0d1148766f56eb9
+  languageName: node
+  linkType: hard
+
+"hasown@npm:^2.0.4":
+  version: 2.0.4
+  resolution: "hasown@npm:2.0.4"
+  dependencies:
+    function-bind: "npm:^1.1.2"
+  checksum: 10c0/2d8de939e270b70618f8cebb69746620db10617dbb495bc66ddad326955ea24d3ca4af133aff3eb7c1853e0218f867bc2b050ec26fe02e3aea58f880ffc5e506
   languageName: node
   linkType: hard
 
@@ -746,6 +737,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"lewsnetter@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "lewsnetter@workspace:."
+  dependencies:
+    mocha: "npm:^11.7.6"
+    should: "npm:^13.2.0"
+    zapier-platform-core: "npm:^19.0.0"
+  languageName: unknown
+  linkType: soft
+
 "locate-path@npm:^6.0.0":
   version: 6.0.0
   resolution: "locate-path@npm:6.0.0"
@@ -827,7 +828,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mime-types@npm:^2.1.12":
+"mime-types@npm:^2.1.35":
   version: 2.1.35
   resolution: "mime-types@npm:2.1.35"
   dependencies:
@@ -852,9 +853,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mocha@npm:>=5.2.0":
-  version: 11.7.5
-  resolution: "mocha@npm:11.7.5"
+"mocha@npm:^11.7.6":
+  version: 11.7.6
+  resolution: "mocha@npm:11.7.6"
   dependencies:
     browser-stdout: "npm:^1.3.1"
     chokidar: "npm:^4.0.1"
@@ -880,7 +881,7 @@ __metadata:
   bin:
     _mocha: bin/_mocha
     mocha: bin/mocha.js
-  checksum: 10c0/e6150cba85345aaabbc5b2e7341b1e6706b878f5a9782960cad57fd4cc458730a76d08c5f1a3e05d3ebb49cad93b455764bb00727bd148dcaf0c6dd4fa665b3d
+  checksum: 10c0/95b3eeb52eaf253167d335d1c1a46659f6f282dc112a74fd0ac46380637ae3ee52894319e00a46412a1e5a6e3056128153dc87c1fe36565c748b9fbe8d705ad0
   languageName: node
   linkType: hard
 
@@ -982,15 +983,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"randombytes@npm:^2.1.0":
-  version: 2.1.0
-  resolution: "randombytes@npm:2.1.0"
-  dependencies:
-    safe-buffer: "npm:^5.1.0"
-  checksum: 10c0/50395efda7a8c94f5dffab564f9ff89736064d32addf0cc7e8bf5e4166f09f8ded7a0849ca6c2d2a59478f7d90f78f20d8048bca3cdf8be09d8e8a10790388f3
-  languageName: node
-  linkType: hard
-
 "readable-stream@npm:^3.6.0":
   version: 3.6.2
   resolution: "readable-stream@npm:3.6.2"
@@ -1026,7 +1018,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"safe-buffer@npm:5.2.1, safe-buffer@npm:^5.1.0, safe-buffer@npm:^5.1.2, safe-buffer@npm:^5.2.0, safe-buffer@npm:^5.2.1, safe-buffer@npm:~5.2.0":
+"safe-buffer@npm:5.2.1, safe-buffer@npm:^5.1.2, safe-buffer@npm:^5.2.0, safe-buffer@npm:^5.2.1, safe-buffer@npm:~5.2.0":
   version: 5.2.1
   resolution: "safe-buffer@npm:5.2.1"
   checksum: 10c0/6501914237c0a86e9675d4e51d89ca3c21ffd6a31642efeba25ad65720bce6921c9e7e974e5be91a786b25aa058b5303285d3c15dbabf983a919f5f630d349f3
@@ -1042,12 +1034,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"serialize-javascript@npm:^6.0.2":
-  version: 6.0.2
-  resolution: "serialize-javascript@npm:6.0.2"
-  dependencies:
-    randombytes: "npm:^2.1.0"
-  checksum: 10c0/2dd09ef4b65a1289ba24a788b1423a035581bef60817bea1f01eda8e3bda623f86357665fe7ac1b50f6d4f583f97db9615b3f07b2a2e8cbcb75033965f771dd2
+"serialize-javascript@npm:^7.0.5":
+  version: 7.0.7
+  resolution: "serialize-javascript@npm:7.0.7"
+  checksum: 10c0/b8fb3de1484682e3bd7649e12e81ef119c9873537c07bf7ed8c8836fb30be6587679d7c18e445eb80e97c23c9df6390e4da65bef093f2d89fb6dfc10da991b6a
   languageName: node
   linkType: hard
 
@@ -1274,16 +1264,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"untitled-application@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "untitled-application@workspace:."
-  dependencies:
-    mocha: "npm:>=5.2.0"
-    should: "npm:^13.2.0"
-    zapier-platform-core: "npm:>=12.2.0"
-  languageName: unknown
-  linkType: soft
-
 "urlsafe-base64@npm:1.0.0":
   version: 1.0.0
   resolution: "urlsafe-base64@npm:1.0.0"
@@ -1418,9 +1398,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zapier-platform-core@npm:>=12.2.0":
-  version: 18.5.1
-  resolution: "zapier-platform-core@npm:18.5.1"
+"zapier-platform-core@npm:^19.0.0":
+  version: 19.0.0
+  resolution: "zapier-platform-core@npm:19.0.0"
   dependencies:
     "@types/node": "npm:^20.3.1"
     "@zapier/secret-scrubber": "npm:^1.1.2"
@@ -1435,7 +1415,7 @@ __metadata:
     node-fetch: "npm:2.7.0"
     oauth-sign: "npm:0.9.0"
     semver: "npm:7.7.2"
-    zapier-platform-schema: "npm:18.5.1"
+    zapier-platform-schema: "npm:19.0.0"
   peerDependencies:
     zapier-platform-legacy-scripting-runner: ">=3"
   dependenciesMeta:
@@ -1444,17 +1424,17 @@ __metadata:
   peerDependenciesMeta:
     zapier-platform-legacy-scripting-runner:
       optional: true
-  checksum: 10c0/38349bb35e441619e5f4f890127f25dcdd2535847fb381b0d1b7e038ea4c85fb0e8df79b3ae6235ae65ac3123b1edf878b987a5ccfec3a2c0f78073cb45714e9
+  checksum: 10c0/e62ef43837bc1de725d096e1425305aba9eff9548671cf720297b3040f7544364b51d580514ea15fdce859756f3bf0df1fc76899e0ade0538c98bfbc4c326167
   languageName: node
   linkType: hard
 
-"zapier-platform-schema@npm:18.5.1":
-  version: 18.5.1
-  resolution: "zapier-platform-schema@npm:18.5.1"
+"zapier-platform-schema@npm:19.0.0":
+  version: 19.0.0
+  resolution: "zapier-platform-schema@npm:19.0.0"
   dependencies:
     json-metaschema: "npm:1.3.0"
     jsonschema: "npm:1.5.0"
     lodash: "npm:4.18.1"
-  checksum: 10c0/3a6fbbb772fd2e817a6f84a5e913f8b356b38c701fea033a5fc67e70896a847acbbf7982471fc27e710bb9ed6b7f8639e2cf0b17843a8e96f9649b0f4590e28e
+  checksum: 10c0/353d25e090045d171d940a5250eafed584954e4814f4d02a93677909fd660654d263e685d78756cb8f792caa8077145bad1a9ef1e6c5094fbbb9b85f8362455e
   languageName: node
   linkType: hard

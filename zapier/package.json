@@ -11,13 +11,18 @@
     "npm": ">=5.6.0"
   },
   "dependencies": {
-    "zapier-platform-core": ">=12.2.0"
+    "zapier-platform-core": "^19.0.0"
   },
   "devDependencies": {
-    "mocha": ">=5.2.0",
+    "mocha": "^11.7.6",
     "should": "^13.2.0"
   },
   "private": true,
+  "resolutions": {
+    "form-data": "^4.0.6",
+    "serialize-javascript": "^7.0.5",
+    "diff": "^8.0.3"
+  },
   "zapier": {
     "convertedByCLIVersion": "12.2.0"
   }
