@@ -21,7 +21,8 @@
   "resolutions": {
     "form-data": "^4.0.6",
     "serialize-javascript": "^7.0.5",
-    "diff": "^8.0.3"
+    "diff": "^8.0.3",
+    "js-yaml": "^4.3.0"
   },
   "zapier": {
     "convertedByCLIVersion": "12.2.0"
