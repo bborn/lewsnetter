@@ -15,14 +15,14 @@
     "@rails/actiontext": "^8.1.300",
     "@rails/activestorage": "^8.1.300",
     "@rails/request.js": "^0.0.13",
-    "@redocly/cli": "^1.34.5 <2.0.0",
+    "@redocly/cli": "^2.36.0",
     "@tailwindcss/forms": "^0.5.11",
     "@tailwindcss/typography": "^0.5.19",
     "autoprefixer": "^10.5.0",
     "cable_ready": "^5.0.6",
     "codemirror": "^6.0.2",
     "easymde": "^2.18.0",
-    "esbuild": "^0.28.0",
+    "esbuild": "^0.28.1",
     "glob": "^13.0.6",
     "jstz": "^2.1.1",
     "mjml": "^5.0.0",
@@ -46,7 +46,13 @@
   },
   "packageManager": "yarn@4.2.2",
   "resolutions": {
-    "daterangepicker/jquery": "^3.7.1"
+    "daterangepicker/jquery": "^3.7.1",
+    "dompurify": "^3.4.11",
+    "ws": "^7.5.11",
+    "undici": "^6.27.0",
+    "yaml": "^2.8.3",
+    "tinyglobby/picomatch": "^4.0.4",
+    "node-gyp": "^11.0.0"
   },
   "devDependencies": {
     "yalc": "^1.0.0-pre.53"
