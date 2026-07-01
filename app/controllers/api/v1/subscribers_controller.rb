@@ -9,6 +9,9 @@ if defined?(Api::V1::ApplicationController)
 
     # GET /api/v1/teams/:team_id/subscribers
     def index
+      # Newest first so the account UI (which delegates its JSON here) and API
+      # consumers both get recency order, not raw insertion order.
+      @subscribers = @subscribers.reorder(created_at: :desc, id: :desc)
     end
 
     # GET /api/v1/subscribers/:id

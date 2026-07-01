@@ -5,6 +5,10 @@ class Account::SubscribersController < Account::ApplicationController
   # GET /account/teams/:team_id/subscribers
   # GET /account/teams/:team_id/subscribers.json
   def index
+    # Newest first — the list has an "Added" column, so recency is the natural
+    # order. id is the tiebreaker so bulk-imported rows sharing a created_at
+    # (same-second backfill) stay stably ordered across paginated pages.
+    @subscribers = @subscribers.reorder(created_at: :desc, id: :desc)
     delegate_json_to_api
   end
 
