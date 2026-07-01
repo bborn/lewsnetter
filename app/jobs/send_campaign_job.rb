@@ -17,7 +17,7 @@ class SendCampaignJob < ApplicationJob
       return
     end
 
-    campaign.update!(status: "sending", stats: campaign.stats.merge("sent" => 0, "failed" => 0, "suppressed" => 0, "errors" => []))
+    campaign.update!(status: "sending", stats: campaign.stats.merge("sent" => 0, "failed" => 0, "suppressed" => 0, "duplicates" => 0, "errors" => []))
 
     recipients =
       begin
@@ -31,21 +31,43 @@ class SendCampaignJob < ApplicationJob
     sent_count = 0
     failed_count = 0
     suppressed_count = 0
+    duplicate_count = 0
     errors = []
 
-    recipients.find_in_batches(batch_size: BATCH_SIZE) do |batch|
-      result = SesSender.send_bulk(campaign: campaign, subscribers: batch)
-      sent_count += result.message_ids.size
-      failed_count += result.failed.size
-      suppressed_count += result.suppressed.size
-      errors.concat(result.failed.map { |f| "#{f[:subscriber]&.email}: #{f[:error]}" })
+    # One address, one send. A person can exist as multiple subscriber rows
+    # (the sync keys on external_id, not email, so duplicate source records
+    # become duplicate rows sharing an address). De-dupe by normalized email
+    # across the whole send so nobody is emailed twice. find_in_batches yields
+    # in ascending id order, so the oldest row for an address wins.
+    seen_emails = Set.new
 
-      bump_last_contacted!(batch, result)
+    recipients.find_in_batches(batch_size: BATCH_SIZE) do |batch|
+      unique_batch = []
+      batch.each do |subscriber|
+        key = subscriber.email.to_s.strip.downcase
+        next if key.blank?
+        if seen_emails.add?(key)
+          unique_batch << subscriber
+        else
+          duplicate_count += 1
+        end
+      end
+
+      if unique_batch.any?
+        result = SesSender.send_bulk(campaign: campaign, subscribers: unique_batch)
+        sent_count += result.message_ids.size
+        failed_count += result.failed.size
+        suppressed_count += result.suppressed.size
+        errors.concat(result.failed.map { |f| "#{f[:subscriber]&.email}: #{f[:error]}" })
+
+        bump_last_contacted!(unique_batch, result)
+      end
 
       stats = campaign.stats.dup
       stats["sent"] = sent_count
       stats["failed"] = failed_count
       stats["suppressed"] = suppressed_count
+      stats["duplicates"] = duplicate_count
       stats["errors"] = errors
       campaign.update_column(:stats, stats)
     end

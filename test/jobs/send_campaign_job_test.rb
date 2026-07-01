@@ -66,6 +66,47 @@ class SendCampaignJobTest < ActiveJob::TestCase
     assert_equal 0, c.times_contacted
   end
 
+  test "de-dupes by email so a person with multiple subscriber rows is emailed once" do
+    # Same person, synced twice from the source app under different external_ids
+    # (the sync keys on external_id, not email — so duplicate source records
+    # become duplicate subscriber rows sharing an address). Also a case-variant
+    # of b@ to prove the dedupe is case-insensitive.
+    @team.subscribers.create!(email: "a@example.com", external_id: "job-a-dupe", subscribed: true)
+    @team.subscribers.create!(email: "B@EXAMPLE.COM", external_id: "job-b-dupe", subscribed: true)
+
+    original = Rails.application.config.ses_client
+    Rails.application.config.ses_client = :stub
+    begin
+      SendCampaignJob.perform_now(@campaign.id)
+    ensure
+      Rails.application.config.ses_client = original
+    end
+
+    @campaign.reload
+    assert_equal "sent", @campaign.status
+    # Audience is 4 subscribed rows but only 2 distinct addresses → 2 sends.
+    assert_equal 2, @campaign.stats["sent"]
+    assert_equal 2, @campaign.stats["duplicates"]
+  end
+
+  test "de-duped rows do not get last_contacted bumped" do
+    original = Rails.application.config.ses_client
+    Rails.application.config.ses_client = :stub
+    dupe = @team.subscribers.create!(email: "a@example.com", external_id: "job-a-dupe2", subscribed: true)
+
+    begin
+      SendCampaignJob.perform_now(@campaign.id)
+    ensure
+      Rails.application.config.ses_client = original
+    end
+
+    # The winning (oldest) row for a@ was contacted; the duplicate row was not.
+    winner = @team.subscribers.where(email: "a@example.com").order(:id).first
+    assert_not_nil winner.reload.last_contacted_at
+    assert_nil dupe.reload.last_contacted_at
+    assert_equal 0, dupe.times_contacted
+  end
+
   test "skips when campaign is already sent" do
     @campaign.update!(status: "sent", sent_at: 1.hour.ago)
     SendCampaignJob.perform_now(@campaign.id)
