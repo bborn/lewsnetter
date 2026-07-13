@@ -127,6 +127,16 @@ env:
     LEWSNETTER_ABUSE_EMAIL: "abuse@lewsnetter.dev"
     HIDE_THINGS: "true"
     HIDE_EXAMPLES: "true"
+    # Run a SINGLE Puma worker. The MCP server (fast-mcp RackTransport) keeps
+    # its connected SSE-client registry in per-process memory and delivers each
+    # JSON-RPC response only to clients registered in the SAME worker. With
+    # multiple workers a client's SSE stream lands on worker A while its
+    # POST /mcp/messages lands on worker B (empty registry), so the response is
+    # broadcast to nobody and the client times out at 30s. One worker keeps the
+    # stream and the message POSTs in the same process. Fine at current scale
+    # (RAILS_MAX_THREADS still applies); revisit with cross-worker pub/sub —
+    # or a stateless Streamable-HTTP transport — before scaling web concurrency.
+    WEB_CONCURRENCY: "1"
     # ── OPTIONAL: Cloudflare R2 backup (Litestream) ───────────────────────
     # R2 is OPT-IN. Setting LITESTREAM_REPLICA_BUCKET is the single switch
     # that turns on R2 for both Litestream DB backups AND Active Storage
