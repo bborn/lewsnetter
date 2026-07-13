@@ -101,9 +101,14 @@ Doorkeeper.configure do
   # Access token expiration time (default: 2 hours).
   # If you want to disable expiration, set this to `nil`.
   #
-  # Kept at the 2h default explicitly. Do NOT lengthen this to work around
-  # session drops — refresh tokens (see `use_refresh_token` below) are the
-  # correct mechanism for keeping long-running MCP sessions alive.
+  # 2h default for interactive OAuth + API tokens (the /api/v1 REST API and
+  # developer server-to-server tokens). MCP clients are exempted below via
+  # custom_access_token_expires_in and issued NON-EXPIRING tokens instead:
+  # the refresh-token flow does not reliably keep Claude Code / Cursor MCP
+  # sessions alive across the 2h cliff, and the resulting re-auth churn
+  # accumulates zombie SSE streams that wedge the fast-mcp transport. A
+  # long-lived token for the (single-tenant, send-gated) MCP client trades a
+  # small amount of bearer-token risk for a session that stays connected.
   access_token_expires_in 2.hours
 
   # Assign custom TTL for access tokens. Will be used instead of access_token_expires_in
@@ -118,9 +123,15 @@ Doorkeeper.configure do
   # `grant_type` - the grant type of the request (see Doorkeeper::OAuth)
   # `scopes` - the requested scopes (see Doorkeeper::OAuth::Scopes)
   #
-  # custom_access_token_expires_in do |context|
-  #   context.client.application.additional_settings.implicit_oauth_expiration
-  # end
+  # MCP clients register dynamically with mcp:* scopes (see
+  # Oauth::RegistrationsController). Issue them a non-expiring access token so
+  # long-running MCP sessions don't drop every 2h. Returning nil for any
+  # non-MCP token falls back to access_token_expires_in above. Returning
+  # Float::INFINITY yields a token with no expiry (see Doorkeeper's
+  # Authorization::Token.access_token_expires_in).
+  custom_access_token_expires_in do |context|
+    Float::INFINITY if context.scopes&.all&.any? { |scope| scope.start_with?("mcp:") }
+  end
 
   # Use a custom class for generating the access token.
   # See https://doorkeeper.gitbook.io/guides/configuration/other-configurations#custom-access-token-generator
