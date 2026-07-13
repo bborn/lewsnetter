@@ -29,7 +29,9 @@ module Doorkeeper
           return true if uri.host == "localhost"
 
           IPAddr.new(uri.host).loopback?
-        rescue IPAddr::Error, IPAddr::InvalidAddressError
+        rescue IPAddr::Error
+          # IPAddr::InvalidAddressError (raised for non-IP-literal hosts) is a
+          # subclass of IPAddr::Error, so this catches it too.
           false
         end
       end
