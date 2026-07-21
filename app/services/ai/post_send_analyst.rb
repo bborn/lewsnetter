@@ -64,7 +64,12 @@ module AI
       # in the per-recipient delivery_stats so both the LLM prompt and the stub
       # summary report real open/click/bounce numbers instead of zeros.
       send_side = (@campaign.stats || {}).to_h.stringify_keys
-      send_side.merge(engagement_stats)
+      # Add only the engagement metrics (not sent/failed — the send-side counts
+      # stay authoritative for the recipient total).
+      engagement = engagement_stats.slice(
+        "delivered", "opened", "clicked", "bounced", "complained", "unsubscribed", "click_total"
+      )
+      send_side.merge(engagement)
     end
 
     def engagement_stats

@@ -10,8 +10,21 @@ module AI
         body_mjml: "<mjml><mj-body><mj-section><mj-column><mj-text>Hi there</mj-text></mj-column></mj-section></mj-body></mjml>",
         status: "sent",
         sent_at: 1.day.ago,
-        stats: {"sent" => 200, "opens" => 50, "clicks" => 10, "bounces" => 2, "complaints" => 1}
+        stats: {"sent" => 4}
       )
+      # Engagement lives on the per-recipient deliveries, not the stats column:
+      # 4 sent/delivered, 2 opened, 1 clicked → 50% open, 25% click.
+      subs = 4.times.map do |i|
+        @team.subscribers.create!(email: "d#{i}@example.com", external_id: "d-#{i}", subscribed: true)
+      end
+      Delivery.create!(campaign: @campaign, subscriber: subs[0], ses_message_id: "m0", status: "delivered",
+        sent_at: 1.hour.ago, delivered_at: 55.minutes.ago, opened_at: 40.minutes.ago, clicked_at: 30.minutes.ago, click_count: 1)
+      Delivery.create!(campaign: @campaign, subscriber: subs[1], ses_message_id: "m1", status: "delivered",
+        sent_at: 1.hour.ago, delivered_at: 55.minutes.ago, opened_at: 40.minutes.ago)
+      Delivery.create!(campaign: @campaign, subscriber: subs[2], ses_message_id: "m2", status: "delivered",
+        sent_at: 1.hour.ago, delivered_at: 55.minutes.ago)
+      Delivery.create!(campaign: @campaign, subscriber: subs[3], ses_message_id: "m3", status: "delivered",
+        sent_at: 1.hour.ago, delivered_at: 55.minutes.ago)
       AI::Base.force_stub = true
     end
 
@@ -27,12 +40,12 @@ module AI
       assert_match(/## What didn't/, md)
       assert_match(/## What to try next/, md)
       assert_match(/Hello world/, md)
-      assert_match(/200 recipients/, md)
-      # 50/200 = 25.0%
+      assert_match(/4 recipients/, md)
+      # 2 opened / 4 sent = 50.0%
+      assert_match(/50\.0%/, md)
+      # 1 clicked / 4 sent = 25.0%
       assert_match(/25\.0%/, md)
-      # 10/200 = 5.0%
-      assert_match(/5\.0%/, md)
-      assert_match(/Stub-mode analysis/, md)
+      assert_match(/postmortem/i, md)
     end
 
     test "stub mode handles a campaign with empty stats without raising" do
