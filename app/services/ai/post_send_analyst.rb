@@ -56,9 +56,22 @@ module AI
     end
 
     def stats
-      # `&.` so stub_markdown — which `call` falls back to when @campaign is
+      # Guard so stub_markdown — which `call` falls back to when @campaign is
       # nil — doesn't recrash here and defeat its own nil-guard.
-      (@campaign&.stats || {}).to_h
+      return {} unless @campaign
+      # Engagement (opened/clicked/bounced/complained) is NOT stored on the
+      # campaign's `stats` column — that's send-side only (sent/failed/…). Merge
+      # in the per-recipient delivery_stats so both the LLM prompt and the stub
+      # summary report real open/click/bounce numbers instead of zeros.
+      send_side = (@campaign.stats || {}).to_h.stringify_keys
+      send_side.merge(engagement_stats)
+    end
+
+    def engagement_stats
+      @campaign.delivery_stats.stringify_keys
+    rescue => e
+      Rails.logger.warn("[AI::PostSendAnalyst] delivery_stats failed: #{e.class}: #{e.message}")
+      {}
     end
 
     def baseline
@@ -71,18 +84,21 @@ module AI
       return {} if prior.empty?
       keys = prior.flat_map(&:keys).uniq
       keys.each_with_object({}) do |k, acc|
-        values = prior.map { |row| row[k].to_f }.compact
-        acc[k] = (values.sum / values.size).round(2) if values.any?
+        # Some stats values are non-numeric (e.g. `errors` is an Array). Only
+        # average the numeric ones — calling `.to_f` on an Array raises, and the
+        # rescue in `call` silently turned that into stub-mode output.
+        values = prior.map { |row| row[k] }.grep(Numeric)
+        acc[k] = (values.sum.to_f / values.size).round(2) if values.any?
       end
     end
 
     def stub_markdown
       s = stats
-      sent = s["sent"] || s[:sent] || 0
-      opens = s["opens"] || s[:opens] || 0
-      clicks = s["clicks"] || s[:clicks] || 0
-      bounces = s["bounces"] || s[:bounces] || 0
-      complaints = s["complaints"] || s[:complaints] || 0
+      sent = s["sent"] || 0
+      opens = s["opened"] || 0
+      clicks = s["clicked"] || 0
+      bounces = s["bounced"] || 0
+      complaints = s["complained"] || 0
 
       open_rate = percent(opens, sent)
       click_rate = percent(clicks, sent)
@@ -92,8 +108,17 @@ module AI
       subject = @campaign&.subject.to_s.presence || "(no subject)"
       sent_at = @campaign&.sent_at&.to_fs(:long) || "an unknown time"
 
+      # Only blame a missing key when the LLM genuinely isn't configured. When
+      # it IS configured, this fallback means the AI call failed for some other
+      # reason — don't send the author chasing an API key that's already set.
+      note = if Llm::Configuration.current.usable?
+        "*Automated summary — the AI postmortem couldn't be generated this time, so here are the numbers directly.*"
+      else
+        "*Stub-mode analysis — set `ANTHROPIC_API_KEY` for a real LLM postmortem.*"
+      end
+
       <<~MARKDOWN
-        *Stub-mode analysis — set `ANTHROPIC_API_KEY` for a real LLM postmortem.*
+        #{note}
 
         ## What worked
 
