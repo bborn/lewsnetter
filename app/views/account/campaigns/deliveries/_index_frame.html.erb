@@ -60,7 +60,10 @@
               <tr>
                 <td>
                   <% if s %>
-                    <%= link_to [:account, s], class: "campaign-show-recipients__recipient" do %>
+                    <%# Break out of the recipients turbo-frame — the subscriber
+                        page is a full page, not this frame, so an in-frame nav
+                        renders Turbo's "content missing". %>
+                    <%= link_to [:account, s], class: "campaign-show-recipients__recipient", data: { turbo_frame: "_top" } do %>
                       <span class="campaign-show-recipients__name">
                         <%= s.name.presence || s.email %>
                       </span>
