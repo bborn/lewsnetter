@@ -109,7 +109,7 @@ class Account::Campaigns::DeliveriesControllerTest < ActionDispatch::Integration
 
     header = rows.first
     %w[subscriber_email subscriber_name subscriber_external_id status sent_at
-      delivered_at opened_at clicked_at bounced_at bounce_subtype
+      delivered_at opened_at clicked_at bounced_at bounce_type bounce_subtype
       complained_at unsubscribed_at click_count last_clicked_url].each do |col|
       assert_includes header, col, "expected #{col} in CSV header, got #{header.inspect}"
     end
@@ -122,8 +122,8 @@ class Account::Campaigns::DeliveriesControllerTest < ActionDispatch::Integration
 
     # The clicker row should carry click_count=3 + the last_clicked_url.
     clicker_row = body_rows.find { |r| r[0] == "clicker@example.com" }
-    assert_equal "3", clicker_row[12]
-    assert_equal "https://example.com/cta", clicker_row[13]
+    assert_equal "3", clicker_row[13]
+    assert_equal "https://example.com/cta", clicker_row[14]
   end
 
   test "csv export ignores status filter (always exports everything)" do

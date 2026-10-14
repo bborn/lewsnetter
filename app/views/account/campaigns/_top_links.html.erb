@@ -1,9 +1,10 @@
 <%# Top clicked links table for the campaign show page.
     Locals: campaign (Campaign).
 
-    Reads aggregate from Campaign#top_links — sorted by total clicks desc,
-    capped at 25. We render a quiet, no-chrome variant of the existing
-    stats card so the section sits naturally beneath Engagement without
+    Reads aggregate from Campaign#top_links — sorted by human clicks desc,
+    capped at 25. Unique/Total are human clicks; Scanner is machine traffic
+    (link scanners, near-instant clicks) shown so nothing is hidden. We
+    render a quiet, no-chrome variant of the existing stats card so the section sits naturally beneath Engagement without
     competing with it. URLs are truncated at 80 chars in the display so
     a single ridiculous UTM-stuffed URL can't blow out the column. %>
 
@@ -13,7 +14,7 @@
     <header class="campaign-show-stats__header">
       <h3 class="campaign-show-stats__title">Top links</h3>
       <span class="campaign-show-stats__hint">
-        <%= pluralize(links.size, "link") %> · sorted by total clicks
+        <%= pluralize(links.size, "link") %> · human clicks, scanners counted separately
       </span>
     </header>
 
@@ -24,6 +25,7 @@
             <th scope="col" class="campaign-show-links__th-url">URL</th>
             <th scope="col" class="campaign-show-links__th-num">Unique</th>
             <th scope="col" class="campaign-show-links__th-num">Total</th>
+            <th scope="col" class="campaign-show-links__th-num">Scanner</th>
           </tr>
         </thead>
         <tbody>
@@ -38,6 +40,7 @@
               </td>
               <td class="campaign-show-links__num"><%= row[:unique_clicks] %></td>
               <td class="campaign-show-links__num"><%= row[:total_clicks] %></td>
+              <td class="campaign-show-links__num"><%= row[:automated_clicks] %></td>
             </tr>
           <% end %>
         </tbody>

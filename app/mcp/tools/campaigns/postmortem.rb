@@ -13,9 +13,13 @@ module Mcp
           subscriber) pair, written at send time and updated by SES SNS event
           webhooks (Bounce, Complaint, Delivery, Reject). The "failed" counter
           covers sends that errored locally (render failure) or were rejected by
-          SES before reaching the network. Open + click counters are populated by
-          client-side tracking in a follow-up phase and will be 0 until then.
-          Use top_links for click-through data when available.
+          SES before reaching the network. `opened`, `clicked` and `clicks_total`
+          count HUMAN engagement only: link-scanner clicks (Safe Links,
+          Proofpoint, Mimecast, near-instant clicks, honeypot hits) and Apple
+          Mail Privacy Protection / scanner opens are excluded and reported in
+          `opened_automated` / `clicked_automated`. The `*_raw` keys are the
+          unfiltered counts. top_links gives human `clicks` / `unique_clicks`
+          per URL plus `automated_clicks`.
         DESC
         arguments_schema(
           type: "object",
@@ -28,27 +32,25 @@ module Mcp
 
         def call(arguments:, context:)
           campaign = context.team.campaigns.find_by!(id: arguments["id"])
-          deliveries = campaign.deliveries
 
-          stats = {
-            sent: deliveries.where.not(ses_message_id: nil).count,
-            delivered: deliveries.where.not(delivered_at: nil).count,
-            opened: deliveries.where.not(opened_at: nil).count,
-            clicked: deliveries.where.not(clicked_at: nil).count,
-            bounced: deliveries.bounced.count,
-            complained: deliveries.complained.count,
-            unsubscribed: deliveries.where.not(unsubscribed_at: nil).count,
-            failed: deliveries.where(status: "failed").count
-          }
+          # Opens + clicks are HUMAN numbers; machine traffic (link
+          # scanners, Apple MPP, honeypot hits) is reported alongside in
+          # the *_automated / *_raw keys. See Campaign#delivery_stats.
+          stats = campaign.delivery_stats
 
-          # top_links: aggregated from the per-recipient Delivery rows via
-          # `last_clicked_url` + `click_count` (see Campaign#top_links for
-          # the methodology + caveats). Falls back to the legacy
+          # top_links: aggregated from ClickEvent rows — `clicks` and
+          # `unique_clicks` are human, `automated_clicks` is scanner traffic
+          # (see Campaign#top_links). Falls back to the legacy
           # `campaign.stats["links"]` blob when no clicks have been
           # recorded yet, so older campaigns whose links got persisted into
           # the stats JSON column still surface here.
           tracked = campaign.top_links(limit: 10).map do |row|
-            {url: row[:url], clicks: row[:total_clicks], unique_clicks: row[:unique_clicks]}
+            {
+              url: row[:url],
+              clicks: row[:total_clicks],
+              unique_clicks: row[:unique_clicks],
+              automated_clicks: row[:automated_clicks]
+            }
           end
 
           top_links =

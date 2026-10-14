@@ -8,6 +8,14 @@
 # Auto-populated from:
 #   - SES Permanent bounces  (reason: "hard_bounce")
 #   - SES Complaints         (reason: "complaint")
+#   - Repeated soft bounces  (reason: "repeated_soft_bounce") — an address
+#     that soft-bounced (SES bounceType "Transient": mailbox full, mailbox
+#     disabled, receiving server deferring…) on SOFT_BOUNCE_THRESHOLD
+#     consecutive campaigns with no successful delivery, open, or click in
+#     between. A single soft bounce is never enough: those are often
+#     temporary. Several in a row across separate campaigns means the
+#     mailbox is effectively dead, and continuing to mail it hurts sender
+#     reputation. See `.suppress_after_repeated_soft_bounces`.
 #
 # Manually populated from:
 #   - Operator add via the Suppressions UI  (reason: "manual")
@@ -17,7 +25,11 @@
 # `where(email: q)` still hits the unique index. Reason + source + note are
 # plaintext — low-stakes, useful for operator debugging.
 class Suppression < ApplicationRecord
-  REASONS = %w[hard_bounce complaint manual gdpr_request].freeze
+  REASONS = %w[hard_bounce complaint repeated_soft_bounce manual gdpr_request].freeze
+
+  # How many consecutive campaigns must soft-bounce before an address is
+  # suppressed. Self-hosters can override with SOFT_BOUNCE_SUPPRESSION_THRESHOLD.
+  SOFT_BOUNCE_THRESHOLD = Integer(ENV.fetch("SOFT_BOUNCE_SUPPRESSION_THRESHOLD", 3))
 
   # PII at rest. Deterministic so we can do exact-match lookups for the
   # SesSender skip-list and the SNS auto-add upsert. `support_unencrypted_data`
@@ -79,6 +91,50 @@ class Suppression < ApplicationRecord
     existing = where(team_id: team.id, email: normalized).first
     raise e if existing.nil?
     existing
+  end
+
+  # Called by the SNS webhook after a Transient bounce is recorded. Looks at
+  # the subscriber's most recent SOFT_BOUNCE_THRESHOLD deliveries on this
+  # team (one per campaign) and suppresses the address only when every one
+  # of them soft-bounced and none was opened or clicked. Any delivery in
+  # that run that wasn't a soft bounce (delivered cleanly, opened, clicked)
+  # breaks the streak, so this only fires on N bounces in a row.
+  #
+  # Deliveries that never went out (status "suppressed" / "failed") are
+  # skipped — they don't say anything about the mailbox.
+  #
+  # Returns the Suppression row when one was created (or already existed),
+  # nil otherwise.
+  def self.suppress_after_repeated_soft_bounces(team:, subscriber:, threshold: SOFT_BOUNCE_THRESHOLD)
+    return nil if subscriber.nil? || threshold.to_i < 1
+
+    recent = Delivery.joins(:campaign)
+      .where(campaigns: {team_id: team.id}, subscriber_id: subscriber.id)
+      .where.not(status: %w[suppressed failed])
+      .order(Arel.sql("COALESCE(deliveries.sent_at, deliveries.created_at) DESC"), id: :desc)
+      .limit(threshold)
+      .to_a
+
+    return nil if recent.size < threshold
+    return nil unless recent.all? { |d| soft_bounce?(d) }
+
+    suppress(
+      team: team,
+      email: subscriber.email,
+      reason: "repeated_soft_bounce",
+      source: recent.first.bounce_subtype.presence || "Transient",
+      note: "Soft-bounced on #{threshold} consecutive campaigns"
+    )
+  end
+
+  # A delivery counts toward the streak when SES reported a Transient bounce
+  # and the recipient never opened or clicked it. `delivered_at` alone
+  # doesn't break it: SES "Delivery" only means the receiving server
+  # accepted the message, and an asynchronous bounce can follow.
+  def self.soft_bounce?(delivery)
+    delivery.bounce_type == "Transient" &&
+      delivery.opened_at.nil? &&
+      delivery.clicked_at.nil?
   end
 
   private

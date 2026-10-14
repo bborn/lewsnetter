@@ -99,7 +99,8 @@ class CampaignTest < ActiveSupport::TestCase
 
   test "delivery_stats returns zero counts when there are no deliveries" do
     stats = @campaign.delivery_stats
-    %i[sent delivered opened clicked bounced complained unsubscribed failed click_total].each do |k|
+    %i[sent delivered opened opened_automated opened_raw clicked clicks_total clicked_automated
+      clicked_raw clicks_total_raw bounced complained unsubscribed failed].each do |k|
       assert_equal 0, stats[k], "expected #{k} = 0"
     end
   end
@@ -109,13 +110,16 @@ class CampaignTest < ActiveSupport::TestCase
       @team.subscribers.create!(email: "ds#{i}@example.com", external_id: "ds-#{i}", subscribed: true)
     end
 
-    # Plain sent (delivered to MTA, opened, clicked twice).
-    Delivery.create!(
+    # Plain sent (delivered to MTA, opened, clicked twice by a person).
+    clicker = Delivery.create!(
       campaign: @campaign, subscriber: subs[0],
       ses_message_id: "ds-1", sent_at: 1.hour.ago,
       delivered_at: 50.minutes.ago, opened_at: 40.minutes.ago,
       clicked_at: 30.minutes.ago, click_count: 2
     )
+    clicker.open_events.create!(opened_at: 40.minutes.ago, user_agent: "Mozilla/5.0 (Macintosh) Firefox/130")
+    clicker.click_events.create!(url: "https://example.com/a", clicked_at: 30.minutes.ago, user_agent: "Firefox")
+    clicker.click_events.create!(url: "https://example.com/b", clicked_at: 29.minutes.ago, user_agent: "Firefox")
     # Sent + delivered only.
     Delivery.create!(
       campaign: @campaign, subscriber: subs[1],
@@ -151,11 +155,61 @@ class CampaignTest < ActiveSupport::TestCase
     assert_equal 3, stats[:delivered]    # rows with delivered_at
     assert_equal 1, stats[:opened]
     assert_equal 1, stats[:clicked]
-    assert_equal 2, stats[:click_total]
+    assert_equal 2, stats[:clicks_total]
     assert_equal 1, stats[:bounced]
     assert_equal 1, stats[:complained]
     assert_equal 1, stats[:unsubscribed]
     assert_equal 1, stats[:failed]
+  end
+
+  test "delivery_stats reports human clicks/opens as the headline and machine traffic alongside" do
+    subs = 4.times.map do |i|
+      @team.subscribers.create!(email: "hm#{i}@example.com", external_id: "hm-#{i}", subscribed: true)
+    end
+    delivered = 2.hours.ago
+
+    # Scanner only: every link hit seconds after delivery, raw columns set.
+    scanned = Delivery.create!(campaign: @campaign, subscriber: subs[0], ses_message_id: "hm-1",
+      sent_at: delivered, delivered_at: delivered, opened_at: delivered + 5.seconds,
+      clicked_at: delivered + 10.seconds, click_count: 3, last_clicked_url: "https://example.com/c")
+    scanned.open_events.create!(opened_at: delivered + 5.seconds, automated: true, automated_reason: "apple_mpp")
+    %w[a b c].each_with_index do |path, i|
+      scanned.click_events.create!(url: "https://example.com/#{path}", clicked_at: delivered + (10 + i).seconds,
+        automated: true, automated_reason: "too_fast")
+    end
+
+    # Scanner pass, then the real reader an hour later on one link.
+    mixed = Delivery.create!(campaign: @campaign, subscriber: subs[1], ses_message_id: "hm-2",
+      sent_at: delivered, delivered_at: delivered, opened_at: delivered + 5.seconds,
+      clicked_at: delivered + 10.seconds, click_count: 3, last_clicked_url: "https://example.com/a")
+    mixed.open_events.create!(opened_at: delivered + 5.seconds, automated: true, automated_reason: "too_fast")
+    mixed.click_events.create!(url: "https://example.com/a", clicked_at: delivered + 10.seconds,
+      automated: true, automated_reason: "too_fast")
+    mixed.click_events.create!(url: "https://example.com/b", clicked_at: delivered + 11.seconds,
+      automated: true, automated_reason: "too_fast")
+    mixed.click_events.create!(url: "https://example.com/a", clicked_at: delivered + 1.hour, user_agent: "Safari")
+
+    # Apple MPP open only — no human signal at all.
+    mpp = Delivery.create!(campaign: @campaign, subscriber: subs[2], ses_message_id: "hm-3",
+      sent_at: delivered, delivered_at: delivered, opened_at: delivered + 3.seconds)
+    mpp.open_events.create!(opened_at: delivered + 3.seconds, automated: true, automated_reason: "apple_mpp")
+
+    # A real open, no click.
+    reader = Delivery.create!(campaign: @campaign, subscriber: subs[3], ses_message_id: "hm-4",
+      sent_at: delivered, delivered_at: delivered, opened_at: delivered + 30.minutes)
+    reader.open_events.create!(opened_at: delivered + 30.minutes, user_agent: "Mozilla/5.0 (Windows NT 10.0) Thunderbird/128")
+
+    stats = @campaign.delivery_stats
+    assert_equal 1, stats[:clicked], "only the mixed recipient clicked as a person"
+    assert_equal 1, stats[:clicks_total]
+    assert_equal 1, stats[:clicked_automated], "scanner-only recipient"
+    assert_equal 2, stats[:clicked_raw]
+    assert_equal 6, stats[:clicks_total_raw]
+    # Human opens: the real reader + the mixed recipient (a human click
+    # implies an open even though their pixel fetch was a scanner).
+    assert_equal 2, stats[:opened]
+    assert_equal 2, stats[:opened_automated], "scanned + mpp"
+    assert_equal 4, stats[:opened_raw]
   end
 
   test "top_links returns [] when no recipient has clicked a tracked URL" do
@@ -163,72 +217,62 @@ class CampaignTest < ActiveSupport::TestCase
     assert_equal [], @campaign.top_links
   end
 
-  test "top_links aggregates unique + total clicks per URL, sorted by total desc" do
-    subs = 5.times.map do |i|
+  test "top_links counts human unique/total per URL from click events, crediting every link clicked" do
+    subs = 3.times.map do |i|
       @team.subscribers.create!(email: "tl#{i}@example.com", external_id: "tl-#{i}", subscribed: true)
     end
+    deliveries = subs.each_with_index.map do |sub, i|
+      Delivery.create!(campaign: @campaign, subscriber: sub, ses_message_id: "tl-#{i}",
+        sent_at: 2.hours.ago, delivered_at: 2.hours.ago)
+    end
+    foo = "https://foo.example.com/landing"
+    bar = "https://bar.example.com/x"
 
-    # foo.example.com — 3 unique recipients, with click_counts 5, 2, 1 → total 8
-    Delivery.create!(campaign: @campaign, subscriber: subs[0], ses_message_id: "tl-1",
-      sent_at: 1.hour.ago, clicked_at: 30.minutes.ago,
-      click_count: 5, last_clicked_url: "https://foo.example.com/landing")
-    Delivery.create!(campaign: @campaign, subscriber: subs[1], ses_message_id: "tl-2",
-      sent_at: 1.hour.ago, clicked_at: 25.minutes.ago,
-      click_count: 2, last_clicked_url: "https://foo.example.com/landing")
-    Delivery.create!(campaign: @campaign, subscriber: subs[2], ses_message_id: "tl-3",
-      sent_at: 1.hour.ago, clicked_at: 20.minutes.ago,
-      click_count: 1, last_clicked_url: "https://foo.example.com/landing")
-    # bar.example.com — 2 unique recipients, click_counts 4, 3 → total 7
-    Delivery.create!(campaign: @campaign, subscriber: subs[3], ses_message_id: "tl-4",
-      sent_at: 1.hour.ago, clicked_at: 15.minutes.ago,
-      click_count: 4, last_clicked_url: "https://bar.example.com/x")
-    Delivery.create!(campaign: @campaign, subscriber: subs[4], ses_message_id: "tl-5",
-      sent_at: 1.hour.ago, clicked_at: 10.minutes.ago,
-      click_count: 3, last_clicked_url: "https://bar.example.com/x")
+    # Recipient 0 clicks foo twice and bar once — both links get credit.
+    deliveries[0].click_events.create!(url: foo, clicked_at: 1.hour.ago, user_agent: "Firefox")
+    deliveries[0].click_events.create!(url: foo, clicked_at: 50.minutes.ago, user_agent: "Firefox")
+    deliveries[0].click_events.create!(url: bar, clicked_at: 40.minutes.ago, user_agent: "Firefox")
+    # Recipient 1 clicks foo once.
+    deliveries[1].click_events.create!(url: foo, clicked_at: 30.minutes.ago, user_agent: "Safari")
+    # Recipient 2 is a scanner on both links.
+    deliveries[2].click_events.create!(url: foo, clicked_at: 2.hours.ago, automated: true, automated_reason: "too_fast")
+    deliveries[2].click_events.create!(url: bar, clicked_at: 2.hours.ago, automated: true, automated_reason: "too_fast")
+    # Honeypot hits never show up as a link.
+    deliveries[2].click_events.create!(clicked_at: 2.hours.ago, honeypot: true, automated: true, automated_reason: "honeypot")
 
     rows = @campaign.top_links
 
     assert_equal 2, rows.size
-    assert_equal "https://foo.example.com/landing", rows[0][:url]
-    assert_equal 3, rows[0][:unique_clicks]
-    assert_equal 8, rows[0][:total_clicks]
+    assert_equal({url: foo, unique_clicks: 2, total_clicks: 3, automated_clicks: 1}, rows[0])
+    assert_equal({url: bar, unique_clicks: 1, total_clicks: 1, automated_clicks: 1}, rows[1])
+  end
 
-    assert_equal "https://bar.example.com/x", rows[1][:url]
-    assert_equal 2, rows[1][:unique_clicks]
-    assert_equal 7, rows[1][:total_clicks]
+  test "top_links lists scanner-only links below human-clicked ones" do
+    sub = @team.subscribers.create!(email: "so@example.com", external_id: "so", subscribed: true)
+    d = Delivery.create!(campaign: @campaign, subscriber: sub, ses_message_id: "so-1",
+      sent_at: 2.hours.ago, delivered_at: 2.hours.ago)
+    d.click_events.create!(url: "https://example.com/scanned", clicked_at: 2.hours.ago,
+      automated: true, automated_reason: "scanner_user_agent")
+    d.click_events.create!(url: "https://example.com/human", clicked_at: 1.hour.ago, user_agent: "Firefox")
+
+    rows = @campaign.top_links
+    assert_equal %w[https://example.com/human https://example.com/scanned], rows.map { |r| r[:url] }
+    assert_equal 0, rows[1][:total_clicks]
+    assert_equal 1, rows[1][:automated_clicks]
   end
 
   test "top_links honours the limit argument" do
-    10.times do |i|
-      sub = @team.subscribers.create!(email: "lim#{i}@example.com", external_id: "lim-#{i}", subscribed: true)
-      Delivery.create!(campaign: @campaign, subscriber: sub, ses_message_id: "lim-#{i}",
-        sent_at: 1.hour.ago, clicked_at: 30.minutes.ago,
-        click_count: 10 - i, # bigger i → fewer clicks → lower rank
-        last_clicked_url: "https://example.com/link-#{i}")
+    sub = @team.subscribers.create!(email: "lim@example.com", external_id: "lim", subscribed: true)
+    d = Delivery.create!(campaign: @campaign, subscriber: sub, ses_message_id: "lim-1",
+      sent_at: 2.hours.ago, delivered_at: 2.hours.ago)
+    5.times do |i|
+      (5 - i).times do |n|
+        d.click_events.create!(url: "https://example.com/link-#{i}", clicked_at: (60 - n).minutes.ago, user_agent: "Firefox")
+      end
     end
 
     rows = @campaign.top_links(limit: 3)
-    assert_equal 3, rows.size
-    # Top three should be the three with the largest click_counts (links 0..2).
-    assert_equal "https://example.com/link-0", rows[0][:url]
-    assert_equal "https://example.com/link-1", rows[1][:url]
-    assert_equal "https://example.com/link-2", rows[2][:url]
-  end
-
-  test "top_links ignores deliveries with no last_clicked_url" do
-    sub_a = @team.subscribers.create!(email: "tla@example.com", external_id: "tla", subscribed: true)
-    sub_b = @team.subscribers.create!(email: "tlb@example.com", external_id: "tlb", subscribed: true)
-    # Clicked → included
-    Delivery.create!(campaign: @campaign, subscriber: sub_a, ses_message_id: "tl-c-a",
-      sent_at: 1.hour.ago, clicked_at: 10.minutes.ago,
-      click_count: 1, last_clicked_url: "https://present.example.com")
-    # No click recorded → excluded
-    Delivery.create!(campaign: @campaign, subscriber: sub_b, ses_message_id: "tl-c-b",
-      sent_at: 1.hour.ago, delivered_at: 30.minutes.ago)
-
-    rows = @campaign.top_links
-    assert_equal 1, rows.size
-    assert_equal "https://present.example.com", rows[0][:url]
+    assert_equal %w[https://example.com/link-0 https://example.com/link-1 https://example.com/link-2], rows.map { |r| r[:url] }
   end
 
   # ---------------------------------------------------------------------

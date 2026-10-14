@@ -29,6 +29,10 @@ class CampaignRenderer
 
   BODY_PLACEHOLDER = "{{body}}".freeze
 
+  # Inline style for the hidden honeypot link (see #prepend_honeypot_link).
+  HONEYPOT_STYLE = "display:none !important;mso-hide:all;visibility:hidden;" \
+    "font-size:0;line-height:0;max-height:0;max-width:0;overflow:hidden;opacity:0".freeze
+
   # Optional `delivery:` arg enables open-pixel injection + click rewriting.
   # When nil (preview / test-render paths), the email is returned without
   # tracking markup so previews don't pollute stats and don't crash on the
@@ -86,13 +90,14 @@ class CampaignRenderer
   # Tracking injection (Phase 2)
   # ──────────────────────────────────────────────────────────────────────
   # Walks the final HTML, rewrites every trackable <a href> to go through
-  # the click redirect controller, and appends a 1x1 open pixel just before
-  # </body>. We parse with Nokogiri rather than regexing the HTML because
+  # the click redirect controller, adds the hidden honeypot link at the top
+  # of <body>, and appends a 1x1 open pixel just before </body>. We parse with Nokogiri rather than regexing the HTML because
   # MJML's output has nested anchors inside table cells and a regex would
   # mis-handle attributes that contain '>'.
   def inject_tracking(html)
     doc = Nokogiri::HTML5(html)
     rewrite_links(doc)
+    prepend_honeypot_link(doc)
     append_pixel(doc)
     # `to_html` re-serializes back to a full document; for email we want a
     # well-formed <html><body>… same as Premailer produced, so this is fine.
@@ -112,6 +117,32 @@ class CampaignRenderer
       href = a["href"].to_s
       next unless trackable_link?(href)
       a["href"] = click_tracking_url_for(href)
+    end
+  end
+
+  # One invisible tracked link per email that no person can see, tab to, or
+  # have read aloud: empty (no text, so nothing in the plain-text part),
+  # display:none plus `mso-hide:all` for Outlook's Word renderer,
+  # aria-hidden, and out of the tab order. Link scanners request every href
+  # in the message regardless of styling, so a hit on this link marks that
+  # delivery's burst of clicks as machine traffic (see ClickEvent).
+  #
+  # Placed first in <body> so a scanner that caps how many links it follows
+  # still reaches it.
+  def prepend_honeypot_link(doc)
+    body = doc.at_css("body")
+    return unless body
+
+    a = Nokogiri::XML::Node.new("a", doc)
+    a["href"] = honeypot_tracking_url
+    a["aria-hidden"] = "true"
+    a["tabindex"] = "-1"
+    a["data-lewsnetter-hp"] = "1"
+    a["style"] = HONEYPOT_STYLE
+    if body.children.first
+      body.children.first.add_previous_sibling(a)
+    else
+      body.add_child(a)
     end
   end
 
@@ -145,6 +176,11 @@ class CampaignRenderer
 
   def click_tracking_url_for(original_url)
     token = @delivery.signed_click_token(url: original_url)
+    Rails.application.routes.url_helpers.tracking_click_url(token, **default_url_options)
+  end
+
+  def honeypot_tracking_url
+    token = @delivery.signed_click_token(url: nil, honeypot: true)
     Rails.application.routes.url_helpers.tracking_click_url(token, **default_url_options)
   end
 

@@ -21,6 +21,11 @@ class Delivery < ApplicationRecord
   belongs_to :subscriber
   # 🚅 add belongs_to associations above.
 
+  # Per-hit tracking rows (one per click / pixel fetch) with the human vs
+  # automated classification. The clicked_at / click_count / opened_at
+  # columns above stay as raw counters; see ClickEvent / OpenEvent.
+  has_many :click_events, dependent: :delete_all
+  has_many :open_events, dependent: :delete_all
   # 🚅 add has_many associations above.
 
   # 🚅 add has_one associations above.
@@ -95,11 +100,15 @@ class Delivery < ApplicationRecord
   # can trust the URL without consulting a database lookup table — this also
   # closes the open-redirect hole (an attacker would need our signing secret
   # to redirect to an arbitrary URL).
-  def signed_click_token(url:)
-    Rails.application.message_verifier(:delivery_click).generate({
-      delivery_id: id,
-      url: url
-    })
+  #
+  # `honeypot: true` builds the token for the invisible honeypot link
+  # CampaignRenderer adds to every email. No person can reach that link, so
+  # a hit on it marks the delivery's surrounding clicks as machine traffic.
+  def signed_click_token(url:, honeypot: false)
+    payload = {delivery_id: id, url: url}
+    payload[:honeypot] = true if honeypot
+    Rails.application.message_verifier(:delivery_click).generate(payload)
   end
+
   # 🚅 add methods above.
 end
