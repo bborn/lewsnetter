@@ -38,6 +38,10 @@ module AI
         Keep each section to 2-4 sentences. Be specific — cite the actual
         open/click/bounce/complaint rates. If data is missing or zero, say so
         plainly rather than making up numbers.
+
+        `opened`, `clicked` and `clicks_total` are human engagement. The
+        `*_automated` and `*_raw` keys include link scanners and Apple Mail
+        Privacy Protection prefetches; never quote those as engagement.
       PROMPT
     end
 
@@ -67,7 +71,9 @@ module AI
       # Add only the engagement metrics (not sent/failed — the send-side counts
       # stay authoritative for the recipient total).
       engagement = engagement_stats.slice(
-        "delivered", "opened", "clicked", "bounced", "complained", "unsubscribed", "click_total"
+        "delivered", "opened", "opened_automated", "opened_raw",
+        "clicked", "clicked_automated", "clicked_raw", "clicks_total", "clicks_total_raw",
+        "bounced", "complained", "unsubscribed"
       )
       send_side.merge(engagement)
     end

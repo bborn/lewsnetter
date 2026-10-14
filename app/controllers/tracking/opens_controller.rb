@@ -2,7 +2,8 @@
 # GIF appended just before `</body>` whose `src` points here. When the
 # recipient opens the email, the image client fetches this URL and we stamp
 # `Delivery#opened_at` (idempotent — only first open counts so we don't
-# overwrite the historical record).
+# overwrite the historical record). Every fetch also writes an OpenEvent,
+# which classifies it as a person or a machine (Apple MPP, scanners).
 #
 # Mounted outside the Account:: namespace + skips both CSRF and Devise auth,
 # because email clients are not logged-in browsers. The signed token IS the
@@ -34,11 +35,26 @@ class Tracking::OpensController < ApplicationController
       # stay cheap.
       delivery.update_columns(opened_at: Time.current, updated_at: Time.current)
     end
+    record_open_event(delivery) if delivery
 
     send_pixel
   end
 
   private
+
+  # Never let a stats write break the pixel response.
+  def record_open_event(delivery)
+    OpenEvent.record!(
+      delivery: delivery,
+      user_agent: request.user_agent,
+      ip: request.remote_ip,
+      http_method: request.request_method
+    )
+  rescue => e
+    Rails.logger.warn(
+      "[Tracking::Opens] failed to record open event for delivery=#{delivery.id}: #{e.class}: #{e.message}"
+    )
+  end
 
   def send_pixel
     # Aggressively forbid caching so image-cache proxies (e.g. Gmail's image

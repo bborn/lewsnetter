@@ -17,10 +17,14 @@ module AI
       subs = 4.times.map do |i|
         @team.subscribers.create!(email: "d#{i}@example.com", external_id: "d-#{i}", subscribed: true)
       end
-      Delivery.create!(campaign: @campaign, subscriber: subs[0], ses_message_id: "m0", status: "delivered",
+      # Opens/clicks are read from the human tracking events.
+      clicker = Delivery.create!(campaign: @campaign, subscriber: subs[0], ses_message_id: "m0", status: "delivered",
         sent_at: 1.hour.ago, delivered_at: 55.minutes.ago, opened_at: 40.minutes.ago, clicked_at: 30.minutes.ago, click_count: 1)
-      Delivery.create!(campaign: @campaign, subscriber: subs[1], ses_message_id: "m1", status: "delivered",
+      clicker.open_events.create!(opened_at: 40.minutes.ago, user_agent: "Thunderbird")
+      clicker.click_events.create!(url: "https://example.com/", clicked_at: 30.minutes.ago, user_agent: "Firefox")
+      opener = Delivery.create!(campaign: @campaign, subscriber: subs[1], ses_message_id: "m1", status: "delivered",
         sent_at: 1.hour.ago, delivered_at: 55.minutes.ago, opened_at: 40.minutes.ago)
+      opener.open_events.create!(opened_at: 40.minutes.ago, user_agent: "Thunderbird")
       Delivery.create!(campaign: @campaign, subscriber: subs[2], ses_message_id: "m2", status: "delivered",
         sent_at: 1.hour.ago, delivered_at: 55.minutes.ago)
       Delivery.create!(campaign: @campaign, subscriber: subs[3], ses_message_id: "m3", status: "delivered",

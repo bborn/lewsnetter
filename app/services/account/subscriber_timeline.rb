@@ -128,7 +128,8 @@ module Account
       end
 
       if delivery.bounced_at
-        bounce_label = delivery.bounce_subtype.present? ? "Bounced (#{delivery.bounce_subtype}): #{subject}" : "Bounced: #{subject}"
+        bounce_detail = delivery.bounce_subtype.presence || delivery.bounce_type
+        bounce_label = bounce_detail.present? ? "Bounced (#{bounce_detail}): #{subject}" : "Bounced: #{subject}"
         rows << {
           at: delivery.bounced_at,
           kind: "bounced",

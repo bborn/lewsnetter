@@ -161,12 +161,20 @@
                 <p class="campaign-show-stats__sub"><%= pct.call(stats[:delivered], stats[:sent]) %> of sent</p>
               </div>
 
+              <%# Opens + clicks are human numbers. Scanner / Apple MPP traffic
+                  is shown underneath rather than hidden — see ClickEvent and
+                  OpenEvent for how a hit gets classified. %>
               <div class="campaign-show-stats__cell">
                 <dt>Opened</dt>
                 <dd class="campaign-show-stats__num"><%= stats[:opened] %></dd>
                 <p class="campaign-show-stats__sub">
                   <%= pct.call(stats[:opened], stats[:delivered]) %> · unique opens
                 </p>
+                <% if stats[:opened_automated].to_i > 0 %>
+                  <p class="campaign-show-stats__sub" title="Pixel fetches by Apple Mail Privacy Protection, security scanners, or within a minute of delivery. Unfiltered first-open count: <%= stats[:opened_raw] %>.">
+                    + <%= stats[:opened_automated] %> machine opens
+                  </p>
+                <% end %>
               </div>
 
               <div class="campaign-show-stats__cell">
@@ -174,10 +182,15 @@
                 <dd class="campaign-show-stats__num"><%= stats[:clicked] %></dd>
                 <p class="campaign-show-stats__sub">
                   <%= pct.call(stats[:clicked], stats[:delivered]) %>
-                  <% if stats[:click_total].to_i > stats[:clicked] %>
-                    · <%= stats[:click_total] %> total
+                  <% if stats[:clicks_total].to_i > stats[:clicked] %>
+                    · <%= stats[:clicks_total] %> total
                   <% end %>
                 </p>
+                <% if stats[:clicked_automated].to_i > 0 %>
+                  <p class="campaign-show-stats__sub" title="Recipients whose only clicks came from link scanners (Safe Links, Proofpoint, Mimecast…), the hidden honeypot link, or clicks within two minutes of delivery. Unfiltered: <%= stats[:clicked_raw] %> recipients, <%= stats[:clicks_total_raw] %> clicks.">
+                    + <%= stats[:clicked_automated] %> scanner-only
+                  </p>
+                <% end %>
               </div>
 
               <div class="campaign-show-stats__cell campaign-show-stats__cell--warn">

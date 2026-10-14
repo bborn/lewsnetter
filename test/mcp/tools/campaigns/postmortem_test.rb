@@ -69,7 +69,7 @@ module Mcp
           assert_equal 1, result[:stats][:complained]
         end
 
-        test "opened, clicked, unsubscribed are 0 until Phase 2 populates them" do
+        test "opened, clicked, unsubscribed are 0 with no tracking events" do
           3.times { make_delivery }
           result = Postmortem.new.invoke(arguments: {"id" => @campaign.id}, context: @ctx)
           assert_equal 0, result[:stats][:opened]
@@ -84,6 +84,23 @@ module Mcp
           assert_equal 0, result[:stats][:bounced]
           assert_equal 0, result[:stats][:complained]
           assert_equal 0, result[:stats][:failed]
+        end
+
+        test "opened and clicked are human counts; scanner traffic is reported separately" do
+          scanned = make_delivery(delivered_at: 2.hours.ago, clicked_at: 2.hours.ago, click_count: 1,
+            last_clicked_url: "https://example.com/x")
+          scanned.click_events.create!(url: "https://example.com/x", clicked_at: 2.hours.ago,
+            automated: true, automated_reason: "too_fast")
+          reader = make_delivery(delivered_at: 2.hours.ago, clicked_at: 1.hour.ago, click_count: 1,
+            last_clicked_url: "https://example.com/x")
+          reader.click_events.create!(url: "https://example.com/x", clicked_at: 1.hour.ago, user_agent: "Firefox")
+
+          result = Postmortem.new.invoke(arguments: {"id" => @campaign.id}, context: @ctx)
+          assert_equal 1, result[:stats][:clicked]
+          assert_equal 1, result[:stats][:clicked_automated]
+          assert_equal 2, result[:stats][:clicked_raw]
+          assert_equal [{url: "https://example.com/x", clicks: 1, unique_clicks: 1, automated_clicks: 1}],
+            result[:top_links]
         end
 
         test "returns analyzed_at as ISO8601 string" do

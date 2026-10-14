@@ -79,13 +79,14 @@
                 </td>
                 <td>
                   <%= delivery_state_pill(delivery) %>
-                  <% if delivery.bounce_subtype.present? %>
+                  <% bounce_detail = delivery.bounce_subtype.presence || delivery.bounce_type %>
+                  <% if bounce_detail.present? %>
                     <span class="campaign-show-recipients__subtype">
                       <%# bounce_subtype from SES is CamelCase (e.g. "MailboxFull",
                           "MessageRejected"). Insert a space at camel boundaries
                           before humanizing so "MailboxFull" → "Mailbox full"
                           rather than the unhelpful "Mailboxfull". %>
-                      <%= delivery.bounce_subtype.to_s.gsub(/([a-z])([A-Z])/, '\1 \2').humanize %>
+                      <%= bounce_detail.to_s.gsub(/([a-z])([A-Z])/, '\1 \2').humanize %>
                     </span>
                   <% end %>
                 </td>

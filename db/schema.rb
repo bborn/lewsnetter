@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_26_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_14_120200) do
   create_table "account_onboarding_invitation_lists", force: :cascade do |t|
     t.integer "team_id", null: false
     t.json "invitations"
@@ -156,6 +156,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_26_120000) do
     t.index ["user_id"], name: "index_chats_on_user_id"
   end
 
+  create_table "click_events", force: :cascade do |t|
+    t.integer "delivery_id", null: false
+    t.text "url"
+    t.datetime "clicked_at", null: false
+    t.string "user_agent"
+    t.string "ip_prefix"
+    t.string "http_method"
+    t.boolean "honeypot", default: false, null: false
+    t.boolean "automated", default: false, null: false
+    t.string "automated_reason"
+    t.boolean "backfilled", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["delivery_id", "automated"], name: "index_click_events_on_delivery_id_and_automated"
+    t.index ["delivery_id", "clicked_at"], name: "index_click_events_on_delivery_id_and_clicked_at"
+    t.index ["delivery_id"], name: "index_click_events_on_delivery_id"
+  end
+
   create_table "companies", force: :cascade do |t|
     t.integer "team_id", null: false
     t.string "name", null: false
@@ -187,6 +205,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_26_120000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.text "last_clicked_url"
+    t.string "bounce_type"
     t.index ["campaign_id", "status"], name: "index_deliveries_on_campaign_id_and_status"
     t.index ["campaign_id"], name: "index_deliveries_on_campaign_id"
     t.index ["ses_message_id"], name: "index_deliveries_on_ses_message_id", unique: true
@@ -378,6 +397,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_26_120000) do
     t.datetime "updated_at", precision: nil, null: false
     t.index ["uid"], name: "index_oauth_stripe_accounts_on_uid", unique: true
     t.index ["user_id"], name: "index_oauth_stripe_accounts_on_user_id"
+  end
+
+  create_table "open_events", force: :cascade do |t|
+    t.integer "delivery_id", null: false
+    t.datetime "opened_at", null: false
+    t.string "user_agent"
+    t.string "ip_prefix"
+    t.string "http_method"
+    t.boolean "automated", default: false, null: false
+    t.string "automated_reason"
+    t.boolean "backfilled", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["delivery_id", "automated"], name: "index_open_events_on_delivery_id_and_automated"
+    t.index ["delivery_id"], name: "index_open_events_on_delivery_id"
   end
 
   create_table "scaffolding_absolutely_abstract_creative_concepts", force: :cascade do |t|
@@ -714,6 +748,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_26_120000) do
   add_foreign_key "chats", "models"
   add_foreign_key "chats", "teams"
   add_foreign_key "chats", "users"
+  add_foreign_key "click_events", "deliveries"
   add_foreign_key "companies", "teams"
   add_foreign_key "deliveries", "campaigns"
   add_foreign_key "deliveries", "subscribers"
@@ -737,6 +772,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_26_120000) do
   add_foreign_key "oauth_access_tokens", "oauth_applications", column: "application_id"
   add_foreign_key "oauth_applications", "teams"
   add_foreign_key "oauth_stripe_accounts", "users"
+  add_foreign_key "open_events", "deliveries"
   add_foreign_key "scaffolding_absolutely_abstract_creative_concepts", "teams"
   add_foreign_key "scaffolding_completely_concrete_tangible_things", "scaffolding_absolutely_abstract_creative_concepts", column: "absolutely_abstract_creative_concept_id"
   add_foreign_key "scaffolding_completely_concrete_tangible_things_assignments", "memberships"

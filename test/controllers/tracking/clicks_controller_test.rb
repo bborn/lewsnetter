@@ -93,4 +93,58 @@ class Tracking::ClicksControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, @delivery.click_count
     assert_equal @destination, @delivery.last_clicked_url
   end
+
+  # ----- ClickEvent rows (human vs machine) -----
+
+  BROWSER_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15"
+
+  test "a browser click well after delivery records a human ClickEvent" do
+    token = @delivery.signed_click_token(url: @destination)
+    get "/track/c/#{token}", headers: {"User-Agent" => BROWSER_UA, "REMOTE_ADDR" => "203.0.113.77"}
+
+    event = @delivery.click_events.sole
+    assert_not event.automated
+    assert_nil event.automated_reason
+    assert_equal @destination, event.url
+    assert_equal "GET", event.http_method
+    assert_equal "203.0.113.0", event.ip_prefix, "IP must be stored as an anonymized /24"
+  end
+
+  test "a scanner user agent is recorded as automated but still redirects" do
+    token = @delivery.signed_click_token(url: @destination)
+    get "/track/c/#{token}", headers: {"User-Agent" => "Mozilla/5.0 (compatible; Barracuda Sentinel)"}
+
+    assert_redirected_to @destination
+    assert_equal "scanner_user_agent", @delivery.click_events.sole.automated_reason
+  end
+
+  test "a HEAD request is recorded as automated" do
+    token = @delivery.signed_click_token(url: @destination)
+    head "/track/c/#{token}", headers: {"User-Agent" => BROWSER_UA}
+
+    assert_equal "head_request", @delivery.click_events.sole.automated_reason
+  end
+
+  test "a honeypot hit returns an empty 200, records a honeypot event and leaves raw counters alone" do
+    token = @delivery.signed_click_token(url: nil, honeypot: true)
+    get "/track/c/#{token}", headers: {"User-Agent" => BROWSER_UA}
+
+    assert_response :ok
+    assert_empty response.body
+    event = @delivery.click_events.sole
+    assert event.honeypot
+    assert_equal "honeypot", event.automated_reason
+    @delivery.reload
+    assert_nil @delivery.clicked_at
+    assert_equal 0, @delivery.click_count
+  end
+
+  test "a honeypot hit flags the delivery's link clicks in the same burst" do
+    get "/track/c/#{@delivery.signed_click_token(url: @destination)}", headers: {"User-Agent" => BROWSER_UA}
+    get "/track/c/#{@delivery.signed_click_token(url: nil, honeypot: true)}", headers: {"User-Agent" => BROWSER_UA}
+
+    link_click = @delivery.click_events.links.sole
+    assert link_click.automated
+    assert_equal "honeypot_burst", link_click.automated_reason
+  end
 end

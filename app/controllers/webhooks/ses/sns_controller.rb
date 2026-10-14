@@ -157,24 +157,32 @@ class Webhooks::Ses::SnsController < ApplicationController
     scope.first
   end
 
-  # Permanent bounces auto-unsubscribe the recipient. Soft bounces (transient)
-  # are left alone — SES will retry; if it gives up it'll send a permanent
-  # bounce later. The Delivery row is updated for *any* bounce, hard or
-  # soft, so the postmortem reflects all observed bounce events.
+  # Permanent bounces auto-unsubscribe the recipient. A single soft bounce
+  # (transient) is left alone — SES will retry; if it gives up it'll send a
+  # permanent bounce later. But an address that soft-bounces on several
+  # campaigns in a row gets suppressed (see
+  # Suppression.suppress_after_repeated_soft_bounces). The Delivery row is
+  # updated for *any* bounce, hard or soft, so the postmortem reflects all
+  # observed bounce events.
+  #
+  # SES sends both `bounceType` (Permanent / Transient / Undetermined) and
+  # `bounceSubType` (MailboxFull, General, NoEmail…); we keep both.
   def handle_bounce(team, bounce, message_id)
     bounce_type = bounce["bounceType"]
+    bounce_subtype = bounce["bounceSubType"]
 
     update_delivery_for(team, message_id) do |delivery|
       delivery.update!(
         status: "bounced",
         bounced_at: Time.current,
-        bounce_subtype: bounce_type
+        bounce_type: bounce_type,
+        bounce_subtype: bounce_subtype
       )
     end
 
-    return unless bounce_type == "Permanent"
+    handle_soft_bounce(team, bounce, bounce_subtype) if bounce_type == "Transient"
 
-    bounce_subtype = bounce["bounceSubType"]
+    return unless bounce_type == "Permanent"
 
     Array(bounce["bouncedRecipients"]).each do |recipient|
       email = recipient["emailAddress"].to_s.downcase
@@ -192,6 +200,29 @@ class Webhooks::Ses::SnsController < ApplicationController
       subscriber.update!(subscribed: false, bounced_at: Time.current)
       Rails.logger.info("[SNS:bounce] team=#{team.id} email=#{email} unsubscribed (permanent)")
     end
+  end
+
+  # Transient bounce: no action on its own, but once the same address has
+  # soft-bounced on SOFT_BOUNCE_THRESHOLD consecutive campaigns it goes on
+  # the suppression list. The subscriber row is left subscribed so an
+  # operator can lift the suppression without re-subscribing anyone.
+  def handle_soft_bounce(team, bounce, bounce_subtype)
+    Array(bounce["bouncedRecipients"]).each do |recipient|
+      email = recipient["emailAddress"].to_s.downcase
+      next if email.blank?
+
+      subscriber = team.subscribers.find_by(email: email)
+      next unless subscriber
+
+      row = Suppression.suppress_after_repeated_soft_bounces(team: team, subscriber: subscriber)
+      if row
+        Rails.logger.info("[SNS:bounce] team=#{team.id} email=#{email} suppressed (repeated soft bounce, last=#{bounce_subtype})")
+      end
+    end
+  rescue => e
+    # A failure here must not fail the webhook (SNS would retry the whole
+    # notification). Worst case we catch it on the next soft bounce.
+    Rails.logger.warn("[SNS:bounce] repeated-soft-bounce check failed for team=#{team.id}: #{e.class}: #{e.message}")
   end
 
   # Reject events fire when SES refuses to send (e.g. message contains a

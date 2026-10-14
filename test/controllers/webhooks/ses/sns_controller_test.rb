@@ -222,7 +222,71 @@ class Webhooks::Ses::SnsControllerTest < ActionDispatch::IntegrationTest
     delivery.reload
     assert_equal "bounced", delivery.status
     assert_not_nil delivery.bounced_at
-    assert_equal "Permanent", delivery.bounce_subtype
+    assert_equal "Permanent", delivery.bounce_type
+  end
+
+  def soft_bounce_payload(message_id, sub_type: "MailboxFull")
+    {
+      "Type" => "Notification",
+      "TopicArn" => @bounce_topic,
+      "Message" => {
+        "eventType" => "Bounce",
+        "mail" => {"messageId" => message_id, "destination" => ["victim@example.com"]},
+        "bounce" => {
+          "bounceType" => "Transient",
+          "bounceSubType" => sub_type,
+          "bouncedRecipients" => [{"emailAddress" => "victim@example.com"}]
+        }
+      }.to_json
+    }
+  end
+
+  def post_sns(payload)
+    post "/webhooks/ses/sns", params: payload.to_json, headers: {"CONTENT_TYPE" => "application/json"}
+    assert_response :ok
+  end
+
+  test "Bounce stores bounceType and bounceSubType separately" do
+    delivery = make_delivery(ses_message_id: "msg-sub-1")
+    post_sns(soft_bounce_payload("msg-sub-1", sub_type: "MailboxFull"))
+
+    delivery.reload
+    assert_equal "Transient", delivery.bounce_type
+    assert_equal "MailboxFull", delivery.bounce_subtype
+  end
+
+  test "a single soft bounce does not suppress the address" do
+    make_delivery(ses_message_id: "msg-one-soft")
+    post_sns(soft_bounce_payload("msg-one-soft"))
+
+    assert_nil @team.suppressions.find_by(email: "victim@example.com")
+    assert @subscriber.reload.subscribed
+  end
+
+  test "soft bounces on three consecutive campaigns suppress the address as repeated_soft_bounce" do
+    3.times do |i|
+      make_delivery(ses_message_id: "msg-streak-#{i}", sent_at: (3 - i).days.ago)
+      post_sns(soft_bounce_payload("msg-streak-#{i}"))
+    end
+
+    row = @team.suppressions.find_by(email: "victim@example.com")
+    assert_not_nil row
+    assert_equal "repeated_soft_bounce", row.reason
+    assert_equal "MailboxFull", row.source
+  end
+
+  test "an open between soft bounces resets the streak" do
+    make_delivery(ses_message_id: "msg-gap-0", sent_at: 4.days.ago)
+    post_sns(soft_bounce_payload("msg-gap-0"))
+    make_delivery(ses_message_id: "msg-gap-1", sent_at: 3.days.ago,
+      delivered_at: 3.days.ago, opened_at: 2.days.ago, status: "delivered")
+    make_delivery(ses_message_id: "msg-gap-2", sent_at: 2.days.ago)
+    post_sns(soft_bounce_payload("msg-gap-2"))
+    make_delivery(ses_message_id: "msg-gap-3", sent_at: 1.day.ago)
+    post_sns(soft_bounce_payload("msg-gap-3"))
+
+    assert_nil @team.suppressions.find_by(email: "victim@example.com"),
+      "only two soft bounces since the last open; must not suppress"
   end
 
   test "Event Publishing Complaint updates the matching Delivery row" do

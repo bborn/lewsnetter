@@ -368,6 +368,37 @@ class CampaignRendererTest < ActiveSupport::TestCase
       "expected at least two /track/c/ URLs in #{result.html.scan(%r{href="[^"]+"}).inspect}"
   end
 
+  test "adds one hidden honeypot link whose token decodes as a honeypot" do
+    delivery = Delivery.create!(
+      campaign: @campaign, subscriber: @subscriber, ses_message_id: "track-hp-1", sent_at: Time.current
+    )
+
+    result = CampaignRenderer.new(campaign: @campaign, subscriber: @subscriber, delivery: delivery).call
+
+    doc = Nokogiri::HTML5(result.html)
+    links = doc.css("a[data-lewsnetter-hp]")
+    assert_equal 1, links.size
+    hp = links.first
+    assert_equal "true", hp["aria-hidden"]
+    assert_equal "-1", hp["tabindex"]
+    assert_includes hp["style"], "display:none"
+    assert_includes hp["style"], "mso-hide:all"
+    assert_equal "", hp.text, "honeypot must have no visible text"
+    assert_equal hp, doc.at_css("body a"), "honeypot should be the first link in the body"
+
+    token = CGI.unescape(hp["href"][%r{/track/c/([^"?\s]+)}, 1])
+    payload = Rails.application.message_verifier(:delivery_click).verify(token)
+    assert_equal delivery.id, payload["delivery_id"] || payload[:delivery_id]
+    assert(payload["honeypot"] || payload[:honeypot])
+
+    refute_includes result.text, "/track/c/", "honeypot must not leak into the text part"
+  end
+
+  test "no honeypot is added when rendering without a delivery" do
+    result = CampaignRenderer.new(campaign: @campaign, subscriber: @subscriber).call
+    refute_includes result.html, "data-lewsnetter-hp"
+  end
+
   test "preserves the unsubscribe link without rewriting it" do
     @campaign.update!(body_mjml: <<~MJML)
       <mjml>

@@ -23,6 +23,7 @@ class Account::Campaigns::DeliveriesController < Account::ApplicationController
     opened_at
     clicked_at
     bounced_at
+    bounce_type
     bounce_subtype
     complained_at
     unsubscribed_at
@@ -121,6 +122,7 @@ class Account::Campaigns::DeliveriesController < Account::ApplicationController
             d.opened_at&.iso8601,
             d.clicked_at&.iso8601,
             d.bounced_at&.iso8601,
+            d.bounce_type,
             d.bounce_subtype,
             d.complained_at&.iso8601,
             d.unsubscribed_at&.iso8601,

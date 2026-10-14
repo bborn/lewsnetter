@@ -34,6 +34,8 @@ class Campaign < ApplicationRecord
   # Phase 2). Destroyed with the campaign so postmortem data dies with it —
   # we don't keep an audit trail of deleted campaigns by design.
   has_many :deliveries, dependent: :destroy
+  has_many :click_events, through: :deliveries
+  has_many :open_events, through: :deliveries
 
   # 🚅 add has_many associations above.
 
@@ -164,56 +166,83 @@ class Campaign < ApplicationRecord
   #   delivered, bounced, complained — anything that left the queue with an id).
   # - `failed`: deliveries that never got a message id (render error / SES
   #   reject), distinct from `sent` so attempts add up to `sent + failed`.
-  # - The remaining counts are simple presence-of-timestamp scopes.
+  #
+  # Opens + clicks are reported as HUMAN numbers first, with the machine
+  # share alongside so nothing is hidden (see ClickEvent / OpenEvent for the
+  # classification rules):
+  #
+  # - `clicked`: recipients with at least one human click.
+  # - `clicks_total`: human clicks across all links.
+  # - `clicked_automated`: recipients whose clicks were ALL machine traffic
+  #   (scanners, honeypot hits) — they're not in `clicked`.
+  # - `clicked_raw` / `clicks_total_raw`: the unfiltered Delivery counters,
+  #   i.e. what this card showed before filtering existed.
+  # - `opened`: recipients with a human open OR a human click (a click
+  #   proves the email was opened even when images were blocked or Apple
+  #   MPP hid the real open).
+  # - `opened_automated`: recipients with only machine opens.
+  # - `opened_raw`: the unfiltered first-pixel-fetch count.
   def delivery_stats
     rel = deliveries
+    human_click_ids = click_events.links.human.select(:delivery_id)
+    human_open_ids = open_events.human.select(:delivery_id)
+    opened_ids = rel.where(id: human_open_ids).or(rel.where(id: human_click_ids))
+
     {
       sent: rel.sent.count,
       delivered: rel.delivered.count,
-      opened: rel.opened.count,
-      clicked: rel.clicked.count,
+      opened: opened_ids.count,
+      opened_automated: rel.where(id: open_events.select(:delivery_id))
+        .where.not(id: opened_ids.select(:id)).count,
+      opened_raw: rel.opened.count,
+      clicked: rel.where(id: human_click_ids).count,
+      clicks_total: click_events.links.human.count,
+      clicked_automated: rel.where(id: click_events.select(:delivery_id))
+        .where.not(id: human_click_ids).count,
+      clicked_raw: rel.clicked.count,
+      clicks_total_raw: rel.sum(:click_count),
       bounced: rel.bounced.count,
       complained: rel.complained.count,
       unsubscribed: rel.where.not(unsubscribed_at: nil).count,
-      failed: rel.failed.count,
-      click_total: rel.sum(:click_count)
+      failed: rel.failed.count
     }
   end
 
-  # Top clicked URLs for this campaign, aggregated from the per-recipient
-  # Delivery rows. `last_clicked_url` is set on a Delivery the first time the
-  # tracking-click route resolves that URL, and `click_count` increments on
-  # every subsequent click of any link. So:
+  # Top clicked URLs for this campaign, aggregated from ClickEvent rows so
+  # a recipient who clicked several links is credited on each one (the old
+  # Delivery#last_clicked_url rollup could only attribute one).
   #
-  #   - `unique_clicks` is the number of distinct recipients who clicked
-  #     this URL (one Delivery row per recipient).
-  #   - `total_clicks` is the sum of `click_count` across those recipients.
-  #     Because click_count is a per-recipient counter rolled up across all
-  #     links, this slightly over-counts when a recipient clicks multiple
-  #     different URLs — we attribute their full click_count to whatever
-  #     URL was last clicked. The Delivery schema doesn't keep a per-URL
-  #     click counter, and we deliberately don't add one (see the build
-  #     spec — no schema changes). Treat total_clicks as "engagement
-  #     intensity" rather than an exact per-URL hit count.
+  #   - `unique_clicks`: distinct recipients with a human click on the URL.
+  #   - `total_clicks`: human clicks on the URL.
+  #   - `automated_clicks`: machine clicks on the URL (scanners etc.).
+  #
+  # Links that only machines clicked are still listed (with zero human
+  # counts) so the scanner traffic is visible, sorted below the rest. The
+  # honeypot link is never listed.
   #
   # Returns an Array of Hashes (NOT an AR relation) so callers can chain
   # `.first(25)`, `to_json`, CSV, etc. without surprising lazy reloads.
-  # The hashes have symbol keys: :url, :unique_clicks, :total_clicks.
   def top_links(limit: 25)
-    rows = deliveries
-      .where.not(last_clicked_url: nil)
-      .group(:last_clicked_url)
+    rows = click_events.links
+      .where.not(url: nil)
+      .group(:url)
       .pluck(
-        :last_clicked_url,
-        Arel.sql("COUNT(*)"),
-        Arel.sql("COALESCE(SUM(click_count), 0)")
+        :url,
+        Arel.sql("COUNT(DISTINCT CASE WHEN click_events.automated = 0 THEN click_events.delivery_id END)"),
+        Arel.sql("SUM(CASE WHEN click_events.automated = 0 THEN 1 ELSE 0 END)"),
+        Arel.sql("SUM(CASE WHEN click_events.automated = 1 THEN 1 ELSE 0 END)")
       )
 
     rows
-      .map { |url, unique_count, total_count|
-        {url: url, unique_clicks: unique_count.to_i, total_clicks: total_count.to_i}
+      .map { |url, unique_count, human_count, automated_count|
+        {
+          url: url,
+          unique_clicks: unique_count.to_i,
+          total_clicks: human_count.to_i,
+          automated_clicks: automated_count.to_i
+        }
       }
-      .sort_by { |row| [-row[:total_clicks], -row[:unique_clicks], row[:url]] }
+      .sort_by { |row| [-row[:total_clicks], -row[:unique_clicks], -row[:automated_clicks], row[:url]] }
       .first(limit)
   end
 
