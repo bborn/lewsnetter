@@ -49,6 +49,9 @@ shallow do
       post "events/track", to: "events#track"
       post "events/bulk", to: "events#bulk"
 
+      # Push-API suppression add (idempotent upsert by email).
+      post "suppressions", to: "suppressions#create"
+
       resources :segments
       resources :email_templates
       resources :campaigns
