@@ -9,7 +9,11 @@ class Campaign < ApplicationRecord
   has_paper_trail on: [:create, :update, :destroy],
     ignore: [:updated_at]
 
-  STATUSES = %w[draft scheduled sending sent failed].freeze
+  # `sequence` marks the hidden campaign a SequenceStep owns. It is never
+  # sendable on its own; SequenceStepSendJob sends it one subscriber at a
+  # time. It exists so Deliveries, SES webhooks, tracking and delivery_stats
+  # work for sequence emails without a parallel pipeline.
+  STATUSES = %w[draft scheduled sending sent failed sequence].freeze
 
   # Mirror of EmailTemplate::ASSET_MAX_BYTES — keep these in lockstep.
   # Per-attachment cap, not aggregate; uploading several small images
@@ -39,8 +43,12 @@ class Campaign < ApplicationRecord
 
   # 🚅 add has_many associations above.
 
+  has_one :sequence_step, dependent: :nullify
   # 🚅 add has_one associations above.
 
+  # Everything except sequence-step backing campaigns. Use for any list the
+  # user sees as "my campaigns".
+  scope :visible, -> { where.not(status: "sequence") }
   scope :draft, -> { where(status: "draft") }
   scope :scheduled, -> { where(status: "scheduled") }
   scope :sent, -> { where(status: "sent") }

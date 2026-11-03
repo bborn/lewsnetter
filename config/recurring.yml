@@ -9,7 +9,20 @@
 #     priority: 2
 #     schedule: at 5am every day
 
+# Sequences. Both jobs no-op for teams without `sequences_enabled`.
+sequences: &sequences
+  sequence_dispatch:
+    class: SequenceDispatchJob
+    schedule: every minute
+  segment_enrollment_sweep:
+    class: SegmentEnrollmentSweepJob
+    schedule: every hour at minute 7
+
+development:
+  <<: *sequences
+
 production:
+  <<: *sequences
   clear_solid_queue_finished_jobs:
     command: "SolidQueue::Job.clear_finished_in_batches(sleep_between_batches: 0.3)"
     schedule: every hour at minute 12

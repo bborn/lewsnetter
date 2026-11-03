@@ -35,7 +35,7 @@ class Avo::ToolsController < Avo::ApplicationController
       companies: Company.count,
       segments: Segment.count,
       email_templates: EmailTemplate.count,
-      campaigns: Campaign.count,
+      campaigns: Campaign.visible.count,
       campaigns_sent: Campaign.where(status: "sent").count,
       deliveries: Delivery.count,
       suppressions: Suppression.count,

@@ -3,10 +3,10 @@
   # Resources live in the top nav now; we don't dump every index inline.
   team = @team
   subscribers_count = team.subscribers.subscribed.where(bounced_at: nil).count
-  campaigns_count = team.campaigns.count
+  campaigns_count = team.campaigns.visible.count
   last_sent = team.campaigns.where.not(sent_at: nil).order(sent_at: :desc).first
   next_scheduled = team.campaigns.where(status: "scheduled").order(:scheduled_for).first
-  recent_campaigns = team.campaigns.order(created_at: :desc).limit(5)
+  recent_campaigns = team.campaigns.visible.order(created_at: :desc).limit(5)
 %>
 <%= render 'account/shared/page' do |p| %>
   <% p.content_for :title, t('.header', teams_possessive: possessive_string(@team.name)) %>

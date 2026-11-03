@@ -1,1 +1,1 @@
-json.array! @campaigns, partial: "api/v1/campaigns/campaign", as: :campaign
+json.array! @campaigns.visible, partial: "api/v1/campaigns/campaign", as: :campaign

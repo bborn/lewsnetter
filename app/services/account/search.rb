@@ -205,7 +205,7 @@ module Account
 
     # ----- Campaigns -------------------------------------------------------
     def campaigns
-      scope = team.campaigns
+      scope = team.campaigns.visible
       rows =
         if query.blank?
           scope.order(updated_at: :desc).limit(PER_GROUP_RECENT_LIMIT)
