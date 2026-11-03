@@ -27,6 +27,7 @@ Lewsnetter ships ~43 MCP tools. Source of truth: `app/mcp/tools/`. They're group
 | **Email templates** | `email_templates.list`, `.get`, `.create`, `.update`, `.delete` |
 | **Sender addresses** | `sender_addresses.list`, `.get`, `.create`, `.verify`, `.delete` |
 | **Events** | `events.list`, `.create` (custom subscriber events you segment on) |
+| **Sequences** | `sequences_list`, `sequences_stats` (enrollment counts + per-step funnel; read-only) |
 | **Team** | `team.get` (current team metadata + limits) |
 | **LLM (introspection)** | `llm.*` (agent-side conveniences — usually you don't need these directly) |
 
@@ -79,7 +80,9 @@ Every weekday at 9am:
 
 ### 2) Drip campaigns via cron (instead of native drip)
 
-Lewsnetter doesn't ship native drip sequences. Reasonable indie-dev workaround: the agent IS the drip engine.
+Lewsnetter now has native Sequences (see [sequences.md](sequences.md)), which
+is the better fit for most drips. The cron approach still works when the
+logic doesn't fit a fixed step list: the agent IS the drip engine.
 
 ```
 Every 6 hours:

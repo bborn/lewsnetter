@@ -71,6 +71,16 @@ end
 
 Every save → enqueues a background job → POSTs to Lewsnetter's bulk subscriber endpoint. Idempotent on `external_id`, so retries are safe.
 
+## Track events
+
+```ruby
+LewsnetterRails.track(current_user, "trial_started", plan: "pro")
+```
+
+Enqueues `LewsnetterRails::TrackJob`, which posts to `/events/track`. Events
+enroll subscribers in event-triggered [Sequences](sequences.md). The gem
+README has the details (async/inline, retries, the 24-hour enrollment window).
+
 ## What about deletes?
 
 The gem fires a delete sync on `destroy`. If you soft-delete instead, mark `subscribed: false` in your mapper.
