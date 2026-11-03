@@ -4,7 +4,8 @@ require "faraday"
 require "faraday/retry"
 
 module LewsnetterRails
-  # Thin HTTP client for Lewsnetter's subscriber endpoints. Retries on
+  # Thin HTTP client for Lewsnetter's subscriber, event and suppression
+  # endpoints. Retries on
   # 429 / 5xx with exponential backoff so transient blips don't lose syncs.
   # The job layer also retries — these retries are belt + suspenders.
   class Client
@@ -26,6 +27,35 @@ module LewsnetterRails
       return {processed: 0, created: 0, updated: 0, errors: []} if payloads.empty?
       ndjson = payloads.map(&:to_json).join("\n")
       response = connection.post(bulk_path, ndjson, "Content-Type" => "application/x-ndjson")
+      handle_response(response)
+    end
+
+    # Record an event against the subscriber with this external_id. Events
+    # drive event-triggered Sequences. Returns the created event as JSON.
+    # Raises TransportError on 404 (unknown external_id) — sync the user
+    # first, or pass `email:` with `auto_create: true`.
+    def track_event(external_id:, name:, occurred_at: nil, properties: {}, email: nil, auto_create: false)
+      body = {
+        external_id: external_id.to_s,
+        event_name: name.to_s,
+        occurred_at: occurred_at&.iso8601,
+        properties: properties || {}
+      }
+      if auto_create
+        body[:auto_create] = true
+        body[:email] = email
+      end
+      response = connection.post(track_path, body.compact.to_json, "Content-Type" => "application/json")
+      handle_response(response)
+    end
+
+    # Add an address to the team's suppression list (nothing sends to it
+    # again). Idempotent: an address already on the list returns 200 with
+    # created: false. `reason` is one of Lewsnetter's Suppression::REASONS
+    # (defaults to "manual" server-side).
+    def suppress(email:, reason: nil, note: nil, source: nil)
+      body = {email: email, reason: reason, note: note, source: source}.compact
+      response = connection.post(suppressions_path, body.to_json, "Content-Type" => "application/json")
       handle_response(response)
     end
 
@@ -53,6 +83,14 @@ module LewsnetterRails
 
     def bulk_path
       "/api/v1/teams/#{config.team_slug}/subscribers/bulk"
+    end
+
+    def track_path
+      "/api/v1/teams/#{config.team_slug}/events/track"
+    end
+
+    def suppressions_path
+      "/api/v1/teams/#{config.team_slug}/suppressions"
     end
 
     def delete_path(external_id)

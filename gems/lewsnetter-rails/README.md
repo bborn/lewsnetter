@@ -76,6 +76,48 @@ end
 
 For a first-run full backfill: pass `User.all` (or whatever scope you want).
 
+## Track events
+
+Events drive event-triggered Sequences in Lewsnetter (a `trial_started`
+event enrolls the subscriber in every active sequence listening for it).
+
+```ruby
+LewsnetterRails.track(current_user, "trial_started", plan: "pro")
+LewsnetterRails.track("user-42", "invoice_paid", {amount: 99}, occurred_at: invoice.paid_at)
+```
+
+- The first argument is an external_id string, or a record whose
+  `external_id_method` (config, default `:id`) gives one. It must match the
+  `external_id` your mapper syncs.
+- Enqueues `LewsnetterRails::TrackJob`; pass `async: false` to POST inline.
+- `occurred_at` is captured when you call `track`, so a retried job still
+  records the real time. Lewsnetter only enrolls on events less than 24
+  hours old, so backfilling history won't fire sequences.
+- An event for a subscriber Lewsnetter hasn't seen yet returns 404; the job
+  retries (5 attempts, polynomial backoff), which covers the usual "user
+  just signed up and SyncJob hasn't run yet" race.
+- Disabled config (`enabled = false`) makes `track` a no-op.
+
+The client call underneath:
+
+```ruby
+LewsnetterRails::Client.new.track_event(
+  external_id: "42", name: "trial_started",
+  occurred_at: Time.current, properties: {plan: "pro"}
+)
+```
+
+## Suppress an address
+
+```ruby
+LewsnetterRails::Client.new.suppress(email: "gone@example.com", reason: "manual",
+  source: "influencekit", note: "account deleted")
+# => {"email"=>"gone@example.com", "reason"=>"manual", "created"=>true, ...}
+```
+
+Nothing sends to a suppressed address again. Idempotent: an address that's
+already on the list returns `created: false`.
+
 ## Tests
 
 ```ruby
@@ -87,11 +129,21 @@ end
 
 ## What's on the Lewsnetter side
 
-This gem talks to three endpoints, all of which already exist:
+This gem talks to these endpoints:
 
 | Endpoint                                                                   | Used by               |
 |----------------------------------------------------------------------------|-----------------------|
 | `POST /api/v1/teams/:slug/subscribers/bulk` (NDJSON)                       | SyncJob, Backfill     |
 | `DELETE /api/v1/teams/:slug/subscribers/by_external_id/:external_id`       | destroy hook          |
+| `POST /api/v1/teams/:slug/events/track` (JSON)                             | `track`, TrackJob     |
+| `POST /api/v1/teams/:slug/suppressions` (JSON)                             | `Client#suppress`     |
 
 The bulk endpoint auto-normalizes list-like custom attributes — so if you ship `tabs_enabled: "billing,brand_account,reports"` it lands as `["billing","brand_account","reports"]` and segments correctly with element-wise matching. (You can also ship arrays directly — the normalizer is idempotent.)
+
+## Developing this gem
+
+```sh
+cd gems/lewsnetter-rails
+bundle install
+bundle exec rake test   # Minitest + WebMock, no network
+```
