@@ -19,6 +19,9 @@ class Delivery < ApplicationRecord
 
   belongs_to :campaign
   belongs_to :subscriber
+  # Set for sequence emails (the campaign is then the step's hidden backing
+  # campaign). Lets per-step stats query deliveries directly.
+  belongs_to :sequence_step, optional: true
   # 🚅 add belongs_to associations above.
 
   # Per-hit tracking rows (one per click / pixel fetch) with the human vs
@@ -47,6 +50,7 @@ class Delivery < ApplicationRecord
   # campaign + subscriber presence is enforced by the belongs_to defaults.
   # 🚅 add validations above.
 
+  before_validation :tag_sequence_step, on: :create
   # 🚅 add callbacks above.
 
   # 🚅 add delegations above.
@@ -111,4 +115,11 @@ class Delivery < ApplicationRecord
   end
 
   # 🚅 add methods above.
+
+  private
+
+  def tag_sequence_step
+    return if sequence_step_id.present? || campaign.nil?
+    self.sequence_step = campaign.sequence_step if campaign.status == "sequence"
+  end
 end

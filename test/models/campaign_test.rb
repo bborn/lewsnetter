@@ -56,7 +56,7 @@ class CampaignTest < ActiveSupport::TestCase
   end
 
   test "STATUSES constant covers the documented state machine values" do
-    assert_equal %w[draft scheduled sending sent failed], Campaign::STATUSES
+    assert_equal %w[draft scheduled sending sent failed sequence], Campaign::STATUSES
   end
 
   test "accepts an attached image asset" do

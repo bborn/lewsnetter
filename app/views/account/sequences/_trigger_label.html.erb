@@ -1,0 +1,5 @@
+<% if sequence.trigger_type == "event" %>
+  event · <span class="text-zinc-700 dark:text-zinc-300"><%= sequence.trigger_event_name %></span>
+<% else %>
+  segment · <span class="text-zinc-700 dark:text-zinc-300"><%= sequence.trigger_segment&.name || "—" %></span>
+<% end %>

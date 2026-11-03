@@ -12,7 +12,7 @@ class Account::CampaignsController < Account::ApplicationController
     # bubble up when edited. Resource loader leaves @campaigns unordered, so
     # without this the list comes back in `id ASC` — random-feeling once you
     # have more than a handful of campaigns.
-    @campaigns = @campaigns.order(updated_at: :desc)
+    @campaigns = @campaigns.visible.order(updated_at: :desc)
     delegate_json_to_api
   end
 

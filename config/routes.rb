@@ -196,6 +196,12 @@ Rails.application.routes.draw do
         # remove + re-add). See Account::SuppressionsController.
         resources :suppressions, only: [:index, :create, :destroy]
 
+        # Automated multi-step flows (Intercom Series replacement). Gated
+        # per team by teams.sequences_enabled — see Account::SequencesController.
+        resources :sequences do
+          resources :sequence_steps, path: "steps", except: [:index, :show]
+        end
+
         resources :email_templates do
           member do
             get :preview_frame

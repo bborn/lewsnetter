@@ -19,7 +19,7 @@ module Mcp
         )
 
         def call(arguments:, context:)
-          scope = context.team.campaigns
+          scope = context.team.campaigns.visible
           scope = scope.where(status: arguments["status"]) if arguments["status"]
           total = scope.count
           limit = arguments["limit"] || 50

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_14_120200) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_03_164956) do
   create_table "account_onboarding_invitation_lists", force: :cascade do |t|
     t.integer "team_id", null: false
     t.json "invitations"
@@ -206,8 +206,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_14_120200) do
     t.datetime "updated_at", null: false
     t.text "last_clicked_url"
     t.string "bounce_type"
+    t.integer "sequence_step_id"
     t.index ["campaign_id", "status"], name: "index_deliveries_on_campaign_id_and_status"
     t.index ["campaign_id"], name: "index_deliveries_on_campaign_id"
+    t.index ["sequence_step_id"], name: "index_deliveries_on_sequence_step_id"
     t.index ["ses_message_id"], name: "index_deliveries_on_ses_message_id", unique: true
     t.index ["subscriber_id"], name: "index_deliveries_on_subscriber_id"
   end
@@ -481,6 +483,64 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_14_120200) do
     t.index ["team_id"], name: "index_sender_addresses_on_team_id"
   end
 
+  create_table "sequence_enrollments", force: :cascade do |t|
+    t.integer "sequence_id", null: false
+    t.integer "subscriber_id", null: false
+    t.integer "current_step", default: 0, null: false
+    t.datetime "next_send_at"
+    t.string "state", default: "active", null: false
+    t.string "exit_reason"
+    t.integer "attempts", default: 0, null: false
+    t.datetime "enrolled_at", null: false
+    t.datetime "completed_at"
+    t.datetime "exited_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["sequence_id", "subscriber_id"], name: "index_sequence_enrollments_one_active", unique: true, where: "state = 'active'"
+    t.index ["sequence_id"], name: "index_sequence_enrollments_on_sequence_id"
+    t.index ["state", "next_send_at"], name: "index_sequence_enrollments_on_state_and_next_send_at"
+    t.index ["subscriber_id"], name: "index_sequence_enrollments_on_subscriber_id"
+  end
+
+  create_table "sequence_steps", force: :cascade do |t|
+    t.integer "sequence_id", null: false
+    t.integer "position", default: 0, null: false
+    t.integer "delay_minutes", default: 0, null: false
+    t.string "subject"
+    t.string "preheader"
+    t.text "body_markdown"
+    t.integer "email_template_id"
+    t.integer "skip_segment_id"
+    t.integer "campaign_id"
+    t.integer "skipped_count", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["campaign_id"], name: "index_sequence_steps_on_campaign_id"
+    t.index ["email_template_id"], name: "index_sequence_steps_on_email_template_id"
+    t.index ["sequence_id", "position"], name: "index_sequence_steps_on_sequence_id_and_position"
+    t.index ["sequence_id"], name: "index_sequence_steps_on_sequence_id"
+    t.index ["skip_segment_id"], name: "index_sequence_steps_on_skip_segment_id"
+  end
+
+  create_table "sequences", force: :cascade do |t|
+    t.integer "team_id", null: false
+    t.string "name", null: false
+    t.string "status", default: "draft", null: false
+    t.string "trigger_type", default: "event", null: false
+    t.string "trigger_event_name"
+    t.integer "trigger_segment_id"
+    t.integer "exit_segment_id"
+    t.integer "reentry_days"
+    t.integer "sender_address_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["exit_segment_id"], name: "index_sequences_on_exit_segment_id"
+    t.index ["sender_address_id"], name: "index_sequences_on_sender_address_id"
+    t.index ["team_id", "status", "trigger_type"], name: "index_sequences_on_team_id_and_status_and_trigger_type"
+    t.index ["team_id"], name: "index_sequences_on_team_id"
+    t.index ["trigger_segment_id"], name: "index_sequences_on_trigger_segment_id"
+  end
+
   create_table "subscribers", force: :cascade do |t|
     t.integer "team_id", null: false
     t.string "external_id"
@@ -588,6 +648,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_14_120200) do
     t.string "time_zone"
     t.string "locale"
     t.string "stripe_customer_id"
+    t.boolean "sequences_enabled", default: false, null: false
   end
 
   create_table "tool_calls", force: :cascade do |t|
@@ -751,6 +812,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_14_120200) do
   add_foreign_key "click_events", "deliveries"
   add_foreign_key "companies", "teams"
   add_foreign_key "deliveries", "campaigns"
+  add_foreign_key "deliveries", "sequence_steps", on_delete: :nullify
   add_foreign_key "deliveries", "subscribers"
   add_foreign_key "email_images", "teams", on_delete: :nullify
   add_foreign_key "email_templates", "teams"
@@ -779,6 +841,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_14_120200) do
   add_foreign_key "scaffolding_completely_concrete_tangible_things_assignments", "scaffolding_completely_concrete_tangible_things", column: "tangible_thing_id"
   add_foreign_key "segments", "teams"
   add_foreign_key "sender_addresses", "teams"
+  add_foreign_key "sequence_enrollments", "sequences"
+  add_foreign_key "sequence_enrollments", "subscribers"
+  add_foreign_key "sequence_steps", "campaigns", on_delete: :nullify
+  add_foreign_key "sequence_steps", "email_templates", on_delete: :nullify
+  add_foreign_key "sequence_steps", "segments", column: "skip_segment_id", on_delete: :nullify
+  add_foreign_key "sequence_steps", "sequences"
+  add_foreign_key "sequences", "segments", column: "exit_segment_id", on_delete: :nullify
+  add_foreign_key "sequences", "segments", column: "trigger_segment_id", on_delete: :nullify
+  add_foreign_key "sequences", "sender_addresses", on_delete: :nullify
+  add_foreign_key "sequences", "teams"
   add_foreign_key "subscribers", "companies"
   add_foreign_key "subscribers", "teams"
   add_foreign_key "subscribers_imports", "teams"

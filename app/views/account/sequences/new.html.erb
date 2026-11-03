@@ -1,0 +1,7 @@
+<% content_for :page_title, "New sequence" %>
+<div class="max-w-[760px] mx-auto px-8 pt-14 pb-24">
+  <h1 class="mb-8 text-[32px] font-semibold tracking-[-0.02em] text-zinc-900 dark:text-zinc-50">New sequence</h1>
+  <section class="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 py-6">
+    <%= render "account/sequences/form", sequence: @sequence %>
+  </section>
+</div>

@@ -9,7 +9,11 @@ class Campaign < ApplicationRecord
   has_paper_trail on: [:create, :update, :destroy],
     ignore: [:updated_at]
 
-  STATUSES = %w[draft scheduled sending sent failed].freeze
+  # `sequence` marks the hidden campaign a SequenceStep owns. It is never
+  # sendable on its own; SequenceStepSendJob sends it one subscriber at a
+  # time. It exists so Deliveries, SES webhooks, tracking and delivery_stats
+  # work for sequence emails without a parallel pipeline.
+  STATUSES = %w[draft scheduled sending sent failed sequence].freeze
 
   # Mirror of EmailTemplate::ASSET_MAX_BYTES — keep these in lockstep.
   # Per-attachment cap, not aggregate; uploading several small images
@@ -39,8 +43,12 @@ class Campaign < ApplicationRecord
 
   # 🚅 add has_many associations above.
 
+  has_one :sequence_step, dependent: :nullify
   # 🚅 add has_one associations above.
 
+  # Everything except sequence-step backing campaigns. Use for any list the
+  # user sees as "my campaigns".
+  scope :visible, -> { where.not(status: "sequence") }
   scope :draft, -> { where(status: "draft") }
   scope :scheduled, -> { where(status: "scheduled") }
   scope :sent, -> { where(status: "sent") }
@@ -51,6 +59,7 @@ class Campaign < ApplicationRecord
   validates :email_template, scope: true
   validates :segment, scope: true
   validate :body_present_in_some_form
+  validate :sequence_status_is_permanent
   validate :plain_text_requires_markdown_body
   validate :assets_must_be_images_under_max_size
   # 🚅 add validations above.
@@ -59,6 +68,7 @@ class Campaign < ApplicationRecord
   # carries a template. Enforced as a callback (not just in the form) so the
   # MCP/API path can't persist the contradictory state either.
   before_validation :clear_template_when_plain_text
+  before_destroy :keep_while_step_exists, prepend: true
   # 🚅 add callbacks above.
 
   # 🚅 add delegations above.
@@ -292,6 +302,24 @@ class Campaign < ApplicationRecord
   # 🚅 add methods above.
 
   private
+
+  # A step's backing campaign stays a backing campaign: scheduling or
+  # sending it as a broadcast would mail its whole (nil = every subscriber)
+  # segment. And a regular campaign can't be turned into one.
+  def sequence_status_is_permanent
+    return if new_record? || !will_save_change_to_status?
+    return unless status_in_database == "sequence" || status == "sequence"
+    errors.add(:status, "can't change for a sequence step's email")
+  end
+
+  # Deleted with its step (SequenceStep belongs_to campaign, dependent:
+  # :destroy), never on its own: the step would be left with nothing to send.
+  def keep_while_step_exists
+    return if destroyed_by_association
+    return unless status == "sequence" && SequenceStep.exists?(campaign_id: id)
+    errors.add(:base, "belongs to a sequence step; remove the step instead")
+    throw :abort
+  end
 
   # In-memory subscriber used when there are no real subscribers yet — lets
   # authors see their work-in-progress preview before they've imported anyone.

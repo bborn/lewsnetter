@@ -6,6 +6,8 @@ class Team < ApplicationRecord
 
   # 🚅 add belongs_to associations above.
 
+  # Before subscribers/segments so enrollments go first on team destroy.
+  has_many :sequences, dependent: :destroy
   has_many :subscribers, dependent: :destroy
   has_many :companies, dependent: :destroy
   has_many :events, dependent: :destroy

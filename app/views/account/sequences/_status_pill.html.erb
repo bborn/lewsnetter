@@ -1,0 +1,9 @@
+<%
+  pill_classes =
+    case status
+    when "active" then "border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300"
+    when "paused" then "border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300"
+    else               "border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300"
+    end
+%>
+<span class="inline-flex items-center px-2 py-0.5 rounded-sm border font-mono text-[11px] uppercase tracking-[0.04em] <%= pill_classes %>"><%= status %></span>

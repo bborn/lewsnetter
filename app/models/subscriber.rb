@@ -32,6 +32,7 @@ class Subscriber < ApplicationRecord
   # have we sent this person, and how did it land?" — and they cascade so
   # GDPR-style subscriber deletes don't leave orphan delivery rows.
   has_many :deliveries, dependent: :destroy
+  has_many :sequence_enrollments, dependent: :delete_all
   # 🚅 add has_many associations above.
 
   # 🚅 add has_one associations above.
