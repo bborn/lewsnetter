@@ -1,0 +1,132 @@
+<% content_for :page_title, @sequence.name %>
+<% th = "px-4 py-3 font-mono text-[11px] uppercase tracking-[0.06em] text-zinc-500 dark:text-zinc-400 font-normal" %>
+<% num = "px-4 py-3.5 font-mono text-[13px] tabular-nums text-right text-zinc-700 dark:text-zinc-300" %>
+<% label = "font-mono text-[11px] uppercase tracking-[0.06em] text-zinc-500 dark:text-zinc-400" %>
+
+<div class="max-w-[1120px] mx-auto px-8 pt-14 pb-24 space-y-10">
+
+  <header class="flex items-start justify-between gap-6">
+    <div>
+      <div class="<%= label %> mb-2">Sequence</div>
+      <h1 class="text-[32px] font-semibold tracking-[-0.02em] text-zinc-900 dark:text-zinc-50 leading-tight flex items-center gap-3">
+        <%= @sequence.name %>
+        <%= render "account/sequences/status_pill", status: @sequence.status %>
+      </h1>
+      <p class="mt-2 font-mono text-[13px] text-zinc-500 dark:text-zinc-400">
+        <%= render "account/sequences/trigger_label", sequence: @sequence %>
+      </p>
+    </div>
+    <div class="flex items-center gap-2 shrink-0">
+      <% if @sequence.active? %>
+        <%= button_to "Pause", account_sequence_path(@sequence), method: :patch,
+              params: {sequence: {status: "paused"}},
+              class: "px-4 py-2 rounded-md border border-zinc-300 dark:border-zinc-700 text-[14px] text-zinc-900 dark:text-zinc-100 bg-transparent cursor-pointer" %>
+      <% else %>
+        <%= button_to "Activate", account_sequence_path(@sequence), method: :patch,
+              params: {sequence: {status: "active"}},
+              disabled: @sequence.steps.empty? || @sequence.sender_address.nil?,
+              class: "px-4 py-2 rounded-md bg-orange-600 hover:bg-orange-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-[14px] font-medium cursor-pointer transition-colors" %>
+      <% end %>
+      <%= link_to "Edit", edit_account_sequence_path(@sequence),
+            class: "px-4 py-2 rounded-md border border-zinc-300 dark:border-zinc-700 text-[14px] text-zinc-900 dark:text-zinc-100" %>
+    </div>
+  </header>
+
+  <%# Enrollment KPI strip. %>
+  <section class="grid grid-cols-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 divide-x divide-zinc-200 dark:divide-zinc-800">
+    <% {"active" => "In progress", "completed" => "Completed", "exited" => "Exited", "suppressed" => "Suppressed"}.each do |state, title| %>
+      <div class="px-6 py-5" data-enrollment-state="<%= state %>">
+        <div class="<%= label %>"><%= title %></div>
+        <div class="mt-2 text-[28px] font-semibold tabular-nums text-zinc-900 dark:text-zinc-50"><%= number_with_delimiter(@enrollment_counts[state]) %></div>
+        <% if state == "exited" && @exit_reasons.except("suppressed").any? %>
+          <div class="mt-1 font-mono text-[12px] text-zinc-500 dark:text-zinc-400">
+            <%= @exit_reasons.except("suppressed").map { |reason, n| "#{reason.to_s.tr("_", " ")} #{n}" }.join(" · ") %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </section>
+
+  <%# Steps with per-step funnel counts. %>
+  <section>
+    <div class="flex items-baseline justify-between mb-4">
+      <h2 class="text-[24px] font-semibold tracking-[-0.015em] text-zinc-900 dark:text-zinc-50">Steps</h2>
+      <%= link_to "Add step", new_account_sequence_sequence_step_path(@sequence),
+            class: "px-4 py-2 rounded-md border border-zinc-300 dark:border-zinc-700 text-[14px] text-zinc-900 dark:text-zinc-100" %>
+    </div>
+
+    <% if @step_stats.any? %>
+      <div class="rounded-lg border border-zinc-200 dark:border-zinc-800 overflow-x-auto bg-white dark:bg-zinc-900">
+        <table class="w-full text-left">
+          <thead>
+            <tr class="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950">
+              <th class="<%= th %>">#</th>
+              <th class="<%= th %>">Email</th>
+              <th class="<%= th %> text-right">Waiting</th>
+              <th class="<%= th %> text-right">Sent</th>
+              <th class="<%= th %> text-right">Delivered</th>
+              <th class="<%= th %> text-right">Opened</th>
+              <th class="<%= th %> text-right">Clicked</th>
+              <th class="<%= th %> text-right">Bounced</th>
+              <th class="<%= th %> text-right">Unsub</th>
+              <th class="<%= th %> text-right">Skipped</th>
+              <th class="px-4 py-3"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @step_stats.each do |row| %>
+              <% step = row[:step] %>
+              <tr class="border-b border-zinc-100 dark:border-zinc-800/70 last:border-0" data-step-position="<%= row[:position] %>">
+                <td class="px-4 py-3.5 font-mono text-[13px] text-zinc-500 dark:text-zinc-400 align-top"><%= row[:position] %></td>
+                <td class="px-4 py-3.5 align-top">
+                  <div class="text-[14px] font-medium text-zinc-900 dark:text-zinc-100"><%= step.subject %></div>
+                  <div class="mt-0.5 font-mono text-[12px] text-zinc-500 dark:text-zinc-400">
+                    <%= sequence_step_delay_label(step) %>
+                    <% if step.skip_segment %> · skip <%= step.skip_segment.name %><% end %>
+                  </div>
+                </td>
+                <% %i[waiting sent delivered opened clicked bounced unsubscribed skipped].each do |key| %>
+                  <td class="<%= num %> align-top" data-stat="<%= key %>"><%= number_with_delimiter(row[key]) %></td>
+                <% end %>
+                <td class="px-4 py-3.5 text-right align-top whitespace-nowrap">
+                  <%= link_to "Edit", edit_account_sequence_step_path(step), class: "text-[13px] text-orange-600 dark:text-orange-400 hover:underline" %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-center py-12 px-6">
+        <div class="font-mono text-[11px] uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-2">No steps</div>
+        <%= link_to "Add the first email →", new_account_sequence_sequence_step_path(@sequence), class: "button" %>
+      </div>
+    <% end %>
+  </section>
+
+  <%# Settings summary. %>
+  <section class="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+    <dl class="grid grid-cols-3 divide-x divide-zinc-200 dark:divide-zinc-800">
+      <div class="px-6 py-5">
+        <dt class="<%= label %>">Sender</dt>
+        <dd class="mt-2 font-mono text-[13px] text-zinc-900 dark:text-zinc-100"><%= @sequence.sender_address&.email || "—" %></dd>
+      </div>
+      <div class="px-6 py-5">
+        <dt class="<%= label %>">Exit segment</dt>
+        <dd class="mt-2 text-[14px] text-zinc-900 dark:text-zinc-100"><%= @sequence.exit_segment&.name || "—" %></dd>
+      </div>
+      <div class="px-6 py-5">
+        <dt class="<%= label %>">Re-entry</dt>
+        <dd class="mt-2 text-[14px] text-zinc-900 dark:text-zinc-100"><%= sequence_reentry_label(@sequence) %></dd>
+      </div>
+    </dl>
+  </section>
+
+  <div class="flex justify-between items-center">
+    <%= link_to "← All sequences", account_team_sequences_path(@team), class: "text-[13px] text-zinc-500 dark:text-zinc-400 hover:text-zinc-900" %>
+    <%= button_to "Delete sequence", account_sequence_path(@sequence), method: :delete,
+          data: {turbo_confirm: "Delete this sequence? Active enrollments stop and no further steps send."},
+          class: "text-[13px] text-rose-600 hover:text-rose-700 dark:text-rose-400 bg-transparent border-0 cursor-pointer" %>
+  </div>
+
+</div>

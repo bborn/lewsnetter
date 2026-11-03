@@ -19,6 +19,8 @@ class Avo::Resources::Team < Avo::BaseResource
       ActiveSupport::TimeZone.all.map { |tz| ["(GMT#{tz.formatted_offset}) #{tz.name}", tz.name] }.to_h
     }
     field :locale, as: :text
+    # Per-team gate for Sequences (UI, enrollment and sending).
+    field :sequences_enabled, as: :boolean
     field :users, as: :has_many, through: :memberships
     field :memberships, as: :has_many
     field :invitations, as: :has_many

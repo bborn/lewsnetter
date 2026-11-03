@@ -1,0 +1,7 @@
+<% sequence ||= @sequence %>
+<% team ||= @team || sequence&.team %>
+<%= render 'account/teams/breadcrumbs', team: team %>
+<%= render 'account/shared/breadcrumb', label: "Sequences", url: [:account, team, :sequences] %>
+<% if sequence&.persisted? %>
+  <%= render 'account/shared/breadcrumb', label: sequence.name, url: [:account, sequence] %>
+<% end %>

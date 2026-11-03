@@ -1,0 +1,8 @@
+<% content_for :page_title, "Add step" %>
+<div class="max-w-[760px] mx-auto px-8 pt-14 pb-24">
+  <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-zinc-500 dark:text-zinc-400 mb-2"><%= @sequence.name %></div>
+  <h1 class="mb-8 text-[32px] font-semibold tracking-[-0.02em] text-zinc-900 dark:text-zinc-50">Add step</h1>
+  <section class="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 py-6">
+    <%= render "account/sequence_steps/form", step: @step %>
+  </section>
+</div>

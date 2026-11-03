@@ -6,6 +6,10 @@
 class SequenceStep < ApplicationRecord
   # 🚅 add concerns above.
 
+  # Form-facing delay: "wait 3 days" instead of 4320 minutes. Setting both
+  # writes delay_minutes before validation.
+  DELAY_UNITS = {"minutes" => 1, "hours" => 60, "days" => 1440}.freeze
+  attr_writer :delay_amount, :delay_unit
   # 🚅 add attribute accessors above.
 
   belongs_to :sequence, inverse_of: :steps
@@ -29,7 +33,9 @@ class SequenceStep < ApplicationRecord
   # 🚅 add validations above.
 
   before_validation :assign_position, on: :create
+  before_validation :apply_delay_amount
   after_save :sync_backing_campaign
+  before_destroy :shift_later_enrollments
   # 🚅 add callbacks above.
 
   delegate :team, to: :sequence
@@ -49,9 +55,39 @@ class SequenceStep < ApplicationRecord
     campaign.delivery_stats
   end
 
+  # Largest unit that divides the delay evenly.
+  def delay_unit
+    return @delay_unit if DELAY_UNITS.key?(@delay_unit)
+    minutes = delay_minutes.to_i
+    return "minutes" if minutes.zero?
+    DELAY_UNITS.keys.reverse.find { |unit| (minutes % DELAY_UNITS[unit]).zero? }
+  end
+
+  def delay_amount
+    return @delay_amount if @delay_amount
+    delay_minutes.to_i / DELAY_UNITS[delay_unit]
+  end
+
   # 🚅 add methods above.
 
   private
+
+  # Enrollments point at steps by 0-based index. Removing a step shifts the
+  # later ones down by one, so pull the pointers of anyone past it back too
+  # (anyone waiting on this step now waits on the next).
+  def shift_later_enrollments
+    removed = index
+    return if removed.nil?
+    SequenceEnrollment.where(sequence_id: sequence_id, state: "active")
+      .where("current_step > ?", removed)
+      .update_all("current_step = current_step - 1")
+  end
+
+  def apply_delay_amount
+    return if @delay_amount.nil? || @delay_amount.to_s.strip.empty?
+    unit = DELAY_UNITS.fetch(delay_unit, 1)
+    self.delay_minutes = Integer(@delay_amount.to_s, exception: false)&.*(unit) || -1
+  end
 
   def assign_position
     return if position.to_i > 0

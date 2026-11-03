@@ -1,0 +1,66 @@
+<%
+  input = "w-full text-[14px] px-3 py-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:border-orange-600 dark:focus:border-orange-400 focus:ring-[3px] focus:ring-orange-100 dark:focus:ring-orange-950"
+  lbl = "block text-[13px] font-medium text-zinc-700 dark:text-zinc-300 mb-1.5"
+  opt = '<span class="text-zinc-400 font-normal text-[11px]">(optional)</span>'.html_safe
+  help = "mt-1 text-[12px] text-zinc-500 dark:text-zinc-400"
+  url = step.persisted? ? account_sequence_step_path(step) : account_sequence_sequence_steps_path(@sequence)
+%>
+
+<%= form_with model: step, scope: :sequence_step, url: url, local: true, class: "space-y-6" do |f| %>
+  <% if step.errors.any? %>
+    <div class="px-4 py-3 rounded-md border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 text-[13px] text-rose-700 dark:text-rose-300">
+      <%= step.errors.full_messages.to_sentence %>
+    </div>
+  <% end %>
+
+  <div>
+    <label class="<%= lbl %>" for="sequence_step_delay_amount">Wait before sending</label>
+    <div class="flex gap-2 max-w-xs">
+      <%= f.number_field :delay_amount, min: 0, required: true, class: "#{input} font-mono tabular-nums" %>
+      <%= f.select :delay_unit, SequenceStep::DELAY_UNITS.keys.map { |u| [u, u] }, {}, class: input %>
+    </div>
+    <p class="<%= help %>"><%= step.position == 1 || @sequence.steps.empty? ? "After enrollment." : "After the previous step." %></p>
+  </div>
+
+  <div>
+    <%= f.label :subject, class: lbl %>
+    <%= f.text_field :subject, required: true, class: input %>
+  </div>
+
+  <div>
+    <label for="sequence_step_preheader" class="<%= lbl %>">Preheader <%= opt %></label>
+    <%= f.text_field :preheader, class: input %>
+  </div>
+
+  <div>
+    <%= f.label :body_markdown, "Body (Markdown)", class: lbl %>
+    <%= f.text_area :body_markdown, rows: 14, required: true, class: "#{input} font-mono text-[13px]" %>
+  </div>
+
+  <div class="grid grid-cols-2 gap-4">
+    <div>
+      <label for="sequence_step_email_template_id" class="<%= lbl %>">Template <%= opt %></label>
+      <%= f.select :email_template_id, @team.email_templates.order(:name).map { |t| [t.name, t.id] }, {include_blank: "Plain text"}, class: input %>
+    </div>
+    <div>
+      <label for="sequence_step_skip_segment_id" class="<%= lbl %>">Skip if in segment <%= opt %></label>
+      <%= f.select :skip_segment_id, @team.segments.order(:name).map { |s| [s.name, s.id] }, {include_blank: "—"}, class: input %>
+    </div>
+  </div>
+
+  <div class="flex items-center justify-between pt-2">
+    <div class="flex items-center gap-3">
+      <%= f.submit (step.persisted? ? "Save step" : "Add step"),
+            class: "px-4 py-2 rounded-md bg-orange-600 hover:bg-orange-700 text-white text-[14px] font-medium cursor-pointer transition-colors" %>
+      <%= link_to "Cancel", account_sequence_path(@sequence), class: "px-4 py-2 text-[14px] text-zinc-500 dark:text-zinc-400" %>
+    </div>
+  </div>
+<% end %>
+
+<% if step.persisted? %>
+  <div class="mt-6 pt-6 border-t border-zinc-200 dark:border-zinc-800 text-right">
+    <%= button_to "Remove step", account_sequence_step_path(step), method: :delete,
+          data: {turbo_confirm: "Remove this step? Subscribers waiting on it move to the next one."},
+          class: "text-[13px] text-rose-600 hover:text-rose-700 dark:text-rose-400 bg-transparent border-0 cursor-pointer" %>
+  </div>
+<% end %>

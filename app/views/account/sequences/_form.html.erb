@@ -1,0 +1,73 @@
+<%
+  input = "w-full text-[14px] px-3 py-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:border-orange-600 dark:focus:border-orange-400 focus:ring-[3px] focus:ring-orange-100 dark:focus:ring-orange-950"
+  lbl = "block text-[13px] font-medium text-zinc-700 dark:text-zinc-300 mb-1.5"
+  opt = '<span class="text-zinc-400 font-normal text-[11px]">(optional)</span>'.html_safe
+  help = "mt-1 text-[12px] text-zinc-500 dark:text-zinc-400"
+  segments = @team.segments.order(:name).map { |s| [s.name, s.id] }
+  senders = @team.sender_addresses.order(:email).map { |s| [s.email, s.id] }
+  cancel_path = sequence.persisted? ? account_sequence_path(sequence) : account_team_sequences_path(@team)
+%>
+
+<%= form_with model: sequence,
+      url: (sequence.persisted? ? account_sequence_path(sequence) : account_team_sequences_path(@team)),
+      local: true, class: "space-y-6" do |f| %>
+  <% if sequence.errors.any? %>
+    <div class="px-4 py-3 rounded-md border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 text-[13px] text-rose-700 dark:text-rose-300">
+      <%= sequence.errors.full_messages.to_sentence %>
+    </div>
+  <% end %>
+
+  <div>
+    <%= f.label :name, class: lbl %>
+    <%= f.text_field :name, autofocus: true, required: true, class: input %>
+  </div>
+
+  <div class="grid grid-cols-2 gap-4">
+    <div>
+      <%= f.label :trigger_type, "Trigger", class: lbl %>
+      <%= f.select :trigger_type, [["Tracked event", "event"], ["Enters a segment", "segment"]], {}, class: input %>
+    </div>
+    <div>
+      <%= f.label :status, class: lbl %>
+      <%= f.select :status, Sequence::STATUSES.map { |s| [s.humanize, s] }, {}, class: input %>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-2 gap-4">
+    <div>
+      <%= f.label :trigger_event_name, "Event name", class: lbl %>
+      <%= f.text_field :trigger_event_name, placeholder: "signed_up", class: "#{input} font-mono" %>
+      <p class="<%= help %>">Used when the trigger is a tracked event.</p>
+    </div>
+    <div>
+      <%= f.label :trigger_segment_id, "Trigger segment", class: lbl %>
+      <%= f.select :trigger_segment_id, segments, {include_blank: "—"}, class: input %>
+      <p class="<%= help %>">Used when the trigger is a segment. Checked hourly.</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-2 gap-4">
+    <div>
+      <label for="sequence_exit_segment_id" class="<%= lbl %>">Exit segment <%= opt %></label>
+      <%= f.select :exit_segment_id, segments, {include_blank: "—"}, class: input %>
+      <p class="<%= help %>">Matching subscribers leave the sequence.</p>
+    </div>
+    <div>
+      <label for="sequence_reentry_days" class="<%= lbl %>">Re-entry after days <%= opt %></label>
+      <%= f.number_field :reentry_days, min: 1, placeholder: "Never", class: "#{input} font-mono tabular-nums" %>
+      <p class="<%= help %>">Blank = once per subscriber.</p>
+    </div>
+  </div>
+
+  <div>
+    <%= f.label :sender_address_id, "Sender", class: lbl %>
+    <%= f.select :sender_address_id, senders, {include_blank: "—"}, class: input %>
+    <p class="<%= help %>">Required to activate.</p>
+  </div>
+
+  <div class="flex items-center gap-3 pt-2">
+    <%= f.submit (sequence.persisted? ? "Save sequence" : "Create sequence"),
+          class: "px-4 py-2 rounded-md bg-orange-600 hover:bg-orange-700 text-white text-[14px] font-medium cursor-pointer transition-colors" %>
+    <%= link_to "Cancel", cancel_path, class: "px-4 py-2 text-[14px] text-zinc-500 dark:text-zinc-400" %>
+  </div>
+<% end %>
