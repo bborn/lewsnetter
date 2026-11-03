@@ -61,7 +61,7 @@ class SequencesFlowTest < Api::V1::Test
     assert_equal "completed", enrollment.state
     assert_not_nil enrollment.completed_at
     assert_equal 3, subscriber.reload.times_contacted
-    assert_equal [1, 1, 1], @sequence.reload.step_stats.map { _1[:sent] }
+    assert_equal [1, 1, 1], @sequence.reload.step_stats.map { it[:sent] }
   end
 
   test "unsubscribing mid-sequence stops it" do

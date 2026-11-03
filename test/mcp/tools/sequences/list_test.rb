@@ -23,7 +23,7 @@ module Mcp
           result = List.new.invoke(arguments: {}, context: @ctx)
           assert result[:sequences_enabled]
           assert_equal 2, result[:total]
-          ids = result[:sequences].map { _1[:id] }
+          ids = result[:sequences].map { it[:id] }
           assert_equal [@live.id, @draft.id], ids
           live = result[:sequences].first
           assert_equal "Welcome", live[:name]
@@ -36,7 +36,7 @@ module Mcp
 
         test "filters by status" do
           result = List.new.invoke(arguments: {"status" => "draft"}, context: @ctx)
-          assert_equal [@draft.id], result[:sequences].map { _1[:id] }
+          assert_equal [@draft.id], result[:sequences].map { it[:id] }
         end
       end
     end

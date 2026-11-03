@@ -120,10 +120,10 @@ class SequenceTest < ActiveSupport::TestCase
     second.update_column(:skipped_count, 2)
 
     stats = @sequence.reload.step_stats
-    assert_equal [1, 2], stats.map { _1[:position] }
-    assert_equal [1, 1], stats.map { _1[:waiting] }
-    assert_equal [0, 1], stats.map { _1[:sent] }
-    assert_equal [0, 2], stats.map { _1[:skipped] }
+    assert_equal [1, 2], stats.map { it[:position] }
+    assert_equal [1, 1], stats.map { it[:waiting] }
+    assert_equal [0, 1], stats.map { it[:sent] }
+    assert_equal [0, 2], stats.map { it[:skipped] }
   end
 
   test "destroying a sequence removes its steps, backing campaigns and enrollments" do

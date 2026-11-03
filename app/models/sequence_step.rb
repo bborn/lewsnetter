@@ -60,7 +60,7 @@ class SequenceStep < ApplicationRecord
     return @delay_unit if DELAY_UNITS.key?(@delay_unit)
     minutes = delay_minutes.to_i
     return "minutes" if minutes.zero?
-    DELAY_UNITS.keys.reverse.find { |unit| (minutes % DELAY_UNITS[unit]).zero? }
+    DELAY_UNITS.keys.rfind { |unit| (minutes % DELAY_UNITS[unit]).zero? }
   end
 
   def delay_amount
