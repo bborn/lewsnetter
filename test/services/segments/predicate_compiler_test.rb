@@ -104,14 +104,22 @@ module Segments
       assert_includes sql, "subscribers.external_id IN ('a@x.com','b@x.com','c@x.com')"
     end
 
-    test "datetime within_last_days emits a UTC bound" do
+    # Relative windows are evaluated by SQLite at query time: the predicate
+    # is stored when the segment is saved and must not freeze the window.
+    test "datetime within_last_days is relative to query time" do
       sql = rule("subscribers.created_at", "within_last_days", 7)
-      assert_match(/subscribers\.created_at >= '\d{4}-\d{2}-\d{2}/, sql)
+      assert_equal "(subscribers.created_at >= datetime('now', '-7 days'))", sql
     end
 
     test "datetime more_than_days_ago" do
       sql = rule("subscribers.created_at", "more_than_days_ago", 30)
-      assert_match(/subscribers\.created_at < '\d{4}/, sql)
+      assert_equal "(subscribers.created_at < datetime('now', '-30 days'))", sql
+    end
+
+    test "unix_time compares seconds against a query-time bound" do
+      sql = rule("custom_attributes.last_active_at", "more_than_days_ago", 21, value_type: "unix_time")
+      assert_equal "(CAST(json_extract(subscribers.custom_attributes, '$.last_active_at') AS INTEGER) < " \
+        "CAST(strftime('%s', 'now', '-21 days') AS INTEGER))", sql
     end
 
     test "boolean equals coerces true/false correctly" do
@@ -279,6 +287,23 @@ module Segments
       assert_equal "a@example.com", result.first.email
     end
 
+    test "relative windows execute against stored datetimes and unix seconds" do
+      recent = @team.subscribers.create!(email: "recent@example.com", external_id: "r1", subscribed: true,
+        custom_attributes: {"last_active_at" => 3.days.ago.to_i})
+      stale = @team.subscribers.create!(email: "stale@example.com", external_id: "s1", subscribed: true,
+        custom_attributes: {"last_active_at" => 40.days.ago.to_i})
+      stale.update_columns(created_at: 40.days.ago)
+
+      assert_equal [recent.id], @team.subscribers.where(rule("subscribers.created_at", "within_last_days", 7)).pluck(:id)
+      assert_equal [stale.id], @team.subscribers.where(rule("subscribers.created_at", "more_than_days_ago", 30)).pluck(:id)
+      assert_equal [recent.id], @team.subscribers.where(
+        rule("custom_attributes.last_active_at", "within_last_days", 7, value_type: "unix_time")
+      ).pluck(:id)
+      assert_equal [stale.id], @team.subscribers.where(
+        rule("custom_attributes.last_active_at", "more_than_days_ago", 21, value_type: "unix_time")
+      ).pluck(:id)
+    end
+
     test "compiled SQL with company join is executable" do
       acme = @team.companies.create!(name: "Acme", custom_attributes: {"tenant_type" => "brand"})
       widg = @team.companies.create!(name: "Widget", custom_attributes: {"tenant_type" => "agency"})
@@ -323,11 +348,10 @@ module Segments
     end
 
     # Convenience for single-rule cases.
-    def rule(field, operator, value)
-      compile({
-        "type" => "group", "combinator" => "and",
-        "rules" => [{"type" => "rule", "field" => field, "operator" => operator, "value" => value}]
-      })
+    def rule(field, operator, value, value_type: nil)
+      node = {"type" => "rule", "field" => field, "operator" => operator, "value" => value}
+      node["value_type"] = value_type if value_type
+      compile({"type" => "group", "combinator" => "and", "rules" => [node]})
     end
 
     # Same as `rule`, plus a value_type hint (required for non-string custom

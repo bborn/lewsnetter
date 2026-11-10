@@ -410,7 +410,7 @@ export default class extends Controller {
           <option value="false" ${String(rule.value) === "false" ? "selected" : ""}>false</option>
         </select>`
     }
-    if (type === "datetime") {
+    if (type === "datetime" || type === "unix_time") {
       if (["within_last_days", "more_than_days_ago"].includes(rule.operator)) {
         return `<input type="number" min="1" placeholder="days" value="${this.escape(rule.value || "")}" ${common}>`
       }

@@ -74,7 +74,7 @@ module Segments
       end
 
       observed.keys.sort.map do |attr|
-        type = infer_type(observed[attr])
+        type = infer_type(observed[attr], attr)
         {
           key: "#{key_prefix}#{attr}",
           label: attr,
@@ -112,13 +112,18 @@ module Segments
     # like CSVs (comma-separated, no spaces around commas, more than one
     # segment), pick :csv_list so the UI surfaces element-wise operators
     # that won't false-positive ("brand" matching "brand_account"). Fall
-    # back to :string.
-    def infer_type(values)
+    # back to :string. Integer `*_at` keys holding epoch seconds (the source
+    # app's last_active_at) are :unix_time so they get day-window operators.
+    UNIX_TIME_RANGE = 946_684_800..4_102_444_800 # 2000-01-01..2100-01-01
+    def infer_type(values, attr = nil)
       non_null = values.reject(&:nil?)
       return :string if non_null.empty?
       return :array if non_null.any? { |v| v.is_a?(Array) }
       return :boolean if non_null.all? { |v| v == true || v == false }
-      return :number if non_null.all? { |v| v.is_a?(Numeric) }
+      if non_null.all? { |v| v.is_a?(Numeric) }
+        unix = attr.to_s.end_with?("_at") && non_null.all? { |v| v.is_a?(Integer) && UNIX_TIME_RANGE.cover?(v) }
+        return unix ? :unix_time : :number
+      end
       return :csv_list if non_null.all? { |v| csv_shaped?(v) }
       :string
     end
