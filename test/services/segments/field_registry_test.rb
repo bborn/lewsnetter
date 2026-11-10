@@ -23,5 +23,21 @@ module Segments
       assert_equal :array, tags[:type]
       assert_equal ["Connected Accts"], tags[:samples]
     end
+
+    test "attributes a saved segment uses but no subscriber has yet are still listed" do
+      rules = {"type" => "group", "combinator" => "and", "rules" => [
+        {"type" => "rule", "field" => "custom_attributes.tokens_count", "operator" => "equals", "value" => 0, "value_type" => "number"},
+        {"type" => "group", "combinator" => "or", "rules" => [
+          {"type" => "rule", "field" => "company_attributes.influencer_hub_campaigns", "operator" => "is_not_set", "value_type" => "number"}
+        ]},
+        {"type" => "rule", "field" => "custom_attributes.last_active_at", "operator" => "within_last_days", "value" => 3, "value_type" => "unix_time"}
+      ]}
+      fields = FieldRegistry.new(team: @team, rules: rules).call
+
+      assert_equal :number, fields["Subscriber custom attributes"].find { |f| f[:key] == "custom_attributes.tokens_count" }[:type]
+      assert_equal :number, fields["Company custom attributes"].find { |f| f[:key] == "company_attributes.influencer_hub_campaigns" }[:type]
+      assert_equal 1, fields["Subscriber custom attributes"].count { |f| f[:key] == "custom_attributes.last_active_at" }
+      assert_nil FieldRegistry.new(team: @team).call.values.flatten.find { |f| f[:key] == "custom_attributes.tokens_count" }
+    end
   end
 end

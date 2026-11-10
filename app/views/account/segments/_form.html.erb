@@ -1,6 +1,6 @@
 <% cancel_path ||= segment.persisted? ? [:account, segment] : [:account, @team, :segments] %>
 <%
-  fields_json    = ::Segments::FieldRegistry.new(team: @team).call
+  fields_json    = ::Segments::FieldRegistry.new(team: @team, rules: segment.rules).call
   operators_json = ::Segments::PredicateCompiler::OPERATORS
   preview_url = preview_account_team_segments_path(@team)
 %>

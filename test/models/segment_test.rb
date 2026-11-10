@@ -96,6 +96,30 @@ class SegmentTest < ActiveSupport::TestCase
     end
   end
 
+  test "validate_predicate allows created_at and updated_at columns" do
+    assert_empty Segment.validate_predicate("subscribers.created_at >= datetime('now', '-1 days')")
+    assert_empty Segment.validate_predicate("subscribers.updated_at < datetime('now', '-30 days')")
+  end
+
+  test "validate_predicate still rejects forbidden keywords as whole words" do
+    errs = Segment.validate_predicate("1=1 OR (CREATE TABLE x (id int))")
+    assert errs.any? { |e| e.include?("forbidden token: CREATE") }
+    assert Segment.validate_predicate("subscribed = 1--").any? { |e| e.include?("forbidden token: --") }
+  end
+
+  test "a builder rule on signup date compiles and filters subscribers" do
+    recent = @team.subscribers.create!(email: "recent@example.com", created_at: 2.hours.ago)
+    old = @team.subscribers.create!(email: "old@example.com", created_at: 10.days.ago)
+    segment = @team.segments.create!(name: "Signed up today", rules: {
+      "type" => "group", "combinator" => "and",
+      "rules" => [{"type" => "rule", "field" => "subscribers.created_at", "operator" => "within_last_days", "value" => 1}]
+    })
+
+    matched = segment.applies_to(@team.subscribers).to_a
+    assert_includes matched, recent
+    refute_includes matched, old
+  end
+
   # ---------------------------------------------------------------------
   # PaperTrail audit-history wiring. The segment's `definition` JSON
   # carries the SQL predicate that selects who gets a campaign — versioning

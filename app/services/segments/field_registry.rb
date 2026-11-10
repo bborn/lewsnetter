@@ -19,16 +19,21 @@ module Segments
   #     "Company custom attributes" => [...]
   #   }
   class FieldRegistry
-    def initialize(team:)
+    # `rules` is the segment's saved rules tree. Attributes it references that
+    # no sampled row carries yet (an attribute the app hasn't sent) are still
+    # listed, typed from the rule, so the builder doesn't swap them for the
+    # first field in the list and rewrite the segment on save.
+    def initialize(team:, rules: nil)
       @team = team
+      @rules = rules
     end
 
     def call
       {
         "Subscriber" => builtin_subscriber_fields,
-        "Subscriber custom attributes" => sample_custom_attribute_fields(:subscribers, "custom_attributes."),
+        "Subscriber custom attributes" => with_rule_fields(sample_custom_attribute_fields(:subscribers, "custom_attributes."), "custom_attributes."),
         "Company" => builtin_company_fields,
-        "Company custom attributes" => sample_custom_attribute_fields(:companies, "company_attributes.")
+        "Company custom attributes" => with_rule_fields(sample_custom_attribute_fields(:companies, "company_attributes."), "company_attributes.")
       }.reject { |_, fields| fields.blank? }
     end
 
@@ -82,6 +87,23 @@ module Segments
           samples: sample_values(observed[attr], type)
         }
       end
+    end
+
+    def with_rule_fields(fields, key_prefix)
+      known = fields.map { |f| f[:key] }
+      missing = rule_leaves(@rules).select { |r| r["field"].to_s.start_with?(key_prefix) && !known.include?(r["field"]) }
+      extra = missing.uniq { |r| r["field"] }.map do |r|
+        type = r["value_type"].presence&.to_sym
+        type = :string unless PredicateCompiler::OPERATORS.key?(type)
+        {key: r["field"], label: r["field"].delete_prefix(key_prefix), type: type, samples: []}
+      end
+      (fields + extra).sort_by { |f| f[:label] }
+    end
+
+    def rule_leaves(node)
+      return [] unless node.is_a?(Hash)
+      return [node] if node["type"] == "rule"
+      Array(node["rules"]).flat_map { |child| rule_leaves(child) }
     end
 
     # Distinct value samples for the value-input autocomplete. Skip for

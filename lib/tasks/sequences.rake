@@ -13,7 +13,8 @@ namespace :sequences do
       export_dir: File.expand_path(ENV.fetch("EXPORT_DIR")),
       spec: YAML.safe_load_file(File.expand_path(ENV.fetch("SPEC"))),
       sender_address: ENV["SENDER_ADDRESS_ID"].presence && team.sender_addresses.find(ENV["SENDER_ADDRESS_ID"]),
-      email_template: ENV["EMAIL_TEMPLATE_ID"].presence && team.email_templates.find(ENV["EMAIL_TEMPLATE_ID"])
+      # Required: without a template, steps are plain text and markdown ships raw.
+      email_template: team.email_templates.find(ENV.fetch("EMAIL_TEMPLATE_ID"))
     )
     importer.call.each do |result|
       puts "#{result.status.to_s.ljust(8)} #{result.name} (#{result.steps} steps)"

@@ -38,6 +38,18 @@ class Sequences::IntercomSeriesImportTest < ActiveSupport::TestCase
     assert_equal "\\#1 tip\n\n\\2. step", md
   end
 
+  test "a conditional subject keeps its fallback line" do
+    warnings = []
+    subject = Sequences::IntercomBlocks.subject([{
+      "type" => "ifElseStatement",
+      "predicatesBlocksPairs" => [{"blocks" => [{"type" => "paragraph", "text" => "3 things in {{report_name}}"}]}],
+      "fallbackBlocks" => [{"type" => "paragraph", "text" => "3 things you might&#x27;ve missed"}]
+    }], warnings)
+
+    assert_equal "3 things you might've missed", subject
+    assert_equal ["conditional subject: kept the fallback (else) line"], warnings
+  end
+
   test "real exported bodies render every link with the subscriber's subdomain, or the fallback" do
     [EMAIL_1, EMAIL_4].each do |ruleset|
       md, = Sequences::IntercomBlocks.to_markdown(blocks(ruleset))

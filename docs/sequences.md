@@ -69,11 +69,13 @@ segment runs, not when it's saved. Epoch-second attributes whose key ends in
 ## Importing Intercom Series
 
 `bin/rails sequences:import_intercom_series TEAM_ID=… EXPORT_DIR=… SPEC=spec.yml
-SENDER_ADDRESS_ID=… [EMAIL_TEMPLATE_ID=…]` reads a Series export (one JSON per
+SENDER_ADDRESS_ID=… EMAIL_TEMPLATE_ID=…` reads a Series export (one JSON per
 series) and a YAML spec that says how each series flattens (segments to create,
 trigger, exclusions, goal, steps with their ruleset ids, waits, skip segments,
-tags and actions). Email bodies convert to Markdown and Intercom merge tags
-(`{{custom_data.x|fallback:"y"}}`, URL-encoded tags) are rewritten. Sequences
+tags and actions). Email bodies convert to Markdown inside the given template
+(required: without one the steps would be plain text and the Markdown would show
+raw). Intercom merge tags (`{{custom_data.x|fallback:"y"}}`, URL-encoded tags)
+are kept as written; the renderer understands them. Sequences
 are created as drafts; nothing sends until someone activates them. Rerunning
 skips series that already exist. See `Sequences::IntercomSeriesImporter`.
 

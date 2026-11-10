@@ -156,9 +156,9 @@ module Sequences
 
       first = contents.first
       body, warnings = IntercomBlocks.to_markdown(first["blocks"])
-      warnings = warnings.map { |w| "#{ruleset_id}: #{w}" }
+      subject = IntercomBlocks.subject(first["subject_blocks"], warnings).presence || ruleset.dig("client_data", "title").to_s
+      warnings = warnings.uniq.map { |w| "#{ruleset_id}: #{w}" }
       warnings << "#{ruleset_id}: A/B variant dropped (kept version A)" if contents.size > 1
-      subject = IntercomBlocks.subject(first["subject_blocks"]).presence || ruleset.dig("client_data", "title").to_s
       [{subject: subject, body: body}, warnings]
     end
 

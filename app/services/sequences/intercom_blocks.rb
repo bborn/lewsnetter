@@ -14,8 +14,16 @@ module Sequences
       [parts.join("\n\n").strip, warnings.uniq]
     end
 
-    def subject(blocks)
-      Array(blocks).map { |b| inline(b["text"], plain: true) }.reject(&:empty?).join(" ").strip
+    # A conditional subject keeps its fallback (else) line, as bodies do.
+    def subject(blocks, warnings = [])
+      Array(blocks).flat_map do |b|
+        if b["type"] == "ifElseStatement"
+          warnings << "conditional subject: kept the fallback (else) line"
+          subject(b["fallbackBlocks"], warnings)
+        else
+          inline(b["text"], plain: true)
+        end
+      end.reject(&:empty?).join(" ").strip
     end
 
     def convert(blocks, warnings)
