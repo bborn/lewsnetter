@@ -9,6 +9,10 @@ class SequenceStep < ApplicationRecord
   # Form-facing delay: "wait 3 days" instead of 4320 minutes. Setting both
   # writes delay_minutes before validation.
   DELAY_UNITS = {"minutes" => 1, "hours" => 60, "days" => 1440}.freeze
+  # A step action fires when the subscriber hits the sequence goal, or
+  # clicks a link in this step's email, any time before the next step (or
+  # the end of the sequence). It can tag them, exit them, or both.
+  ACTION_TRIGGERS = %w[goal click].freeze
   attr_writer :delay_amount, :delay_unit
   # 🚅 add attribute accessors above.
 
@@ -30,10 +34,13 @@ class SequenceStep < ApplicationRecord
   validates :delay_minutes, numericality: {only_integer: true, greater_than_or_equal_to: 0}
   validates :email_template, scope: true
   validates :skip_segment, scope: true
+  validates :action_trigger, inclusion: {in: ACTION_TRIGGERS}, allow_nil: true
+  validate :action_is_complete
   # 🚅 add validations above.
 
   before_validation :assign_position, on: :create
   before_validation :apply_delay_amount
+  before_validation :normalize_action
   after_save :sync_backing_campaign
   before_destroy :shift_later_enrollments
   # 🚅 add callbacks above.
@@ -68,6 +75,23 @@ class SequenceStep < ApplicationRecord
     delay_minutes.to_i / DELAY_UNITS[delay_unit]
   end
 
+  def action? = action_trigger.present?
+
+  # Did the subscriber do what this step's action waits for, since `since`
+  # (when the step was sent)?
+  def action_fired?(subscriber, since:)
+    case action_trigger
+    when "goal"
+      sequence.goal_reached?(subscriber, since: since)
+    when "click"
+      return false if campaign_id.nil?
+      ClickEvent.human.links.joins(:delivery)
+        .where(deliveries: {campaign_id: campaign_id, subscriber_id: subscriber.id}).exists?
+    else
+      false
+    end
+  end
+
   # 🚅 add methods above.
 
   private
@@ -78,9 +102,32 @@ class SequenceStep < ApplicationRecord
   def shift_later_enrollments
     removed = index
     return if removed.nil?
-    SequenceEnrollment.where(sequence_id: sequence_id, state: "active")
-      .where("current_step > ?", removed)
-      .update_all("current_step = current_step - 1")
+    active = SequenceEnrollment.where(sequence_id: sequence_id, state: "active")
+    active.where("current_step > ?", removed).update_all("current_step = current_step - 1")
+    # A pending action belongs to the step that set it: drop it with the
+    # step, and re-point the ones set by later steps.
+    active.where(pending_action_step: removed)
+      .update_all(pending_action_step: nil, pending_action_since: nil)
+    active.where("pending_action_step > ?", removed)
+      .update_all("pending_action_step = pending_action_step - 1")
+  end
+
+  def normalize_action
+    self.action_trigger = action_trigger.presence
+    self.action_tag = action_tag.to_s.strip.presence
+    self.sent_tag = sent_tag.to_s.strip.presence
+    self.action_exit = false if action_trigger.nil?
+    self.action_tag = nil if action_trigger.nil?
+  end
+
+  def action_is_complete
+    return if action_trigger.nil?
+    if action_tag.nil? && !action_exit
+      errors.add(:action_trigger, "needs a tag to add or an exit")
+    end
+    if action_trigger == "goal" && !sequence&.goal?
+      errors.add(:action_trigger, "needs a goal on the sequence")
+    end
   end
 
   def apply_delay_amount

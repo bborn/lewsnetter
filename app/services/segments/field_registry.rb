@@ -19,16 +19,21 @@ module Segments
   #     "Company custom attributes" => [...]
   #   }
   class FieldRegistry
-    def initialize(team:)
+    # `rules` is the segment's saved rules tree. Attributes it references that
+    # no sampled row carries yet (an attribute the app hasn't sent) are still
+    # listed, typed from the rule, so the builder doesn't swap them for the
+    # first field in the list and rewrite the segment on save.
+    def initialize(team:, rules: nil)
       @team = team
+      @rules = rules
     end
 
     def call
       {
         "Subscriber" => builtin_subscriber_fields,
-        "Subscriber custom attributes" => sample_custom_attribute_fields(:subscribers, "custom_attributes."),
+        "Subscriber custom attributes" => with_rule_fields(sample_custom_attribute_fields(:subscribers, "custom_attributes."), "custom_attributes."),
         "Company" => builtin_company_fields,
-        "Company custom attributes" => sample_custom_attribute_fields(:companies, "company_attributes.")
+        "Company custom attributes" => with_rule_fields(sample_custom_attribute_fields(:companies, "company_attributes."), "company_attributes.")
       }.reject { |_, fields| fields.blank? }
     end
 
@@ -42,8 +47,14 @@ module Segments
 
     def builtin_subscriber_fields
       PredicateCompiler::FIELDS.select { |k, _| k.start_with?("subscribers.") }.map do |key, meta|
-        {key: key, label: meta[:label], type: meta[:type], samples: []}
+        samples = (key == "subscribers.tags") ? tag_samples : []
+        {key: key, label: meta[:label], type: meta[:type], samples: samples}
       end
+    end
+
+    def tag_samples
+      @team.subscribers.where("json_array_length(subscribers.tags) > 0")
+        .limit(500).pluck(:tags).flatten.uniq.sort.first(50)
     end
 
     def builtin_company_fields
@@ -68,7 +79,7 @@ module Segments
       end
 
       observed.keys.sort.map do |attr|
-        type = infer_type(observed[attr])
+        type = infer_type(observed[attr], attr)
         {
           key: "#{key_prefix}#{attr}",
           label: attr,
@@ -76,6 +87,23 @@ module Segments
           samples: sample_values(observed[attr], type)
         }
       end
+    end
+
+    def with_rule_fields(fields, key_prefix)
+      known = fields.map { |f| f[:key] }
+      missing = rule_leaves(@rules).select { |r| r["field"].to_s.start_with?(key_prefix) && !known.include?(r["field"]) }
+      extra = missing.uniq { |r| r["field"] }.map do |r|
+        type = r["value_type"].presence&.to_sym
+        type = :string unless PredicateCompiler::OPERATORS.key?(type)
+        {key: r["field"], label: r["field"].delete_prefix(key_prefix), type: type, samples: []}
+      end
+      (fields + extra).sort_by { |f| f[:label] }
+    end
+
+    def rule_leaves(node)
+      return [] unless node.is_a?(Hash)
+      return [node] if node["type"] == "rule"
+      Array(node["rules"]).flat_map { |child| rule_leaves(child) }
     end
 
     # Distinct value samples for the value-input autocomplete. Skip for
@@ -106,13 +134,18 @@ module Segments
     # like CSVs (comma-separated, no spaces around commas, more than one
     # segment), pick :csv_list so the UI surfaces element-wise operators
     # that won't false-positive ("brand" matching "brand_account"). Fall
-    # back to :string.
-    def infer_type(values)
+    # back to :string. Integer `*_at` keys holding epoch seconds (the source
+    # app's last_active_at) are :unix_time so they get day-window operators.
+    UNIX_TIME_RANGE = 946_684_800..4_102_444_800 # 2000-01-01..2100-01-01
+    def infer_type(values, attr = nil)
       non_null = values.reject(&:nil?)
       return :string if non_null.empty?
       return :array if non_null.any? { |v| v.is_a?(Array) }
       return :boolean if non_null.all? { |v| v == true || v == false }
-      return :number if non_null.all? { |v| v.is_a?(Numeric) }
+      if non_null.all? { |v| v.is_a?(Numeric) }
+        unix = attr.to_s.end_with?("_at") && non_null.all? { |v| v.is_a?(Integer) && UNIX_TIME_RANGE.cover?(v) }
+        return unix ? :unix_time : :number
+      end
       return :csv_list if non_null.all? { |v| csv_shaped?(v) }
       :string
     end

@@ -59,6 +59,35 @@
     </div>
   </div>
 
+  <div class="grid grid-cols-2 gap-4">
+    <div>
+      <label for="sequence_goal_segment_id" class="<%= lbl %>">Goal segment <%= opt %></label>
+      <%= f.select :goal_segment_id, segments, {include_blank: "—"}, class: input %>
+    </div>
+    <div>
+      <label for="sequence_goal_event_name" class="<%= lbl %>">Goal event <%= opt %></label>
+      <%= f.text_field :goal_event_name, placeholder: "report:shared", class: "#{input} font-mono" %>
+      <p class="<%= help %>">Steps can tag or exit on goal.</p>
+    </div>
+  </div>
+
+  <div>
+    <label for="sequence_excluded_sequence_ids" class="<%= lbl %>">Not if enrolled in <%= opt %></label>
+    <%= f.select :excluded_sequence_ids, sequence.valid_excluded_sequences.order(:name).map { |s| [s.name, s.id] },
+          {include_hidden: true}, multiple: true, size: 4, class: input %>
+  </div>
+
+  <div class="grid grid-cols-2 gap-4">
+    <div>
+      <label for="sequence_finish_after_days" class="<%= lbl %>">Wait after last step, days <%= opt %></label>
+      <%= f.number_field :finish_after_days, min: 0, step: "any", placeholder: "0", class: "#{input} font-mono tabular-nums" %>
+    </div>
+    <div>
+      <label for="sequence_completed_tag" class="<%= lbl %>">Tag on finish <%= opt %></label>
+      <%= f.text_field :completed_tag, class: input %>
+    </div>
+  </div>
+
   <div>
     <%= f.label :sender_address_id, "Sender", class: lbl %>
     <%= f.select :sender_address_id, senders, {include_blank: "—"}, class: input %>

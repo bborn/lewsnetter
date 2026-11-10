@@ -32,7 +32,9 @@ module Mcp
                 id: step.id,
                 subject: step.subject,
                 delay_minutes: step.delay_minutes,
-                skip_segment_id: step.skip_segment_id
+                skip_segment_id: step.skip_segment_id,
+                sent_tag: step.sent_tag,
+                action: step.action? ? {on: step.action_trigger, tag: step.action_tag, exit: step.action_exit} : nil
               )
             }
           }

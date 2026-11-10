@@ -44,6 +44,19 @@ class Account::SegmentsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/No predicate set yet/, response.body)
   end
 
+  test "edit lists an attribute the segment uses even when no subscriber has it yet" do
+    segment = @team.segments.create!(name: "Never connected", rules: {
+      "type" => "group", "combinator" => "and",
+      "rules" => [{"type" => "rule", "field" => "custom_attributes.tokens_count", "operator" => "equals", "value" => 0, "value_type" => "number"}]
+    })
+
+    get edit_account_segment_url(segment)
+    assert_response :success
+    fields = JSON.parse(Nokogiri::HTML(response.body).at("[data-segments-builder-fields-value]")["data-segments-builder-fields-value"])
+    field = fields.fetch("Subscriber custom attributes").find { |f| f["key"] == "custom_attributes.tokens_count" }
+    assert_equal "number", field["type"]
+  end
+
   test "create accepts a predicate via the virtual setter" do
     post account_team_segments_url(@team), params: {
       segment: {

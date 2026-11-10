@@ -44,6 +44,15 @@ module Mcp
           assert_equal 1440, second[:delay_minutes]
         end
 
+        test "steps carry their sent tag and action" do
+          @sequence.update!(goal_event_name: "account:connected")
+          @step1.update!(sent_tag: "nudged", action_trigger: "goal", action_tag: "Connected", action_exit: true)
+          first, second = Stats.new.invoke(arguments: {"id" => @sequence.id}, context: @ctx)[:steps]
+          assert_equal "nudged", first[:sent_tag]
+          assert_equal({on: "goal", tag: "Connected", exit: true}, first[:action])
+          assert_nil second[:action]
+        end
+
         test "another team's sequence is not found" do
           other = create(:sequence)
           assert_raises(ActiveRecord::RecordNotFound) do

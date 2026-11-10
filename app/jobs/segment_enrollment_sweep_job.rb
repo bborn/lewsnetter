@@ -3,12 +3,16 @@
 #   - any trigger: exit active enrollments whose subscriber now matches the
 #     exit segment (SequenceStepSendJob re-checks this before each send too;
 #     the sweep just stops them sooner and keeps the dashboard honest).
+#   - any trigger: run step actions whose goal/click already happened, so a
+#     subscriber who converts is tagged (and exited) within the hour rather
+#     than when the next step comes due.
 class SegmentEnrollmentSweepJob < ApplicationJob
   queue_as :default
 
   def perform
     Sequence.active.joins(:team).where(teams: {sequences_enabled: true}).find_each do |sequence|
       sweep_exits(sequence)
+      sweep_actions(sequence)
       sweep_enrollments(sequence) if sequence.trigger_type == "segment"
     rescue Segment::InvalidPredicate => e
       Rails.logger.warn("[SegmentEnrollmentSweepJob] sequence=#{sequence.id}: #{e.message}")
@@ -28,8 +32,20 @@ class SegmentEnrollmentSweepJob < ApplicationJob
     if sequence.reentry_days.nil?
       candidates = candidates.where.not(id: sequence.enrollments.select(:subscriber_id))
     end
+    if sequence.excluded_sequence_ids.present?
+      candidates = candidates.where.not(
+        id: SequenceEnrollment.where(sequence_id: sequence.excluded_sequence_ids).select(:subscriber_id)
+      )
+    end
 
     candidates.find_each { |subscriber| sequence.enroll!(subscriber) }
+  end
+
+  def sweep_actions(sequence)
+    sequence.enrollments.active.where.not(pending_action_step: nil)
+      .includes(:subscriber).find_each do |enrollment|
+        enrollment.resolve_pending_action!(final: false)
+      end
   end
 
   def sweep_exits(sequence)

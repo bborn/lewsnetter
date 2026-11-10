@@ -55,6 +55,8 @@ module Segments
       "subscribers.updated_at" => {sql: "subscribers.updated_at", type: :datetime, label: "Updated at"},
       "subscribers.last_contacted_at" => {sql: "subscribers.last_contacted_at", type: :datetime, label: "Last contacted"},
       "subscribers.times_contacted" => {sql: "COALESCE(subscribers.times_contacted, 0)", type: :number, label: "Times contacted"},
+      # Set by sequence step actions (Subscriber#add_tag!), never by the sync.
+      "subscribers.tags" => {sql: "subscribers.tags", type: :array, label: "Tags"},
       "companies.name" => {sql: "companies.name", type: :string, label: "Company name"},
       "companies.external_id" => {sql: "companies.external_id", type: :string, label: "Company external ID"}
     }.freeze
@@ -65,6 +67,8 @@ module Segments
       string: %w[equals not_equals contains not_contains starts_with ends_with is_set is_not_set in],
       boolean: %w[equals],
       datetime: %w[before after within_last_days more_than_days_ago is_set is_not_set],
+      # Unix seconds stored as a number (e.g. the source app's last_active_at).
+      unix_time: %w[within_last_days more_than_days_ago is_set is_not_set],
       number: %w[equals not_equals less_than greater_than less_than_or_equal greater_than_or_equal between is_set is_not_set],
       array: %w[contains not_contains is_set is_not_set],
       # csv_list is for comma-separated string values like
@@ -180,15 +184,26 @@ module Segments
         sanitize("#{field} < ?", parse_time(raw_value))
       when [:datetime, "after"]
         sanitize("#{field} > ?", parse_time(raw_value))
+      # Relative bounds are computed by SQLite at query time. The predicate is
+      # compiled once, when the segment is saved, so a Ruby `7.days.ago` here
+      # would freeze "the last 7 days" to the week the segment was created.
       when [:datetime, "within_last_days"]
-        days = Integer(raw_value)
-        sanitize("#{field} >= ?", days.days.ago)
+        "#{field} >= #{sql_days_ago(raw_value)}"
       when [:datetime, "more_than_days_ago"]
-        days = Integer(raw_value)
-        sanitize("#{field} < ?", days.days.ago)
+        "#{field} < #{sql_days_ago(raw_value)}"
       when [:datetime, "is_set"]
         "#{field} IS NOT NULL"
       when [:datetime, "is_not_set"]
+        "#{field} IS NULL"
+
+      # ── unix_time (seconds since the epoch) ──────────────────────────────
+      when [:unix_time, "within_last_days"]
+        "CAST(#{field} AS INTEGER) >= #{sql_unix_days_ago(raw_value)}"
+      when [:unix_time, "more_than_days_ago"]
+        "CAST(#{field} AS INTEGER) < #{sql_unix_days_ago(raw_value)}"
+      when [:unix_time, "is_set"]
+        "#{field} IS NOT NULL"
+      when [:unix_time, "is_not_set"]
         "#{field} IS NULL"
 
       # ── number ───────────────────────────────────────────────────────────
@@ -254,6 +269,14 @@ module Segments
       end
     end
     # rubocop:enable Metrics/CyclomaticComplexity, Metrics/MethodLength
+
+    def sql_days_ago(raw_value)
+      "datetime('now', '-#{Integer(raw_value)} days')"
+    end
+
+    def sql_unix_days_ago(raw_value)
+      "CAST(strftime('%s', 'now', '-#{Integer(raw_value)} days') AS INTEGER)"
+    end
 
     def sanitize(template, *args)
       ActiveRecord::Base.sanitize_sql_array([template, *args])

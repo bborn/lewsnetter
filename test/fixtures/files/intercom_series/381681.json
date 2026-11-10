@@ -1,0 +1,165 @@
+{
+  "series": {
+    "id": "381681",
+    "title": "Connect Accts (Never Connected)"
+  },
+  "rulesets": {
+    "43856798": {
+      "client_data": {
+        "title": "Connect Accts Series - Email 1"
+      },
+      "ruleset_links": [
+        {
+          "type": "matching-system/ruleset-links/email",
+          "object": {
+            "localized_email_contents": [
+              {
+                "blocks": [
+                  {
+                    "type": "paragraph",
+                    "text": "Hi {{first_name|fallback:\"there\"}}!"
+                  },
+                  {
+                    "type": "paragraph",
+                    "text": "Have you connected your social accounts to InfluenceKit yet? To get the most out of your reports, make sure all your platforms are synced. This way, you’ll have real-time analytics on impressions, clicks, engagement, and more — all in one place."
+                  },
+                  {
+                    "type": "paragraph",
+                    "text": "It’s quick and easy to connect your accounts, and once it’s done, your reports will practically build themselves."
+                  },
+                  {
+                    "type": "button",
+                    "text": "Connect my accounts",
+                    "linkUrl": "https://{{custom_data.subdomain|fallback:\"www\"}}.influencekit.com/tokens",
+                    "buttonStyle": "solid"
+                  },
+                  {
+                    "type": "paragraph",
+                    "text": "Get started now to see the full power of InfluenceKit!"
+                  },
+                  {
+                    "type": "paragraph",
+                    "text": "Best,"
+                  },
+                  {
+                    "type": "paragraph",
+                    "text": "Chris<br>Co-founder | InfluenceKit"
+                  }
+                ],
+                "subject_blocks": [
+                  {
+                    "type": "paragraph",
+                    "text": "[Action Needed] Connect Your Accounts💥",
+                    "class": "no-margin"
+                  }
+                ],
+                "locale": "en"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "43879339": {
+      "client_data": {
+        "title": "Connect Accts Series - Email 4"
+      },
+      "ruleset_links": [
+        {
+          "type": "matching-system/ruleset-links/email",
+          "object": {
+            "localized_email_contents": [
+              {
+                "blocks": [
+                  {
+                    "type": "paragraph",
+                    "text": "Hi {{first_name|fallback:\" there\"}}!"
+                  },
+                  {
+                    "type": "paragraph",
+                    "text": "It looks like you haven&#x27;t connected any of your social accounts to InfluenceKit yet 😔"
+                  },
+                  {
+                    "type": "paragraph",
+                    "text": "Connecting your accounts now will mean seamless reporting later after you&#x27;ve published your content, especially if you want to include Instagram Stories in your campaign reports."
+                  },
+                  {
+                    "type": "paragraph",
+                    "text": "If you connect your Facebook account more than 24 hours after you publish your Instagram Stories, the Stories will be gone and you won&#x27;t be able to add them to a report automatically."
+                  },
+                  {
+                    "type": "paragraph",
+                    "text": "<a href=\"https://%7B%7B%20custom_data.subdomain%20%7C%20fallback:%22www%22%20%7D%7D.influencekit.com/tokens\">Take 30 seconds and connect your accounts now ➜</a>"
+                  },
+                  {
+                    "type": "paragraph",
+                    "text": "Best,"
+                  },
+                  {
+                    "type": "paragraph",
+                    "text": "Chris<br>Co-founder | InfluenceKit"
+                  }
+                ],
+                "subject_blocks": [
+                  {
+                    "type": "paragraph",
+                    "text": "Connect Your Accounts (Please!)",
+                    "class": "no-margin"
+                  }
+                ],
+                "locale": "en"
+              }
+            ]
+          }
+        },
+        {
+          "type": "matching-system/ruleset-links/email",
+          "object": {
+            "localized_email_contents": [
+              {
+                "blocks": [
+                  {
+                    "type": "paragraph",
+                    "text": "Hi {{first_name|fallback:\" there\"}}!"
+                  },
+                  {
+                    "type": "paragraph",
+                    "text": "It looks like you haven&#x27;t connected any of your social accounts to InfluenceKit yet."
+                  },
+                  {
+                    "type": "paragraph",
+                    "text": "Connecting your accounts now will mean seamless reporting later after you&#x27;ve published your content, especially if you want to include Instagram Stories in your campaign reports."
+                  },
+                  {
+                    "type": "paragraph",
+                    "text": "If you connect your Facebook account more than 24 hours after you publish your Instagram Stories, the Stories will be gone and you won&#x27;t be available to add them to a report automatically."
+                  },
+                  {
+                    "type": "paragraph",
+                    "text": "<a href=\"https://%7B%7B%20custom_data.subdomain%20%7C%20fallback:%22www%22%20%7D%7D.influencekit.com/tokens\">Take 30 seconds and connect your accounts now ➜</a>"
+                  },
+                  {
+                    "type": "paragraph",
+                    "text": "Best,"
+                  },
+                  {
+                    "type": "paragraph",
+                    "text": "Chris<br>Co-founder | InfluenceKit"
+                  }
+                ],
+                "subject_blocks": [
+                  {
+                    "type": "paragraph",
+                    "text": "Connect Your Accounts (Please!)",
+                    "class": "no-margin"
+                  }
+                ],
+                "locale": "en"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

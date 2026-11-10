@@ -120,9 +120,12 @@ class Segment < ApplicationRecord
     errors = []
     return ["Predicate is blank"] if predicate.to_s.strip.blank?
 
+    # Keywords match as whole words so columns like created_at / updated_at
+    # stay usable; punctuation tokens (; -- /*) match anywhere.
     upcased = predicate.upcase
     FORBIDDEN_PREDICATE_TOKENS.each do |tok|
-      errors << "Predicate contains forbidden token: #{tok}" if upcased.include?(tok)
+      hit = tok.match?(/\A[A-Z]+\z/) ? upcased.match?(/\b#{tok}\b/) : upcased.include?(tok)
+      errors << "Predicate contains forbidden token: #{tok}" if hit
     end
 
     # Ignore single-quoted string literals when scanning for table references.

@@ -63,7 +63,7 @@ class Account::SequenceStepsController < Account::ApplicationController
   def step_params
     permitted = params.require(:sequence_step).permit(
       :subject, :preheader, :body_markdown, :email_template_id, :skip_segment_id,
-      :delay_amount, :delay_unit
+      :delay_amount, :delay_unit, :sent_tag, :action_trigger, :action_tag, :action_exit
     )
     permitted[:email_template_id] = nil if permitted[:email_template_id].blank?
     permitted[:skip_segment_id] = nil if permitted[:skip_segment_id].blank?

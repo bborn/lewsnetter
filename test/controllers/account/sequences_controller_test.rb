@@ -120,4 +120,34 @@ class Account::SequencesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to account_team_sequences_url(@team)
     refute Sequence.exists?(sequence.id)
   end
+
+  test "goal, exclusion and finish settings save from the form and show on the page" do
+    goal = @team.segments.create!(name: "Connected", definition: {"predicate" => "subscribers.subscribed = 1"})
+    other = FactoryBot.create(:sequence, team: @team, name: "Onboarding")
+    sequence = FactoryBot.create(:sequence, team: @team, sender_address: @sender)
+
+    get edit_account_sequence_url(sequence)
+    assert_select "select[name='sequence[excluded_sequence_ids][]'] option[value='#{other.id}']"
+    assert_select "select[name='sequence[excluded_sequence_ids][]'] option[value='#{sequence.id}']", count: 0
+
+    patch account_sequence_url(sequence), params: {sequence: {
+      goal_segment_id: goal.id, goal_event_name: "report:shared",
+      excluded_sequence_ids: ["", other.id.to_s], finish_after_days: "3", completed_tag: "Didn't connect"
+    }}
+    assert_redirected_to account_sequence_url(sequence)
+    sequence.reload
+    assert_equal goal, sequence.goal_segment
+    assert_equal [other.id], sequence.excluded_sequence_ids
+    assert_equal 3 * 1440, sequence.finish_after_minutes
+
+    get account_sequence_url(sequence)
+    assert_select "[data-setting='goal']", text: "Connected or report:shared"
+    assert_select "[data-setting='excluded']", text: "Onboarding"
+    assert_select "[data-setting='finish']", text: "Wait 3 days, then tag Didn't connect"
+
+    # Clearing the multi-select (only the hidden blank) removes the exclusion.
+    patch account_sequence_url(sequence), params: {sequence: {excluded_sequence_ids: [""], goal_segment_id: ""}}
+    assert_equal [], sequence.reload.excluded_sequence_ids
+    assert_nil sequence.goal_segment
+  end
 end

@@ -34,6 +34,12 @@ class Account::SubscribersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "subscribers show lists the subscriber's tags" do
+    @subscriber.add_tag!("Connected Accts")
+    get account_subscriber_url(@subscriber)
+    assert_select "[data-subscriber-tags] span", text: "Connected Accts"
+  end
+
   test "subscribers edit renders without I18n interpolation crash" do
     get edit_account_subscriber_url(@subscriber)
     assert_response :success

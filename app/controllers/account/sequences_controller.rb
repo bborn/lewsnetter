@@ -81,9 +81,12 @@ class Account::SequencesController < Account::ApplicationController
   def sequence_params
     permitted = params.require(:sequence).permit(
       :name, :status, :trigger_type, :trigger_event_name, :trigger_segment_id,
-      :exit_segment_id, :reentry_days, :sender_address_id
+      :exit_segment_id, :reentry_days, :sender_address_id,
+      :goal_segment_id, :goal_event_name, :finish_after_days, :completed_tag,
+      excluded_sequence_ids: []
     )
     permitted[:reentry_days] = nil if permitted[:reentry_days].blank?
+    permitted[:goal_segment_id] = nil if permitted.key?(:goal_segment_id) && permitted[:goal_segment_id].blank?
     permitted
   end
 end

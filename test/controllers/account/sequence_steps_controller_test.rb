@@ -65,4 +65,27 @@ class Account::SequenceStepsControllerTest < ActionDispatch::IntegrationTest
     get edit_account_sequence_step_url(other)
     assert_response :not_found
   end
+
+  test "step action and sent tag save, and the step row shows them" do
+    @sequence.update!(goal_event_name: "account:connected")
+    post account_sequence_sequence_steps_url(@sequence), params: {sequence_step: {
+      subject: "Connect", body_markdown: "Hi", delay_amount: "0", delay_unit: "days",
+      sent_tag: "nudged", action_trigger: "goal", action_tag: "Connected Accts", action_exit: "1"
+    }}
+    step = @sequence.steps.last
+    assert_equal ["goal", "Connected Accts", true, "nudged"],
+      [step.action_trigger, step.action_tag, step.action_exit, step.sent_tag]
+
+    get account_sequence_url(@sequence)
+    assert_select "tr[data-step-position='1']", text: /tag nudged · On goal: tag Connected Accts, exit/
+  end
+
+  test "a goal action without a sequence goal re-renders with the error" do
+    post account_sequence_sequence_steps_url(@sequence), params: {sequence_step: {
+      subject: "Connect", body_markdown: "Hi", delay_amount: "0", delay_unit: "days",
+      action_trigger: "goal", action_exit: "1"
+    }}
+    assert_response :unprocessable_entity
+    assert_match "needs a goal on the sequence", response.body
+  end
 end
