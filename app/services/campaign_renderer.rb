@@ -303,7 +303,7 @@ class CampaignRenderer
   def substitute(string)
     return string if string.blank?
 
-    source = rewrite_legacy_fallback_syntax(string)
+    source = rewrite_legacy_fallback_syntax(rewrite_intercom_syntax(string))
     template = Liquid::Template.parse(source, error_mode: :lax)
     vars = string_keyed_variables
     fill_unknown_vars_with_literals!(vars, template)
@@ -326,6 +326,21 @@ class CampaignRenderer
       escaped = fallback.gsub("\\", "\\\\").gsub('"', '\\"')
       %({{ #{key} | default: "#{escaped}" }})
     end
+  end
+
+  # Intercom's merge-tag dialect, as found in bodies ported from Intercom
+  # Series:
+  #   {{ first_name | fallback: "there" }} → {{ first_name | default: "there" }}
+  #   https://%7B%7B%20custom_data.subdomain%20%7D%7D.example.com
+  #     (Intercom stored some tags URL-encoded inside links) → decoded
+  # `custom_data.*` and `company.*` lookups resolve through #variables.
+  INTERCOM_FALLBACK = /\|\s*fallback\s*:/
+  ENCODED_TAG = /%7B%7B(.*?)%7D%7D/i
+
+  def rewrite_intercom_syntax(string)
+    string
+      .gsub(ENCODED_TAG) { "{{#{CGI.unescape($1)}}}" }
+      .gsub(/\{\{[^}]*\}\}/) { |tag| tag.gsub(INTERCOM_FALLBACK, "| default:") }
   end
 
   # Liquid renders unknown variables as empty by default. Lewsnetter's
@@ -378,7 +393,20 @@ class CampaignRenderer
       h[k.to_sym] = v
     end
 
-    base.merge(custom)
+    # Intercom-style namespaces: {{custom_data.x}} is the subscriber's own
+    # custom attribute x, {{company.name}} / {{company.custom_data.x}} its
+    # company's. Top-level keys win if an attribute is literally named
+    # "custom_data" or "company".
+    company = @subscriber.company
+    namespaced = {
+      custom_data: (@subscriber.custom_attributes || {}).to_h,
+      company: {
+        "name" => company&.name.to_s,
+        "custom_data" => (company&.custom_attributes || {}).to_h
+      }
+    }
+
+    base.merge(namespaced).merge(custom)
   end
 
   # Resolves the unsubscribe URL for a subscriber. For persisted subscribers

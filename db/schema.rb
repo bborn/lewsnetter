@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_03_164956) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_10_073826) do
   create_table "account_onboarding_invitation_lists", force: :cascade do |t|
     t.integer "team_id", null: false
     t.json "invitations"
@@ -496,6 +496,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_03_164956) do
     t.datetime "exited_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "pending_action_step"
+    t.datetime "pending_action_since"
     t.index ["sequence_id", "subscriber_id"], name: "index_sequence_enrollments_one_active", unique: true, where: "state = 'active'"
     t.index ["sequence_id"], name: "index_sequence_enrollments_on_sequence_id"
     t.index ["state", "next_send_at"], name: "index_sequence_enrollments_on_state_and_next_send_at"
@@ -515,6 +517,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_03_164956) do
     t.integer "skipped_count", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "action_trigger"
+    t.string "action_tag"
+    t.boolean "action_exit", default: false, null: false
+    t.string "sent_tag"
     t.index ["campaign_id"], name: "index_sequence_steps_on_campaign_id"
     t.index ["email_template_id"], name: "index_sequence_steps_on_email_template_id"
     t.index ["sequence_id", "position"], name: "index_sequence_steps_on_sequence_id_and_position"
@@ -534,7 +540,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_03_164956) do
     t.integer "sender_address_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "goal_segment_id"
+    t.string "goal_event_name"
+    t.json "excluded_sequence_ids", default: [], null: false
+    t.integer "finish_after_minutes", default: 0, null: false
+    t.string "completed_tag"
     t.index ["exit_segment_id"], name: "index_sequences_on_exit_segment_id"
+    t.index ["goal_segment_id"], name: "index_sequences_on_goal_segment_id"
     t.index ["sender_address_id"], name: "index_sequences_on_sender_address_id"
     t.index ["team_id", "status", "trigger_type"], name: "index_sequences_on_team_id_and_status_and_trigger_type"
     t.index ["team_id"], name: "index_sequences_on_team_id"
@@ -557,6 +569,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_03_164956) do
     t.datetime "last_contacted_at"
     t.integer "times_contacted", default: 0, null: false
     t.string "email_domain"
+    t.json "tags", default: [], null: false
     t.index ["company_id"], name: "index_subscribers_on_company_id"
     t.index ["last_contacted_at"], name: "index_subscribers_on_last_contacted_at"
     t.index ["team_id", "email"], name: "index_subscribers_on_team_id_and_email"

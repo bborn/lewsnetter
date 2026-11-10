@@ -42,8 +42,14 @@ module Segments
 
     def builtin_subscriber_fields
       PredicateCompiler::FIELDS.select { |k, _| k.start_with?("subscribers.") }.map do |key, meta|
-        {key: key, label: meta[:label], type: meta[:type], samples: []}
+        samples = (key == "subscribers.tags") ? tag_samples : []
+        {key: key, label: meta[:label], type: meta[:type], samples: samples}
       end
+    end
+
+    def tag_samples
+      @team.subscribers.where("json_array_length(subscribers.tags) > 0")
+        .limit(500).pluck(:tags).flatten.uniq.sort.first(50)
     end
 
     def builtin_company_fields

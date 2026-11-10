@@ -55,6 +55,8 @@ module Segments
       "subscribers.updated_at" => {sql: "subscribers.updated_at", type: :datetime, label: "Updated at"},
       "subscribers.last_contacted_at" => {sql: "subscribers.last_contacted_at", type: :datetime, label: "Last contacted"},
       "subscribers.times_contacted" => {sql: "COALESCE(subscribers.times_contacted, 0)", type: :number, label: "Times contacted"},
+      # Set by sequence step actions (Subscriber#add_tag!), never by the sync.
+      "subscribers.tags" => {sql: "subscribers.tags", type: :array, label: "Tags"},
       "companies.name" => {sql: "companies.name", type: :string, label: "Company name"},
       "companies.external_id" => {sql: "companies.external_id", type: :string, label: "Company external ID"}
     }.freeze

@@ -1,6 +1,8 @@
 # Sends one step of one enrollment. Every check runs right before the send,
 # so a subscriber who unsubscribed, got suppressed or matched the exit
-# segment since the last step gets nothing more.
+# segment since the last step gets nothing more. First, though, the previous
+# step's action (goal hit / link clicked) gets its turn: it can tag the
+# subscriber and exit them before this step goes out.
 class SequenceStepSendJob < ApplicationJob
   queue_as :default
 
@@ -30,8 +32,12 @@ class SequenceStepSendJob < ApplicationJob
       return
     end
 
+    return if enrollment.resolve_pending_action!(at: now)
+
     step = sequence.steps[step_index]
-    return enrollment.advance!(at: now) if step.nil? # step deleted mid-flight
+    # Past the last step: the finish wait is over (or the step was deleted
+    # mid-flight).
+    return enrollment.complete!(at: now) if step.nil?
 
     # The column, not Mailkick's subscribed?(list) (opt-in, so always false here).
     return enrollment.exit!("unsubscribed", at: now) unless subscriber[:subscribed]
@@ -54,6 +60,8 @@ class SequenceStepSendJob < ApplicationJob
       handle_failure(enrollment, result.failed.first[:error], now)
     else
       bump_last_contacted!(subscriber, now)
+      subscriber.add_tag!(step.sent_tag) if step.sent_tag
+      enrollment.await_action!(step, step_index, at: now)
       enrollment.advance!(at: now)
     end
   end

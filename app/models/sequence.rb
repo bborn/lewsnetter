@@ -22,6 +22,9 @@ class Sequence < ApplicationRecord
   belongs_to :team
   belongs_to :trigger_segment, class_name: "Segment", optional: true
   belongs_to :exit_segment, class_name: "Segment", optional: true
+  # The goal a step action can wait for: entering this segment, or tracking
+  # goal_event_name after the step was sent. Either (or both) may be set.
+  belongs_to :goal_segment, class_name: "Segment", optional: true
   belongs_to :sender_address, optional: true
   # 🚅 add belongs_to associations above.
 
@@ -45,11 +48,15 @@ class Sequence < ApplicationRecord
   validates :reentry_days, numericality: {only_integer: true, greater_than: 0}, allow_nil: true
   validates :trigger_segment, scope: true
   validates :exit_segment, scope: true
+  validates :goal_segment, scope: true
+  validates :finish_after_minutes, numericality: {only_integer: true, greater_than_or_equal_to: 0}
+  validate :excluded_sequences_belong_to_team
   validates :sender_address, scope: true
   validate :sender_address_required_to_activate
   # 🚅 add validations above.
 
   after_update :sync_step_senders, if: :saved_change_to_sender_address_id?
+  before_validation :normalize_excluded_sequence_ids
   # 🚅 add callbacks above.
 
   # 🚅 add delegations above.
@@ -60,6 +67,25 @@ class Sequence < ApplicationRecord
 
   def valid_trigger_segments = team.segments
   def valid_exit_segments = team.segments
+  def valid_goal_segments = team.segments
+  def valid_excluded_sequences = team.sequences.where.not(id: id)
+
+  def excluded_sequences
+    team.sequences.where(id: excluded_sequence_ids)
+  end
+
+  def goal? = goal_segment.present? || goal_event_name.present?
+
+  # Has the subscriber hit the goal since `since`? The segment is checked as
+  # it stands now; the event must have been tracked after `since`.
+  def goal_reached?(subscriber, since:)
+    return true if goal_segment && subscriber_in_segment?(goal_segment, subscriber)
+    return false if goal_event_name.blank?
+    scope = subscriber.events.where(name: goal_event_name)
+    scope = scope.where("occurred_at > ?", since) if since
+    scope.exists?
+  end
+
   def valid_sender_addresses = team.sender_addresses
 
   def live?
@@ -93,6 +119,7 @@ class Sequence < ApplicationRecord
     return false if steps.empty?
     return false if enrollments.where(subscriber: subscriber, state: "active").exists?
     return false unless reentry_allowed?(subscriber, at: at)
+    return false if excluded_by_other_sequence?(subscriber)
     return false if Suppression.for_team_emails(team, [subscriber.email.to_s.downcase]).any?
     return false if exit_segment && subscriber_in_segment?(exit_segment, subscriber)
     true
@@ -105,6 +132,13 @@ class Sequence < ApplicationRecord
     return true if last.nil?
     return false if reentry_days.nil?
     last <= at - reentry_days.days
+  end
+
+  # "Not enrolled in sequence X": any enrollment in an excluded sequence,
+  # active or finished, turns the subscriber away.
+  def excluded_by_other_sequence?(subscriber)
+    return false if excluded_sequence_ids.blank?
+    SequenceEnrollment.where(sequence_id: excluded_sequence_ids, subscriber_id: subscriber.id).exists?
   end
 
   # Does the segment match this one subscriber? An invalid predicate counts
@@ -149,6 +183,17 @@ class Sequence < ApplicationRecord
 
   def sync_step_senders
     steps.includes(:campaign).each { |step| step.campaign&.update!(sender_address: sender_address) }
+  end
+
+  def normalize_excluded_sequence_ids
+    self.excluded_sequence_ids = Array(excluded_sequence_ids)
+      .map { |v| Integer(v.to_s, exception: false) }.compact.uniq - [id]
+  end
+
+  def excluded_sequences_belong_to_team
+    return if excluded_sequence_ids.empty?
+    known = team.sequences.where(id: excluded_sequence_ids).count
+    errors.add(:excluded_sequence_ids, "must be sequences on this team") if known != excluded_sequence_ids.size
   end
 
   def sender_address_required_to_activate

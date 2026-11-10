@@ -50,6 +50,17 @@ class Subscriber < ApplicationRecord
 
   # 🚅 add delegations above.
 
+  # Tags live in their own column, not custom_attributes: the source-app
+  # sync replaces custom_attributes wholesale and would wipe them. Segments
+  # filter on them as "subscribers.tags".
+  def add_tag!(name)
+    name = name.to_s.strip
+    return if name.empty?
+    with_lock do
+      update!(tags: tags | [name]) unless tags.include?(name)
+    end
+  end
+
   # 🚅 add methods above.
 
   private
