@@ -8,7 +8,7 @@ on:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # No postgres service — this app is sqlite-only. See config/database.yml.
     env:
       RAILS_ENV: test
