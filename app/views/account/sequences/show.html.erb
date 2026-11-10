@@ -83,6 +83,8 @@
                   <div class="mt-0.5 font-mono text-[12px] text-zinc-500 dark:text-zinc-400">
                     <%= sequence_step_delay_label(step) %>
                     <% if step.skip_segment %> · skip <%= step.skip_segment.name %><% end %>
+                    <% if step.sent_tag.present? %> · tag <%= step.sent_tag %><% end %>
+                    <% if (action = sequence_step_action_label(step)) %> · <%= action %><% end %>
                   </div>
                 </td>
                 <% %i[waiting sent delivered opened clicked bounced unsubscribed skipped].each do |key| %>
@@ -118,6 +120,20 @@
       <div class="px-6 py-5">
         <dt class="<%= label %>">Re-entry</dt>
         <dd class="mt-2 text-[14px] text-zinc-900 dark:text-zinc-100"><%= sequence_reentry_label(@sequence) %></dd>
+      </div>
+    </dl>
+    <dl class="grid grid-cols-3 divide-x divide-zinc-200 dark:divide-zinc-800 border-t border-zinc-200 dark:border-zinc-800">
+      <div class="px-6 py-5">
+        <dt class="<%= label %>">Goal</dt>
+        <dd class="mt-2 text-[14px] text-zinc-900 dark:text-zinc-100" data-setting="goal"><%= sequence_goal_label(@sequence) %></dd>
+      </div>
+      <div class="px-6 py-5">
+        <dt class="<%= label %>">Not if in</dt>
+        <dd class="mt-2 text-[14px] text-zinc-900 dark:text-zinc-100" data-setting="excluded"><%= @sequence.excluded_sequences.order(:name).pluck(:name).join(", ").presence || "—" %></dd>
+      </div>
+      <div class="px-6 py-5">
+        <dt class="<%= label %>">Finish</dt>
+        <dd class="mt-2 text-[14px] text-zinc-900 dark:text-zinc-100" data-setting="finish"><%= sequence_finish_label(@sequence) %></dd>
       </div>
     </dl>
   </section>

@@ -70,6 +70,15 @@ class Sequence < ApplicationRecord
   def valid_goal_segments = team.segments
   def valid_excluded_sequences = team.sequences.where.not(id: id)
 
+  # The form edits the post-last-step wait in days; the engine stores minutes.
+  def finish_after_days
+    (finish_after_minutes.to_i / 1440.0).then { |d| (d % 1).zero? ? d.to_i : d }
+  end
+
+  def finish_after_days=(days)
+    self.finish_after_minutes = (Float(days.to_s.presence || 0, exception: false).to_f * 1440).round
+  end
+
   def excluded_sequences
     team.sequences.where(id: excluded_sequence_ids)
   end

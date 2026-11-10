@@ -28,6 +28,16 @@
               <label class="block text-2xs uppercase font-semibold py-2 dark:text-white"><%= @subscriber.class.human_attribute_name(:subscribed) %></label>
               <div><%= subscribed_pill(@subscriber) %></div>
             </div>
+            <% if @subscriber.tags.any? %>
+              <div data-subscriber-tags>
+                <label class="block text-2xs uppercase font-semibold py-2 dark:text-white"><%= @subscriber.class.human_attribute_name(:tags) %></label>
+                <div class="flex flex-wrap gap-1.5">
+                  <% @subscriber.tags.each do |tag| %>
+                    <span class="px-2 py-0.5 rounded-full border border-zinc-200 dark:border-zinc-700 text-[12px] text-zinc-700 dark:text-zinc-300"><%= tag %></span>
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
             <%# 🚅 super scaffolding will insert new fields above this line. %>
           <% end %>
         <% end %>

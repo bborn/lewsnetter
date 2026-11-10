@@ -48,6 +48,26 @@
     </div>
   </div>
 
+  <div>
+    <label for="sequence_step_sent_tag" class="<%= lbl %>">Tag when sent <%= opt %></label>
+    <%= f.text_field :sent_tag, class: "#{input} max-w-sm" %>
+  </div>
+
+  <fieldset class="grid grid-cols-3 gap-4 items-end">
+    <legend class="<%= lbl %>">After this email <%= opt %></legend>
+    <div>
+      <label for="sequence_step_action_trigger" class="<%= help %> block mb-1.5">On</label>
+      <%= f.select :action_trigger, [["Goal hit", "goal"], ["Link clicked", "click"]], {include_blank: "—"}, class: input %>
+    </div>
+    <div>
+      <label for="sequence_step_action_tag" class="<%= help %> block mb-1.5">Tag</label>
+      <%= f.text_field :action_tag, class: input %>
+    </div>
+    <label class="flex items-center gap-2 py-2 text-[14px] text-zinc-700 dark:text-zinc-300">
+      <%= f.check_box :action_exit %> Exit sequence
+    </label>
+  </fieldset>
+
   <div class="flex items-center justify-between pt-2">
     <div class="flex items-center gap-3">
       <%= f.submit (step.persisted? ? "Save step" : "Add step"),

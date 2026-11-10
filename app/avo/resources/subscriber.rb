@@ -22,6 +22,7 @@ class Avo::Resources::Subscriber < Avo::BaseResource
     field :external_id, as: :text
     field :subscribed, as: :boolean
     field :custom_attributes, as: :code, language: "json", hide_on: :index
+    field :tags, as: :tags
     field :last_contacted_at, as: :date_time, readonly: true
     field :times_contacted, as: :number, readonly: true
     field :unsubscribed_at, as: :date_time, readonly: true
