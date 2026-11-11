@@ -11,6 +11,13 @@
 #   LITESTREAM_REPLICA_ACCESS_KEY_ID    R2 access key (secret)
 #   LITESTREAM_REPLICA_SECRET_ACCESS_KEY R2 secret (secret)
 
+# Retention: Litestream 0.3's default is 24h, and its retention pass deletes
+# every generation with no snapshot inside that window. That left about one
+# day of history: a bad write or a dropped table noticed on day two was
+# unrecoverable. 168h keeps a week of point-in-time restores
+# (`litestream restore -timestamp ...`) and a daily snapshot. The primary
+# snapshot is ~13 MB compressed, so a week costs well under 1 GB in R2.
+
 dbs:
   - path: /rails/storage/lewsnetter_production.sqlite3
     replicas:
@@ -22,6 +29,9 @@ dbs:
         secret-access-key: ${LITESTREAM_REPLICA_SECRET_ACCESS_KEY}
         region: ${LITESTREAM_REPLICA_REGION}
         force-path-style: true
+        # See "Retention" above.
+        retention: 168h
+        snapshot-interval: 24h
 
   - path: /rails/storage/lewsnetter_production_queue.sqlite3
     replicas:
@@ -33,6 +43,9 @@ dbs:
         secret-access-key: ${LITESTREAM_REPLICA_SECRET_ACCESS_KEY}
         region: ${LITESTREAM_REPLICA_REGION}
         force-path-style: true
+        # See "Retention" above.
+        retention: 168h
+        snapshot-interval: 24h
 
   - path: /rails/storage/lewsnetter_production_cable.sqlite3
     replicas:
@@ -44,3 +57,6 @@ dbs:
         secret-access-key: ${LITESTREAM_REPLICA_SECRET_ACCESS_KEY}
         region: ${LITESTREAM_REPLICA_REGION}
         force-path-style: true
+        # See "Retention" above.
+        retention: 168h
+        snapshot-interval: 24h
