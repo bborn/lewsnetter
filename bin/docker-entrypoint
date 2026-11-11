@@ -7,8 +7,9 @@
 # operator opts into Cloudflare R2 / any S3-compatible backup target).
 #
 #   R2 ENABLED  ($LITESTREAM_REPLICA_BUCKET set):
-#     1. Restore each SQLite database from R2 if the local file is missing
-#        (litestream-restore is a no-op when no replica or no local file exists).
+#     1. Web role: restore each SQLite database from R2 if the local file is
+#        missing (a no-op when no replica exists yet). A failed restore aborts
+#        the boot. Worker role: refuse to start while any database is missing.
 #     2. If the command is `bin/rails server`, wrap it in `litestream replicate
 #        -exec` so the replicator runs alongside Puma and dies with it.
 #        Otherwise (e.g. worker role running `bin/rake solid_queue:start`),
@@ -28,26 +29,59 @@ if [ -z "${LD_PRELOAD+x}" ]; then
   export LD_PRELOAD
 fi
 
+STORAGE_DIR="${LEWSNETTER_STORAGE_DIR:-/rails/storage}"
+DATABASES="lewsnetter_production lewsnetter_production_queue lewsnetter_production_cable"
+
+is_web_server() {
+  [ "${1}" = "./bin/rails" ] && [ "${2}" = "server" ]
+}
+
+# Restore a database from R2 when the local file is missing.
+#
+# A failed restore MUST stop the boot. If it were ignored, db:prepare would
+# create an empty schema, `litestream replicate` would push that empty database
+# up as a new generation, `litestream restore` would pick the empty generation
+# from then on, and retention would delete the good one a day later. Exiting
+# here leaves the volume untouched and the backup intact; kamal keeps the old
+# container serving and the deploy fails loudly.
+#
+# `-if-replica-exists` still makes the very first boot (no replica yet) a
+# clean no-op that exits 0.
 restore_if_missing() {
   local path="$1"
   if [ ! -f "$path" ]; then
     echo "litestream: restoring $path"
-    litestream restore -if-replica-exists -config /etc/litestream.yml "$path" || true
+    if ! litestream restore -if-replica-exists -config /etc/litestream.yml "$path"; then
+      echo "litestream: restore of $path FAILED; refusing to boot on an empty database" >&2
+      exit 1
+    fi
   fi
 }
 
-# Restore each of the three SQLite databases from R2 if the local file is
-# missing — only when R2 backup is enabled.
 if [ -n "$LITESTREAM_REPLICA_BUCKET" ]; then
-  restore_if_missing /rails/storage/lewsnetter_production.sqlite3
-  restore_if_missing /rails/storage/lewsnetter_production_queue.sqlite3
-  restore_if_missing /rails/storage/lewsnetter_production_cable.sqlite3
+  if is_web_server "$@"; then
+    # Only the web role restores. The worker shares the same volume, and two
+    # concurrent restores into one path race each other.
+    for db in $DATABASES; do
+      restore_if_missing "$STORAGE_DIR/$db.sqlite3"
+    done
+  else
+    # The worker must not open a database the web role has not restored yet:
+    # SQLite would create an empty file, and the web role would then see the
+    # file, skip the restore, and replicate the empty database over the backup.
+    for db in $DATABASES; do
+      if [ ! -f "$STORAGE_DIR/$db.sqlite3" ]; then
+        echo "litestream: $STORAGE_DIR/$db.sqlite3 is missing; the web role restores it. Refusing to start." >&2
+        exit 1
+      fi
+    done
+  fi
 fi
 
 # Prepare DBs on first boot (idempotent — does nothing if schema already
 # loaded). Only run if we're about to start the Rails server; workers should
 # wait for the web role to handle migrations.
-if [ "${1}" = "./bin/rails" ] && [ "${2}" = "server" ]; then
+if is_web_server "$@"; then
   # Run migrations + the one-time idempotent backfills (model-registry seed on
   # first boot, subscriber encryption upgrade) in a SINGLE Rails boot. Rake
   # runs both tasks in one process — the same way `db:migrate db:seed` works —
@@ -60,7 +94,7 @@ fi
 # Web role with R2 enabled: wrap the server in litestream replicate so the
 # replicator streams writes to R2. Otherwise (R2 disabled, or the worker
 # role) exec the command directly.
-if [ -n "$LITESTREAM_REPLICA_BUCKET" ] && [ "${1}" = "./bin/rails" ] && [ "${2}" = "server" ]; then
+if [ -n "$LITESTREAM_REPLICA_BUCKET" ] && is_web_server "$@"; then
   exec litestream replicate -config /etc/litestream.yml -exec "$*"
 else
   exec "$@"
