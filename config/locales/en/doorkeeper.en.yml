@@ -1,0 +1,8 @@
+en:
+  doorkeeper:
+    # Shown on the OAuth consent page (doorkeeper/authorizations/new), one
+    # line per requested scope.
+    scopes:
+      admin: "Full access to your account"
+      "mcp:read": "Read your team's subscribers, segments, campaigns and stats"
+      "mcp:write": "Create and change your team's subscribers, segments and campaigns, and send campaigns"
