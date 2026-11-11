@@ -506,9 +506,14 @@ Doorkeeper.configure do
   # so that the user skips the authorization step.
   # For example if dealing with a trusted application.
   #
+  # Never auto-approve. Anyone can register a client through /oauth/register
+  # with any redirect URI, so skipping consent let a link to /oauth/authorize
+  # silently issue a non-expiring MCP token for the signed-in user's team.
+  # The user now sees Doorkeeper's consent page (client name + scopes) and
+  # must click Authorize. Doorkeeper still skips the page for a confidential
+  # client that already holds a matching token for the same scopes.
   skip_authorization do
-    # TODO We actually want to disable this. We want people to have to approve their authorizations.
-    true
+    false
   end
 
   # Configure custom constraints for the Token Introspection request.
