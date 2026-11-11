@@ -1,0 +1,36 @@
+# Dependency and static security checks. Runs on every PR and on master, and
+# weekly so a newly published advisory fails loudly even when nobody pushes.
+name: "Security"
+on:
+  pull_request:
+  push:
+    branches: [master]
+  schedule:
+    - cron: "17 13 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bundler-audit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version-file: .ruby-version
+          bundler-cache: true
+      # Ignored advisories, each with its reason, live in .bundler-audit.yml.
+      - run: bundle exec bundle-audit check --update
+
+  brakeman:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version-file: .ruby-version
+          bundler-cache: true
+      # Reviewed false positives are recorded, with notes, in config/brakeman.ignore.
+      - run: bundle exec brakeman --no-pager --quiet -w1
