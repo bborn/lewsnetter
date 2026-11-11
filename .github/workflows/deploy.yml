@@ -34,8 +34,27 @@ jobs:
       # ruby-vips (loaded via image_processing for Active Storage variants)
       # dlopens libvips.so.42 at app boot. Without it, even `rails db:test:prepare`
       # crashes before doing anything.
+      #
+      # On 2026-11-11 the runners couldn't resolve azure.archive.ubuntu.com for
+      # hours and three deploys died here. Retry, and after the second miss
+      # switch the runner to the main Ubuntu archive.
       - name: Install system deps (libvips)
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libvips42
+        timeout-minutes: 10
+        run: |
+          for attempt in 1 2 3 4; do
+            if sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=20 update \
+              && sudo apt-get install -y --no-install-recommends libvips42; then
+              exit 0
+            fi
+            echo "apt attempt $attempt failed"
+            if [ "$attempt" -eq 2 ]; then
+              echo "Switching apt to archive.ubuntu.com"
+              sudo sed -i 's#http://azure.archive.ubuntu.com#http://archive.ubuntu.com#g' \
+                /etc/apt/sources.list /etc/apt/sources.list.d/*.sources 2>/dev/null || true
+            fi
+            sleep 15
+          done
+          exit 1
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
