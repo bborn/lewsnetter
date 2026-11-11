@@ -19,6 +19,30 @@ class Segment < ApplicationRecord
     ; -- /*
   ].freeze
 
+  # Predicates are raw SQL WHERE fragments that run against the one SQLite
+  # database every team shares, so a denylist is not enough: a SELECT inside
+  # the predicate could read any table, and the matching count leaks the
+  # answer. validate_predicate is an allowlist instead. Every bare word must
+  # be a known SQL keyword or function, a column of a segment table, or a
+  # segment table itself, and tables may only be read through FROM. Every
+  # FROM is then rewritten to a team-scoped derived table (see
+  # scope_subqueries), so a subquery can't see another team's rows either.
+  SEGMENT_TABLES = %w[subscribers companies events deliveries].freeze
+  # Tables a predicate may reference as `table.column` at the top level.
+  # events/deliveries only exist inside a subquery's FROM.
+  QUALIFIABLE_TABLES = %w[subscribers companies].freeze
+  ALLOWED_SQL_WORDS = %w[
+    and or not in is null like glob between escape collate nocase
+    cast as integer real text numeric
+    select distinct from where exists case when then else end
+    true false
+    coalesce ifnull nullif lower upper trim ltrim rtrim length substr instr
+    replace abs round min max count typeof
+    datetime date time julianday strftime unixepoch
+    json_extract json_each json_array_length json_type json_valid
+    key value type atom fullkey path
+  ].freeze
+
   class InvalidPredicate < StandardError; end
 
   # 🚅 add attribute accessors above.
@@ -111,7 +135,33 @@ class Segment < ApplicationRecord
     # without a JOIN, and asking the AI translator (or a hand author) to spell
     # out joins is fragile, so the segment layer handles it.
     scope = scope.joins(:company) if pred.match?(/\bcompanies\./i)
-    scope.where(pred)
+    scope.where(self.class.scope_subqueries(pred, team_id))
+  end
+
+  # Rewrites every `FROM <segment table>` outside string literals to a
+  # derived table holding only this team's rows, so a subquery like
+  # `id NOT IN (SELECT subscriber_id FROM events WHERE ...)` reads the
+  # team's own events. Run only on predicates validate_predicate accepted.
+  def self.scope_subqueries(predicate, team_id)
+    team_id = Integer(team_id)
+    predicate.gsub(/'(?:[^']|'')*'|\bFROM\s+(#{SEGMENT_TABLES.join("|")})\b/i) do |match|
+      table = Regexp.last_match(1)&.downcase
+      next match if table.nil? # a string literal, left untouched
+
+      scoped = if table == "deliveries"
+        "SELECT * FROM deliveries WHERE campaign_id IN (SELECT id FROM campaigns WHERE team_id = #{team_id})"
+      else
+        "SELECT * FROM #{table} WHERE team_id = #{team_id}"
+      end
+      "FROM (#{scoped}) #{table}"
+    end
+  end
+
+  def self.allowed_predicate_words
+    @allowed_predicate_words ||= (
+      ALLOWED_SQL_WORDS + SEGMENT_TABLES +
+      [Subscriber, Company, Event, Delivery].flat_map(&:column_names)
+    ).map(&:downcase).to_set
   end
 
   # Mirror of AI::SegmentTranslator#validate_predicate. Returns an array of
@@ -136,9 +186,32 @@ class Segment < ApplicationRecord
     # scans the full predicate.)
     scannable = predicate.gsub(/'(?:[^']|'')*'/, "''")
     scannable.scan(/\b([a-zA-Z_][a-zA-Z0-9_]*)\.([a-zA-Z_][a-zA-Z0-9_]*)/) do |left, _right|
-      next if left.casecmp("subscribers").zero?
-      next if left.casecmp("companies").zero?
+      next if QUALIFIABLE_TABLES.include?(left.downcase)
       errors << "Predicate references disallowed table: #{left}"
+    end
+
+    # Quoted identifiers ("users", `users`, [users]) would slip a table name
+    # past the FROM rewrite below.
+    if scannable.match?(/["`\[\]]/)
+      errors << "Predicate may not use quoted identifiers"
+    end
+
+    scannable.scan(/\b[a-zA-Z_][a-zA-Z0-9_]*\b/) do |word|
+      next if allowed_predicate_words.include?(word.downcase)
+      errors << "Predicate uses unknown word: #{word}"
+    end
+
+    # A segment table may appear only as `FROM <table>` (one table, no comma
+    # join) or, for subscribers/companies, as a `table.column` prefix.
+    scannable.scan(/(\w+\s*)?\b(#{SEGMENT_TABLES.join("|")})\b(\s*[.,])?/i) do |before, table, after|
+      after = after.to_s.strip
+      from = before.to_s.strip.casecmp("from").zero?
+      qualified = after == "." && QUALIFIABLE_TABLES.include?(table.downcase)
+      next if (from && after != "," && after != ".") || qualified
+      errors << "Predicate may read #{table} only through a single FROM #{table}"
+    end
+    if scannable.match?(/\bFROM\b(?!\s*(?:#{SEGMENT_TABLES.join("|")})\b|\s*json_each\s*\()/i)
+      errors << "Predicate may only select FROM #{SEGMENT_TABLES.join(", ")} or json_each(...)"
     end
 
     errors.uniq
