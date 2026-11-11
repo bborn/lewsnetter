@@ -1,0 +1,86 @@
+{
+  "ignored_warnings": [
+    {
+      "warning_type": "Mass Assignment",
+      "warning_code": 70,
+      "fingerprint": "b27120218e7d1f7b50fd56e70c5d01a924ce70ca19568d70b853df7faa4418ef",
+      "check_name": "MassAssignment",
+      "message": "Specify exact keys allowed for mass assignment instead of using `permit!` which allows any keys",
+      "file": "app/controllers/api/v1/subscribers_controller.rb",
+      "line": 173,
+      "link": "https://brakemanscanner.org/docs/warning_types/mass_assignment/",
+      "code": "params[:subscriber][:attributes].permit!",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "Api::V1::SubscribersController",
+        "method": "subscriber_params"
+      },
+      "user_input": null,
+      "confidence": "Medium",
+      "cwe_id": [
+        915
+      ],
+      "note": "attributes: is free-form by design (Intercom-style custom attributes); it is stored as JSON in custom_attributes and normalised by Subscribers::AttributeNormalizer, never assigned to columns."
+    },
+    {
+      "warning_type": "Redirect",
+      "warning_code": 18,
+      "fingerprint": "f559f627c502b1ff451c2d7cd05c12f2ffe10a28709406a2238c26f1f95177ad",
+      "check_name": "Redirect",
+      "message": "Possible unprotected redirect",
+      "file": "app/controllers/email_images_controller.rb",
+      "line": 42,
+      "link": "https://brakemanscanner.org/docs/warning_types/redirect/",
+      "code": "redirect_to(EmailImage.find_by_token(params[:id]).file.blob.url, :allow_other_host => true, :status => :found)",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "EmailImagesController",
+        "method": "show"
+      },
+      "user_input": "EmailImage.find_by_token(params[:id]).file.blob.url",
+      "confidence": "Weak",
+      "cwe_id": [
+        601
+      ],
+      "note": "Redirects only to the signed URL of a blob the app itself stored for this EmailImage; no user input reaches the target."
+    },
+    {
+      "warning_type": "Cross-Site Scripting",
+      "warning_code": 2,
+      "fingerprint": "f8ea529e8f48f05f364cefc2fd1630373a56fc76467bd514700737deaa588f40",
+      "check_name": "CrossSiteScripting",
+      "message": "Unescaped model attribute",
+      "file": "app/views/account/campaigns/_postmortem.html.erb",
+      "line": 16,
+      "link": "https://brakemanscanner.org/docs/warning_types/cross_site_scripting",
+      "code": "AI::PostSendAnalyst.new(:campaign => Campaign.find(params[:id])).call.to_s.split(/\\n\\n+/).map do\n if m = para.match(/\\A##\\s+(.+)\\z/) then\n  \"<h4 class=\\\"font-semibold text-zinc-900 dark:text-zinc-100 mt-5 mb-2 text-base\\\">#{ERB::Util.html_escape(para.match(/\\A##\\s+(.+)\\z/)[1])}</h4>\"\nelse\n  if para.start_with?(\"*\") and (para.end_with?(\"*\") and (not para.include?(\"\\n\"))) then\n    \"<p class=\\\"font-mono text-xs text-zinc-500 dark:text-zinc-400\\\">#{ERB::Util.html_escape(para.gsub(/\\A\\*|\\*\\z/, \"\"))}</p>\"\n  else\n    escaped = ERB::Util.html_escape(para)\n    escaped = ERB::Util.html_escape(para).gsub(/\\*\\*(.+?)\\*\\*/, \"<strong>\\\\1</strong>\")\n    escaped = ERB::Util.html_escape(para).gsub(/\\*\\*(.+?)\\*\\*/, \"<strong>\\\\1</strong>\").gsub(/(?<!\\*)\\*([^*]+?)\\*(?!\\*)/, \"<em>\\\\1</em>\")\n    \"<p class=\\\"mb-3 text-zinc-700 dark:text-zinc-300\\\">#{ERB::Util.html_escape(para).gsub(/\\*\\*(.+?)\\*\\*/, \"<strong>\\\\1</strong>\").gsub(/(?<!\\*)\\*([^*]+?)\\*(?!\\*)/, \"<em>\\\\1</em>\")}</p>\"\n  end\nend\n end.join(\"\\n\")",
+      "render_path": [
+        {
+          "type": "controller",
+          "class": "Account::CampaignPostmortemsController",
+          "method": "show",
+          "line": 18,
+          "file": "app/controllers/account/campaign_postmortems_controller.rb",
+          "rendered": {
+            "name": "account/campaigns/_postmortem",
+            "file": "app/views/account/campaigns/_postmortem.html.erb"
+          }
+        }
+      ],
+      "location": {
+        "type": "template",
+        "template": "account/campaigns/_postmortem"
+      },
+      "user_input": "Campaign.find(params[:id])",
+      "confidence": "Weak",
+      "cwe_id": [
+        79
+      ],
+      "note": "Every interpolated piece of the postmortem markdown goes through ERB::Util.html_escape before raw."
+    }
+  ],
+  "updated": "2026-11-11",
+  "brakeman_version": "8.1.0"
+}

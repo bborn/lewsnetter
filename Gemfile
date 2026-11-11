@@ -244,6 +244,10 @@ end
 group :development, :test do
   # A great debugger.
   gem "pry"
+
+  # Security scanners, run in CI (.github/workflows/security.yml).
+  gem "bundler-audit", require: false
+  gem "brakeman", require: false
 end
 
 group :production do

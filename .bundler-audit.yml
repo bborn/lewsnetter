@@ -1,0 +1,18 @@
+---
+# Advisories we have reviewed and cannot fix by updating today. Each entry
+# needs a reason. Delete the entry when the fix ships.
+ignore:
+  # avo 3.34.1: the advisories list only 3.33.x and 4.3.x as patched. Avo is
+  # mounted at /admin/avo and reachable only by DEVELOPER_EMAILS. Moving to
+  # avo 4.3.4+ clears these.
+  - GHSA-h7x6-9mqf-vgmx
+  - GHSA-x65r-p6hf-94hv
+  # oauth2 2.0.19: the resolver can't go past 2.0.19 with the current
+  # omniauth stack. oauth2 is only used for outbound Stripe Connect OAuth to
+  # a fixed Stripe host.
+  - GHSA-pp92-crg2-gfv9
+  # ruby_llm 1.15.0: fixed only in 2.0, a major version. ReDoS in response
+  # parsing; the input comes from the LLM provider, not directly from users.
+  - GHSA-5m38-526f-3498
+  - GHSA-57hg-jgw4-wcqw
+  - GHSA-42r3-x6vx-x49x
