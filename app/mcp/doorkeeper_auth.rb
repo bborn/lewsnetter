@@ -46,6 +46,14 @@ module Mcp
         return error(env, 401, "Token's application is not bound to a team. Provision a sync token at /account/teams/:id/developers.")
       end
 
+      # The team comes from the application, so without this check a token
+      # kept working after its user was removed from the team, and so did a
+      # platform-agent token whose membership was gone. The /api/v1 side gets
+      # the same guarantee from CanCan's membership-based abilities.
+      unless team.memberships.where(user_id: user.id).exists?
+        return error(env, 401, "Token's user is not a member of the application's team.")
+      end
+
       env["mcp.user"] = user
       env["mcp.team"] = team
       @app.call(env)

@@ -102,5 +102,32 @@ module Mcp
       payload = JSON.parse(body.first)
       assert_match(/not bound to a team/i, payload["error"]["message"])
     end
+
+    # ---- membership --------------------------------------------------------
+
+    test "rejects a token whose user was removed from the application's team" do
+      @team.memberships.where(user: @user).destroy_all
+
+      env = Rack::MockRequest.env_for("/mcp", "HTTP_AUTHORIZATION" => "Bearer #{@token.token}", :method => "POST")
+      status, _headers, body = @middleware.call(env)
+
+      assert_equal 401, status, "a removed member must lose MCP access to the team"
+      assert_match(/not a member/i, JSON.parse(body.first)["error"]["message"])
+    end
+
+    test "rejects a token whose user never belonged to the application's team" do
+      outsider = create(:onboarded_user)
+      token = Doorkeeper::AccessToken.create!(
+        resource_owner_id: outsider.id,
+        application: @app,
+        scopes: "mcp:read mcp:write",
+        token: SecureRandom.hex
+      )
+
+      env = Rack::MockRequest.env_for("/mcp", "HTTP_AUTHORIZATION" => "Bearer #{token.token}", :method => "POST")
+      status, _headers, _body = @middleware.call(env)
+
+      assert_equal 401, status
+    end
   end
 end
