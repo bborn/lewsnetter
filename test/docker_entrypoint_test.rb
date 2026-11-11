@@ -106,7 +106,7 @@ class DockerEntrypointTest < Minitest::Test
   def stub(relative, exit_status: 0, creates_restored_file: false)
     path = File.join(@dir, relative)
     name = File.basename(relative)
-    body = +"#!/bin/bash\necho \"#{name} $*\" >> \"$CALL_LOG\"\n"
+    body = "#!/bin/bash\necho \"#{name} $*\" >> \"$CALL_LOG\"\n"
     if creates_restored_file
       body << "if [ \"$1\" = \"restore\" ]; then touch \"${@: -1}\"; fi\n"
     end
