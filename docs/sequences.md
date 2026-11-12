@@ -77,7 +77,14 @@ tags and actions). Email bodies convert to Markdown inside the given template
 raw). Intercom merge tags (`{{custom_data.x|fallback:"y"}}`, URL-encoded tags)
 are kept as written; the renderer understands them. Sequences
 are created as drafts; nothing sends until someone activates them. Rerunning
-skips series that already exist. See `Sequences::IntercomSeriesImporter`.
+skips series that already exist. `DRY_RUN=1` reports without writing. See
+`Sequences::IntercomSeriesImporter`.
+
+The MCP tool `sequences_import_intercom` runs the same import for the token's
+team, one series per call: `series_json` (the export), `spec` (the whole spec or
+that series' entry, plus `segments` for an entry), `email_template_id`,
+`sender_address_id`, and `dry_run` (default true). Exclusions resolve against
+sequences already on the team, so import excluded series first.
 
 ## Re-entry
 

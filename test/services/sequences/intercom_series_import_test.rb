@@ -121,6 +121,36 @@ class Sequences::IntercomSeriesImportTest < ActiveSupport::TestCase
     end
   end
 
+  test "a dry run through for_team reports the import and rolls it back" do
+    importer = Sequences::IntercomSeriesImporter.for_team(@team, export_dir: EXPORT_DIR, spec: spec,
+      sender_address_id: @sender.id, email_template_id: @template.id, dry_run: true)
+    results = nil
+    assert_no_difference ["Sequence.count", "SequenceStep.count", "Segment.count", "Campaign.count"] do
+      results = importer.call
+    end
+    assert_equal [[:would_create, "Connect accounts", 2, nil]], results.map { [it.status, it.name, it.steps, it.sequence] }
+    assert_equal ["Never connected", "Connected"], importer.created_segments
+  end
+
+  test "for_team looks ids up on the team and requires a template for a real run" do
+    other = create(:team)
+    other_template = other.email_templates.create!(name: "x", mjml_body: "<mjml/>")
+    assert_raises(ActiveRecord::RecordNotFound) do
+      Sequences::IntercomSeriesImporter.for_team(@team, export_dir: EXPORT_DIR, spec: spec,
+        email_template_id: other_template.id)
+    end
+    assert_raises(Sequences::IntercomSeriesImporter::SpecError) do
+      Sequences::IntercomSeriesImporter.for_team(@team, export_dir: EXPORT_DIR, spec: spec)
+    end
+  end
+
+  test "only the segments an imported series uses are created" do
+    with_unused = spec
+    with_unused["segments"]["Unused"] = {"predicate" => "1 = 1"}
+    import(with_unused)
+    assert_nil @team.segments.find_by(name: "Unused")
+  end
+
   private
 
   def blocks(ruleset)
