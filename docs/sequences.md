@@ -12,6 +12,8 @@ sequence's own status says.
 
 - Avo: Teams → edit → **Sequences enabled**.
 - Console: `Team.find(id).update!(sequences_enabled: true)`.
+- MCP: `sequences_set_enabled` with `enabled: true` (the token's team). `sequences_update`
+  sets a sequence's status and segments; activating still needs a sender address.
 
 ## How a subscriber moves through
 
