@@ -5,7 +5,16 @@
 # bodies out of the export, create segments, sequences and steps).
 #
 # Everything is created as a draft, so nothing sends until someone reviews
-# and activates it. Re-running skips any sequence whose name already exists.
+# and activates it. Nothing is enrolled and the team's sequences_enabled flag
+# is never touched. Re-running skips any sequence whose name already exists.
+# Only the segments the imported series reference are created.
+#
+# Two callers share this class: the `sequences:import_intercom_series` rake
+# task (a directory of exports, the whole spec) and the
+# `sequences_import_intercom` MCP tool (one inline export per call). Both go
+# through `.for_team`, which resolves the sender address and email template
+# on the team. `dry_run: true` runs the same import inside a transaction and
+# rolls it back, so the report is exactly what a real run would create.
 #
 # Spec (string keys, usually from YAML):
 #
@@ -30,61 +39,101 @@
 #       changes: ["…"]                         # echoed into the report
 module Sequences
   class IntercomSeriesImporter
-    Result = Struct.new(:name, :status, :sequence, :steps, :warnings, :changes, keyword_init: true)
+    Result = Struct.new(:intercom_id, :name, :status, :sequence, :steps, :segments, :excluded,
+      :warnings, :changes, keyword_init: true)
 
     class SpecError < StandardError; end
 
-    def initialize(team:, export_dir:, spec:, sender_address: nil, email_template: nil)
+    # Ids are looked up on the team, so another team's sender address or
+    # template raises RecordNotFound. Without a template, steps are plain
+    # text and the markdown ships raw, so a real run refuses to go ahead.
+    def self.for_team(team, spec:, sender_address_id: nil, email_template_id: nil, **options)
+      email_template = email_template_id.presence && team.email_templates.find_by!(id: email_template_id)
+      if email_template.nil? && !options[:dry_run]
+        raise SpecError, "an email template is required (email_template_id)"
+      end
+      new(team: team, spec: spec, email_template: email_template,
+        sender_address: sender_address_id.presence && team.sender_addresses.find_by!(id: sender_address_id),
+        **options)
+    end
+
+    attr_reader :created_segments
+
+    # export_dir: a directory of <intercom_id>.json files, or
+    # exports: {intercom_id => parsed export}.
+    # only: intercom ids to import; the other spec entries only name
+    # `exclude` references. Default: every series in the spec.
+    def initialize(team:, spec:, export_dir: nil, exports: nil, only: nil, sender_address: nil,
+      email_template: nil, dry_run: false)
       @team = team
-      @export_dir = Pathname(export_dir)
       @spec = spec
+      @export_dir = export_dir && Pathname(export_dir)
+      @exports = (exports || {}).transform_keys(&:to_s)
+      @only = only&.map(&:to_s)
       @sender_address = sender_address
       @email_template = email_template
+      @dry_run = dry_run
     end
 
     def call
       results = []
       created = {}
-      Sequence.transaction do
-        segments = build_segments
-        Array(@spec["series"]).each do |entry|
-          result = import_series(entry, segments)
-          created[entry["intercom_id"].to_s] = result.sequence if result.sequence
+      @segments = {}
+      @created_segments = []
+      # requires_new: a savepoint, so the dry-run rollback holds even when
+      # the caller is already inside a transaction.
+      Sequence.transaction(requires_new: true) do
+        entries.each do |entry|
+          result = import_series(entry)
+          created[entry["intercom_id"].to_s] = result.sequence if result.status == :created
           results << result
         end
-        link_exclusions(results, created)
+        link_exclusions(entries.zip(results), created)
+        raise ActiveRecord::Rollback if @dry_run
       end
-      results
+      return results unless @dry_run
+
+      results.each do |r|
+        next unless r.status == :created
+        r.status = :would_create
+        r.sequence = nil
+      end
     end
 
     private
 
-    def build_segments
-      Array(@spec["segments"]).to_h.to_h do |name, definition|
-        [name, @team.segments.find_by(name: name) || create_segment(name, definition || {})]
-      end
+    def entries
+      @entries ||= Array(@spec["series"]).select { |e| @only.nil? || @only.include?(e["intercom_id"].to_s) }
+    end
+
+    def segment_definitions
+      @segment_definitions ||= Array(@spec["segments"]).to_h
     end
 
     def create_segment(name, definition)
-      if definition["rules"]
+      segment = if definition["rules"]
         @team.segments.create!(name: name, rules: definition["rules"])
       elsif definition["predicate"]
         @team.segments.create!(name: name, definition: {"predicate" => definition["predicate"]})
       else
         raise SpecError, "segment #{name.inspect} needs rules or a predicate"
       end
+      @created_segments << name
+      segment
     end
 
-    def import_series(entry, segments)
+    def import_series(entry)
       export = load_export(entry.fetch("intercom_id"))
       name = entry["name"].presence || export.dig("series", "title")
       changes = Array(entry["changes"])
+      base = {intercom_id: entry["intercom_id"], name: name, changes: changes, segments: [], excluded: []}
 
       if (existing = @team.sequences.find_by(name: name))
-        return Result.new(name: name, status: :exists, sequence: existing, steps: existing.steps.size,
-          warnings: [], changes: changes)
+        return Result.new(**base, status: :exists, sequence: existing, steps: existing.steps.size, warnings: [])
       end
 
+      used = []
+      segment = ->(segment_name) { segment_for(segment_name)&.tap { used << segment_name } }
       trigger = entry["trigger"] || {}
       goal = entry["goal"] || {}
       sequence = @team.sequences.create!(
@@ -92,9 +141,9 @@ module Sequences
         status: "draft",
         trigger_type: trigger["event"] ? "event" : "segment",
         trigger_event_name: trigger["event"],
-        trigger_segment: segment_for(trigger["segment"], segments),
-        exit_segment: segment_for(entry["exit_segment"], segments),
-        goal_segment: segment_for(goal["segment"], segments),
+        trigger_segment: segment.call(trigger["segment"]),
+        exit_segment: segment.call(entry["exit_segment"]),
+        goal_segment: segment.call(goal["segment"]),
         goal_event_name: goal["event"],
         reentry_days: entry["reentry_days"],
         finish_after_minutes: minutes(entry, "finish_after"),
@@ -112,7 +161,7 @@ module Sequences
           body_markdown: content[:body],
           email_template: @email_template,
           delay_minutes: minutes(step_spec, "wait"),
-          skip_segment: segment_for(step_spec["skip_segment"], segments),
+          skip_segment: segment.call(step_spec["skip_segment"]),
           sent_tag: step_spec["sent_tag"],
           action_trigger: action["on"],
           action_tag: action["tag"],
@@ -120,27 +169,42 @@ module Sequences
         )
       end
 
-      Result.new(name: name, status: :created, sequence: sequence, steps: sequence.steps.size,
-        warnings: warnings.uniq, changes: changes)
+      Result.new(**base, status: :created, sequence: sequence, steps: sequence.steps.size,
+        segments: used.uniq, warnings: warnings.uniq)
     end
 
-    def link_exclusions(results, created)
-      Array(@spec["series"]).zip(results).each do |entry, result|
+    # An `exclude` reference is an intercom id or a sequence name. An id
+    # resolves to a series created in this run, or to the sequence named by
+    # that id's spec entry if an earlier run (or call) imported it.
+    def link_exclusions(pairs, created)
+      pairs.each do |entry, result|
         next unless result.status == :created && entry["exclude"].present?
-        ids = Array(entry["exclude"]).map do |ref|
-          seq = created[ref.to_s] || @team.sequences.find_by(name: ref.to_s)
-          if seq.nil?
+        excluded = Array(entry["exclude"]).filter_map do |ref|
+          seq = created[ref.to_s] || @team.sequences.find_by(name: spec_name(ref) || ref.to_s)
+          if seq
+            next seq
+          elsif spec_name(ref)
+            result.warnings << "excluded series #{ref} (#{spec_name(ref)}) isn't imported yet: rule dropped; import it first"
+          else
             result.warnings << "excluded series #{ref} isn't ported: rule dropped"
-            next
           end
-          seq.id
+          nil
         end
-        result.sequence.update!(excluded_sequence_ids: ids.compact)
+        result.sequence.update!(excluded_sequence_ids: excluded.map(&:id))
+        result.excluded = excluded.map(&:name)
       end
     end
 
+    def spec_name(ref)
+      entry = Array(@spec["series"]).find { |e| e["intercom_id"].to_s == ref.to_s }
+      entry && (entry["name"].presence || @exports[ref.to_s]&.dig("series", "title"))
+    end
+
     def load_export(intercom_id)
-      JSON.parse(@export_dir.join("#{intercom_id}.json").read)
+      @exports.fetch(intercom_id.to_s) do
+        raise SpecError, "no export for series #{intercom_id}" if @export_dir.nil?
+        JSON.parse(@export_dir.join("#{intercom_id}.json").read)
+      end
     rescue Errno::ENOENT
       raise SpecError, "no export file for series #{intercom_id} in #{@export_dir}"
     end
@@ -162,9 +226,12 @@ module Sequences
       [{subject: subject, body: body}, warnings]
     end
 
-    def segment_for(name, segments)
+    # A segment already on the team wins over the spec's definition, so a
+    # re-run (or a second series) reuses it rather than duplicating it.
+    def segment_for(name)
       return nil if name.blank?
-      segments[name] || @team.segments.find_by(name: name) ||
+      @segments[name] ||= @team.segments.find_by(name: name) ||
+        (segment_definitions.key?(name) && create_segment(name, segment_definitions[name] || {})) ||
         raise(SpecError, "segment #{name.inspect} is neither in the spec nor on the team")
     end
 

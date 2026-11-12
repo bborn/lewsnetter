@@ -12,7 +12,7 @@ The fastest way to grok the architecture: read the design spec at [`docs/superpo
 
 | Path | What's there |
 |---|---|
-| `app/mcp/` | MCP server: `Mcp::Server`, `Mcp::Tool::Base`, `Mcp::DoorkeeperAuth`, all 43 tools under `tools/<group>/<verb>.rb`, 6 markdown skills under `skills/` |
+| `app/mcp/` | MCP server: `Mcp::Server`, `Mcp::Tool::Base`, `Mcp::DoorkeeperAuth`, all 45 tools under `tools/<group>/<verb>.rb`, 6 markdown skills under `skills/` |
 | `app/services/llm/configuration.rb` | Single source of truth for LLM keys/base URL/provider. All AI code reads this. |
 | `app/services/chats/tool_adapter.rb` | Bridges `Mcp::Tool::Base` → `RubyLLM::Tool` for the in-app agent (so external MCP and in-app agent share one tool surface). |
 | `app/services/ai/` | Three task-specific AI services (campaign drafter, segment translator, post-send analyst). The `llm_*` MCP tools wrap these. |
