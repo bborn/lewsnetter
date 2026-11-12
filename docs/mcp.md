@@ -27,7 +27,7 @@ Lewsnetter ships ~43 MCP tools. Source of truth: `app/mcp/tools/`. They're group
 | **Email templates** | `email_templates.list`, `.get`, `.create`, `.update`, `.delete` |
 | **Sender addresses** | `sender_addresses.list`, `.get`, `.create`, `.verify`, `.delete` |
 | **Events** | `events.list`, `.create` (custom subscriber events you segment on) |
-| **Sequences** | `sequences_list`, `sequences_stats` (enrollment counts + per-step funnel; read-only) |
+| **Sequences** | `sequences_list`, `sequences_stats` (enrollment counts + per-step funnel; read-only), `sequences_import_intercom` (drafts only), `sequences_update` (status, exit/goal/trigger segment, re-entry), `sequences_set_enabled` (the team's Sequences flag) |
 | **Team** | `team.get` (current team metadata + limits) |
 | **LLM (introspection)** | `llm.*` (agent-side conveniences — usually you don't need these directly) |
 
