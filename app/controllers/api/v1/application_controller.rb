@@ -11,7 +11,23 @@ class Api::V1::ApplicationController < ActionController::API
   # docs/security/2026-05-19-data-isolation-audit.md (H1).
   before_action :enforce_token_team_matches_url_team
 
+  # The consent page says mcp:read only reads (doorkeeper.en.yml), so a token
+  # granted mcp:read without mcp:write or admin may only GET. Tokens without
+  # mcp:* scopes (sync, platform agent, admin) keep full access.
+  WRITE_SCOPES = %w[mcp:write admin].freeze
+  before_action :enforce_read_only_token_scopes
+
   private
+
+  def enforce_read_only_token_scopes
+    return unless doorkeeper_token
+    return if request.get? || request.head?
+
+    scopes = doorkeeper_token.scopes
+    return unless scopes.exists?("mcp:read") && WRITE_SCOPES.none? { scopes.exists?(it) }
+
+    render json: {error: "This access token is read-only (mcp:read). Writing needs mcp:write."}, status: :forbidden
+  end
 
   def enforce_token_team_matches_url_team
     # No-op for unauthenticated endpoints (currently none under api/v1) and
