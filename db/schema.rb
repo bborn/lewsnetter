@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_14_132502) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_14_134416) do
   create_table "account_onboarding_invitation_lists", force: :cascade do |t|
     t.integer "team_id", null: false
     t.json "invitations"
@@ -306,19 +306,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_132502) do
   create_table "messages", force: :cascade do |t|
     t.string "role", null: false
     t.text "content"
-    t.json "content_raw"
     t.text "thinking_text"
     t.text "thinking_signature"
-    t.integer "thinking_tokens"
-    t.integer "input_tokens"
-    t.integer "output_tokens"
-    t.integer "cached_tokens"
-    t.integer "cache_creation_tokens"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "chat_id", null: false
-    t.integer "model_id"
-    t.integer "tool_call_id"
     t.boolean "cache_until_here", default: false, null: false
     t.string "finish_reason"
     t.json "citations"
@@ -326,9 +318,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_132502) do
     t.json "raw_content"
     t.json "raw_reasoning"
     t.index ["chat_id"], name: "index_messages_on_chat_id"
-    t.index ["model_id"], name: "index_messages_on_model_id"
-    t.index ["role"], name: "index_messages_on_role"
-    t.index ["tool_call_id"], name: "index_messages_on_tool_call_id"
   end
 
   create_table "oauth_access_grants", force: :cascade do |t|
@@ -487,13 +476,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_132502) do
     t.index ["status"], name: "index_ruby_llm_usages_on_status"
     t.check_constraint "operation IN ('chat', 'embedding', 'moderation', 'image', 'speech', 'transcription', 'ocr', 'rerank')"
     t.check_constraint "status IN ('pending', 'succeeded', 'failed', 'cancelled')"
-  end
-
-  create_table "ruby_llm_v2_backfills", id: false, force: :cascade do |t|
-    t.string "task", null: false
-    t.integer "last_id"
-    t.boolean "completed", default: false, null: false
-    t.index ["task"], name: "index_ruby_llm_v2_backfills_on_task", unique: true
   end
 
   create_table "scaffolding_absolutely_abstract_creative_concepts", force: :cascade do |t|
@@ -908,8 +890,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_132502) do
   add_foreign_key "memberships", "teams"
   add_foreign_key "memberships", "users"
   add_foreign_key "messages", "chats"
-  add_foreign_key "messages", "ruby_llm_models", column: "model_id"
-  add_foreign_key "messages", "ruby_llm_tool_calls", column: "tool_call_id"
   add_foreign_key "oauth_access_grants", "oauth_applications", column: "application_id"
   add_foreign_key "oauth_access_tokens", "oauth_applications", column: "application_id"
   add_foreign_key "oauth_applications", "teams"
