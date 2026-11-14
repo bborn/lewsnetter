@@ -362,3 +362,6 @@ gem "sentry-ruby"
 gem "sentry-rails"
 
 # 🚅 super scaffolding will insert new oauth providers above this line.
+
+# Security floor (GHSA: protocol-relative redirect leaks the bearer token); omniauth-oauth2 alone lets it resolve older.
+gem "oauth2", ">= 2.0.22"

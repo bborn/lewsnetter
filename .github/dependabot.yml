@@ -18,3 +18,21 @@ updates:
       bundler-security:
         applies-to: security-updates
         patterns: ["*"]
+  - package-ecosystem: npm
+    directory: /marketing/video/remotion
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    groups:
+      marketingvideoremotion-security:
+        applies-to: security-updates
+        patterns: ["*"]
+  - package-ecosystem: npm
+    directory: /zapier
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    groups:
+      zapier-security:
+        applies-to: security-updates
+        patterns: ["*"]
