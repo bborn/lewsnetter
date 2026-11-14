@@ -17,6 +17,19 @@ module AI
   class CampaignDrafter < Base
     SubjectCandidate = Struct.new(:subject, :rationale, keyword_init: true)
 
+    # The shape the model answers in (structured output).
+    class DraftSchema < Schematist::Schema
+      array :subject_candidates, description: "Exactly 5 distinct subject lines, each exploring a different angle" do
+        object do
+          string :subject
+          string :rationale, description: "Why this subject works"
+        end
+      end
+      string :preheader, description: "The inbox preview text under the subject"
+      string :markdown_body, description: "The email body in markdown"
+      string :suggested_send_time, description: "For example: Tuesday 10am Eastern"
+    end
+
     Draft = Struct.new(
       :subject_candidates, :preheader, :markdown_body, :mjml_body,
       :suggested_send_time, :errors, :stub,
@@ -47,9 +60,8 @@ module AI
       return stub_draft if stub_mode?
       return stub_draft if @brief.blank?
 
-      raw = ask_llm(system: system_prompt, user: user_prompt)
-      parsed = parse_json(raw)
-      return stub_draft(errors: ["LLM did not return valid JSON"]) unless parsed
+      parsed = ask_llm(system: system_prompt, user: user_prompt, schema: DraftSchema)
+      return stub_draft(errors: ["LLM did not return a draft"]) unless parsed.is_a?(Hash)
 
       candidates = Array(parsed["subject_candidates"]).map do |row|
         SubjectCandidate.new(
@@ -83,18 +95,9 @@ module AI
     def system_prompt
       <<~PROMPT
         You are drafting an email campaign for team "#{@team.name}". The user
-        will give you a brief — usually 5 bullets. Output a complete draft as
-        JSON only, no surrounding prose, with this shape:
-
-        {
-          "subject_candidates": [
-            {"subject": "...", "rationale": "why this subject works"},
-            ... (exactly 5 candidates)
-          ],
-          "preheader": "the inbox preview text under the subject",
-          "markdown_body": "## A heading\\n\\nParagraph text…\\n\\n- list item\\n\\n[Call to action →](https://example.com)",
-          "suggested_send_time": "Tuesday 10am Eastern (or similar)"
-        }
+        will give you a brief — usually 5 bullets. Write a complete draft:
+        five subject candidates with a rationale for each, a preheader, the
+        markdown body, and a suggested send time.
 
         Voice samples — the last 10 campaigns this team sent (subject + body excerpt):
         #{voice_samples_block.presence || "(no prior campaigns; default to a friendly, clear tone)"}
@@ -110,7 +113,6 @@ module AI
         - Keep it short: one hero paragraph, 2-3 body paragraphs, one CTA link.
         - CTAs are markdown links: `[Read more →](https://example.com)`
         - 5 distinct subject candidates exploring different angles.
-        - Output JSON only. No code fences, no surrounding prose.
       PROMPT
     end
 

@@ -78,5 +78,54 @@ module AI
       assert_match(/0 recipients/, md)
       assert_match(/\(no subject\)/, md)
     end
+
+    test "the LLM path asks for the analysis schema and adds the section headings" do
+      analyst, calls = analyst_answering(
+        "what_worked" => "Opens were **50%**.",
+        "what_didnt" => "Clicks lagged.",
+        "what_to_try_next" => "Test a shorter subject."
+      )
+
+      md = analyst.call
+
+      assert_equal AI::PostSendAnalyst::AnalysisSchema, calls.sole[:schema]
+      assert_equal <<~MARKDOWN, md
+        ## What worked
+
+        Opens were **50%**.
+
+        ## What didn't
+
+        Clicks lagged.
+
+        ## What to try next
+
+        Test a shorter subject.
+      MARKDOWN
+    end
+
+    test "the LLM path falls back to the stub summary when a section is missing" do
+      analyst, _calls = analyst_answering("what_worked" => "Fine.", "what_didnt" => "", "what_to_try_next" => "More.")
+
+      assert_match(/couldn't be generated/, analyst.call)
+    end
+
+    test "the LLM path falls back to the stub summary when the call fails" do
+      analyst, _calls = analyst_answering(nil)
+
+      assert_match(/50\.0%/, analyst.call)
+    end
+
+    private
+
+    # An analyst in LLM mode whose ask_llm returns +answer+ and records its
+    # arguments.
+    def analyst_answering(answer)
+      calls = []
+      analyst = AI::PostSendAnalyst.new(campaign: @campaign)
+      analyst.define_singleton_method(:stub_mode?) { false }
+      analyst.define_singleton_method(:ask_llm) { |**kwargs| (calls << kwargs) && answer }
+      [analyst, calls]
+    end
   end
 end
