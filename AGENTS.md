@@ -18,7 +18,7 @@ The fastest way to grok the architecture: read the design spec at [`docs/superpo
 | `app/services/ai/` | Two task-specific AI services (campaign drafter, post-send analyst). The `llm_*` MCP tools wrap these. |
 | `app/services/campaign_renderer.rb` | Renders a campaign body for one subscriber: Liquid substitution → markdown → MJML → HTML → premailer-inlined. |
 | `app/channels/chat_channel.rb` | ActionCable channel for the in-app agent. Streaming + tool indicators. |
-| `app/models/{chat,message,tool_call,model}.rb` | `acts_as_chat` from `ruby_llm`. Don't add custom logic here unless necessary. |
+| `app/models/{chat,message}.rb` | `acts_as_chat` / `acts_as_message` from `ruby_llm`. Since ruby_llm 2.0 the gem owns the model registry and tool calls (`RubyLLM::ActiveRecord::Model`, `RubyLLM::ActiveRecord::ToolCall`, tables `ruby_llm_*`). Don't add custom logic here unless necessary. |
 | `app/controllers/well_known_controller.rb` | OAuth 2.1 RFC 8414 + 9728 metadata endpoints. |
 | `app/controllers/oauth/registrations_controller.rb` | RFC 7591 dynamic client registration for MCP clients. |
 | `config/initializers/ruby_llm.rb` | LLM key + gateway URL wiring. |
@@ -56,7 +56,7 @@ The full suite passes on `master`, so treat any failure as new.
 - **No `git push --force-with-lease` to master** without explicit user instruction.
 - **Don't skip pre-commit hooks** (`--no-verify`). If a hook fails, fix the underlying issue.
 - **Design system:** Read [`DESIGN.md`](DESIGN.md) before any visual change. Don't deviate without approval.
-- **Models registry:** `bin/rails ruby_llm:load_models` seeds the ~1,250-row LLM model registry. The prod entrypoint (`bin/docker-entrypoint`) auto-seeds on first boot when `Model.count == 0`. In dev, run it manually after a fresh `db:prepare`.
+- **Models registry:** `bin/rails ruby_llm:load_models` seeds the LLM model registry (`ruby_llm_models`, ~1,700 rows on ruby_llm 2.x). The prod entrypoint (`bin/docker-entrypoint`) auto-seeds on first boot when the table is empty. In dev, run it manually after a fresh `db:prepare`.
 
 ## MCP tool development
 

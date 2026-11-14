@@ -10,7 +10,7 @@ namespace :app do
     # Seed the ruby_llm Model registry on first boot only. load_models is
     # idempotent (find-or-create per entry) but iterates the whole registry,
     # so gate on an empty table to keep subsequent restarts fast.
-    Rake::Task["ruby_llm:load_models"].invoke if Model.count.zero?
+    Rake::Task["ruby_llm:load_models"].invoke if RubyLLM::ActiveRecord::Model.count.zero?
 
     # Upgrade any plaintext subscriber email/name rows to encrypted storage.
     # Idempotent — returns fast when there's nothing left to upgrade.

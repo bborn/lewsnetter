@@ -25,14 +25,16 @@ module Chats
 
         # Hand ruby_llm the tool's JSON Schema as is, so the agent sees what
         # an MCP client gets from tools/list.
-        params(our_tool.arguments_schema || EMPTY_ARGUMENTS_SCHEMA)
+        parameters(our_tool.arguments_schema || EMPTY_ARGUMENTS_SCHEMA)
 
         # ruby_llm calls tool_instance.name to get the wire name. Override
         # the instance method so external clients see our snake_case names.
         define_method(:name) { our_tool.tool_name }
 
-        define_method(:execute) do |args = {}|
-          string_args = (args || {}).transform_keys(&:to_s)
+        # ruby_llm passes the arguments as keywords. A bare **args accepts
+        # any of them, so the MCP tool's own validation decides.
+        define_method(:execute) do |**args|
+          string_args = args.transform_keys(&:to_s)
           our_tool.new.invoke(arguments: string_args, context: ctx)
         rescue ActiveRecord::RecordNotFound => e
           {error: "Not found: #{e.message}"}

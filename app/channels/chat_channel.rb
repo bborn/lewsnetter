@@ -14,6 +14,15 @@
 #   {type: "tool_result",    tool_call_id, name, result_excerpt}      — "← result"
 #   {type: "error",          html}                                    — turn-level failure
 class ChatChannel < ApplicationCable::Channel
+  # The stream a chat broadcasts on: "chat:<GlobalID>". Don't hand the chat
+  # itself to stream_for/broadcast_to. ruby_llm 2 makes acts_as_chat records
+  # Enumerable over their messages, and ActionCable's broadcasting_for calls
+  # Array(model), so the name would be built from the chat's messages and
+  # change with every message saved.
+  def self.stream_key(chat)
+    chat.to_gid_param
+  end
+
   def subscribed
     chat = Chat.find_by(id: params[:chat_id])
     unless authorized?(chat)
@@ -22,7 +31,7 @@ class ChatChannel < ApplicationCable::Channel
     end
 
     @chat = chat
-    stream_for chat
+    stream_for self.class.stream_key(chat)
   end
 
   def send_message(data)
@@ -169,7 +178,7 @@ class ChatChannel < ApplicationCable::Channel
   end
 
   def broadcast(payload)
-    ChatChannel.broadcast_to(@chat, payload.merge(chat_id: @chat.id))
+    ChatChannel.broadcast_to(self.class.stream_key(@chat), payload.merge(chat_id: @chat.id))
   end
 
   def render_message_html(message)
