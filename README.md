@@ -88,7 +88,7 @@ For Claude Desktop, in `~/Library/Application Support/Claude/claude_desktop_conf
 
 Restart Claude Desktop, invoke any tool, and it'll walk you through the auth flow.
 
-The MCP server exposes 43 tools spanning subscribers, segments, email templates, campaigns, sender addresses, events, plus three LLM-backed tools (`llm_draft_campaign`, `llm_translate_segment`, `llm_analyze_send`) that wrap the in-app AI services. Full surface in [`docs/superpowers/specs/2026-05-15-mcp-and-in-app-agent-design.md`](docs/superpowers/specs/2026-05-15-mcp-and-in-app-agent-design.md).
+The MCP server exposes tools spanning subscribers, segments, email templates, campaigns, sender addresses, sequences, events, plus two LLM-backed tools (`llm_draft_campaign`, `llm_analyze_send`) that wrap the in-app AI services. Full surface in [`docs/superpowers/specs/2026-05-15-mcp-and-in-app-agent-design.md`](docs/superpowers/specs/2026-05-15-mcp-and-in-app-agent-design.md).
 
 ## Stack
 
