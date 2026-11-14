@@ -81,4 +81,17 @@ class ChatChannelTest < ActionCable::Channel::TestCase
       perform :send_message, content: "hello"
     end
   end
+
+  test "a failed turn keeps the exception details out of the chat" do
+    stub_connection current_user: @member
+    subscribe chat_id: @chat.id
+
+    Llm::Configuration.singleton_class.define_method(:current) { raise ActiveRecord::StatementInvalid, "no such column: internal_col" }
+    perform :send_message, content: "hello"
+
+    reply = @chat.messages.order(:id).last
+    assert_equal "assistant", reply.role
+    assert_not_includes reply.content, "internal_col"
+    assert_not_includes reply.content, "StatementInvalid"
+  end
 end

@@ -54,7 +54,7 @@ class ChatChannel < ApplicationCable::Channel
     Rails.logger.error("[chat] turn failed: #{e.class}: #{e.message}\n#{e.backtrace.first(8).join("\n")}")
     err = @chat.messages.create!(
       role: "assistant",
-      content: "Sorry — that turn errored: #{e.class}: #{e.message}"
+      content: "Sorry — that turn errored."
     )
     broadcast_full_message(err)
   end
