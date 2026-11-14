@@ -8,6 +8,7 @@ module Mcp
 
         tool_name "sender_addresses_list"
         read_only
+        requires_ability :read, ::SenderAddress
         description "Lists all sender addresses (from-email identities) on the calling team. No pagination — teams rarely have more than a handful."
         arguments_schema(
           type: "object",

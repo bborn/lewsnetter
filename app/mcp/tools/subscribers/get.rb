@@ -8,6 +8,7 @@ module Mcp
 
         tool_name "subscribers_get"
         read_only
+        requires_ability :read, ::Subscriber
         description "Returns a single subscriber by id. Raises RecordNotFound if the id does not belong to the calling team."
         arguments_schema(
           type: "object",

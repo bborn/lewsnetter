@@ -7,6 +7,8 @@ module Mcp
         include Mcp::Tools::Serializers
 
         tool_name "campaigns_delete"
+
+        requires_ability :destroy, ::Campaign
         description "Deletes a campaign by id. Raises RecordNotFound if the campaign does not belong to the calling team."
         arguments_schema(
           type: "object",

@@ -6,6 +6,7 @@ module Mcp
       class GetCurrent < Mcp::Tool::Base
         tool_name "team_get_current"
         read_only
+        requires_ability :read, ::Team
         description "Returns the id, name, and slug of the team that owns the calling token."
         arguments_schema(type: "object", properties: {}, additionalProperties: false)
 

@@ -6,6 +6,7 @@ module Mcp
       class DraftCampaign < Mcp::Tool::Base
         tool_name "llm_draft_campaign"
         read_only
+        requires_ability :create, ::Campaign
         description "Drafts a campaign from a brief: 5 subject candidates with rationale, preheader, markdown body, suggested send time. Wraps AI::CampaignDrafter."
         arguments_schema(
           type: "object",

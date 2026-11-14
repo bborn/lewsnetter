@@ -7,6 +7,8 @@ module Mcp
         include Mcp::Tools::Serializers
 
         tool_name "campaigns_update"
+
+        requires_ability :update, ::Campaign
         description <<~DESC
           Updates an existing campaign. The model enforces that sent campaigns cannot
           have their body changed. Set plain_text_only: true to send a pure plain-text

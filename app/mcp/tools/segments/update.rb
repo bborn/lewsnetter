@@ -7,6 +7,8 @@ module Mcp
         include Mcp::Tools::Serializers
 
         tool_name "segments_update"
+
+        requires_ability :update, ::Segment
         description "Updates an existing segment by id. All fields are optional; passing predicate:\"\" clears the predicate."
         arguments_schema(
           type: "object",

@@ -24,14 +24,14 @@ module Mcp
         end
 
         test "template is scoped to the calling team" do
-          other_team = create(:team)
-          other_ctx = Mcp::Tool::Context.new(user: create(:onboarded_user), team: other_team)
+          other_user = create(:onboarded_user)
+          other_ctx = Mcp::Tool::Context.new(user: other_user, team: other_user.current_team)
           Create.new.invoke(
             arguments: {"name" => "Other Team Layout", "mjml_body" => "<mjml></mjml>"},
             context: other_ctx
           )
           refute @team.email_templates.exists?(name: "Other Team Layout")
-          assert other_team.email_templates.exists?(name: "Other Team Layout")
+          assert other_user.current_team.email_templates.exists?(name: "Other Team Layout")
         end
 
         test "raises on missing required name" do

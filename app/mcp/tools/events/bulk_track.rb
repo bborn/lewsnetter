@@ -7,6 +7,8 @@ module Mcp
         include Mcp::Tools::Serializers
 
         tool_name "events_bulk_track"
+
+        requires_ability :create, ::Event
         description "Tracks multiple events in a single call. Each record is processed independently — per-record errors (unknown subscriber, validation failure) are collected in the errors array without aborting the batch. The entire batch is wrapped in a transaction so a catastrophic failure rolls back cleanly."
         arguments_schema(
           type: "object",

@@ -7,6 +7,8 @@ module Mcp
         include Mcp::Tools::Serializers
 
         tool_name "sender_addresses_create"
+
+        requires_ability :create, ::SenderAddress
         description "Creates a sender address on the calling team, then queries AWS SES to populate its verification status. The record is saved regardless of whether the SES check succeeds."
         arguments_schema(
           type: "object",

@@ -7,6 +7,8 @@ module Mcp
         include Mcp::Tools::Serializers
 
         tool_name "campaigns_schedule"
+
+        requires_ability :send_now, ::Campaign
         description <<~DESC
           Schedules a campaign for future delivery by setting status to "scheduled" and
           recording the scheduled_for datetime. The scheduled_for argument must be an

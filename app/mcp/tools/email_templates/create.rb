@@ -7,6 +7,8 @@ module Mcp
         include Mcp::Tools::Serializers
 
         tool_name "email_templates_create"
+
+        requires_ability :create, ::EmailTemplate
         description "Creates a new email template on the calling team."
         arguments_schema(
           type: "object",

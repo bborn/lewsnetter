@@ -7,6 +7,8 @@ module Mcp
         include Mcp::Tools::Serializers
 
         tool_name "campaigns_send_now"
+
+        requires_ability :send_now, ::Campaign
         description <<~DESC
           Enqueues the campaign for immediate delivery via SendCampaignJob. Only draft
           or scheduled campaigns are sendable — any other status returns an error.

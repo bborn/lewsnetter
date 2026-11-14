@@ -8,6 +8,7 @@ module Mcp
 
         tool_name "campaigns_postmortem"
         read_only
+        requires_ability :read, ::Campaign
         description <<~DESC
           Returns per-recipient delivery stats for a sent campaign. Counters are
           aggregated from the campaign's Delivery rows — one row per (campaign,

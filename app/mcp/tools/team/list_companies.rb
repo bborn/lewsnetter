@@ -6,6 +6,7 @@ module Mcp
       class ListCompanies < Mcp::Tool::Base
         tool_name "team_list_companies"
         read_only
+        requires_ability :read, ::Team
         description "Lists companies on the calling team. Supports pagination and a query that matches name or external_id."
         arguments_schema(
           type: "object",

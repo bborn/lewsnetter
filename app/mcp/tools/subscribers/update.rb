@@ -7,6 +7,8 @@ module Mcp
         include Mcp::Tools::Serializers
 
         tool_name "subscribers_update"
+
+        requires_ability :update, ::Subscriber
         description "Partially updates a subscriber on the calling team. Only fields provided are changed."
         arguments_schema(
           type: "object",

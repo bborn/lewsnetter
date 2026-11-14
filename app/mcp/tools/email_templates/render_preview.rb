@@ -8,6 +8,7 @@ module Mcp
 
         tool_name "email_templates_render_preview"
         read_only
+        requires_ability :read, ::EmailTemplate
         description <<~DESC
           Renders an email template to HTML for preview. Optionally supply a subscriber_id
           to use that subscriber's attributes for variable substitution, or a sample_data

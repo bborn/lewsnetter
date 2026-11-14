@@ -7,6 +7,8 @@ module Mcp
         include Mcp::Tools::Serializers
 
         tool_name "segments_create"
+
+        requires_ability :create, ::Segment
         description "Creates a new segment on the calling team. The predicate is a SQL WHERE fragment applied to the subscribers table."
         arguments_schema(
           type: "object",

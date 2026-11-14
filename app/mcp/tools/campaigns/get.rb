@@ -8,6 +8,7 @@ module Mcp
 
         tool_name "campaigns_get"
         read_only
+        requires_ability :read, ::Campaign
         description "Fetches a single campaign by id. Raises RecordNotFound if the campaign does not belong to the calling team."
         arguments_schema(
           type: "object",

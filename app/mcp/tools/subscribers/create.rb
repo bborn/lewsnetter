@@ -7,6 +7,8 @@ module Mcp
         include Mcp::Tools::Serializers
 
         tool_name "subscribers_create"
+
+        requires_ability :create, ::Subscriber
         description "Creates a subscriber on the calling team, or updates the existing one if external_id matches."
         arguments_schema(
           type: "object",

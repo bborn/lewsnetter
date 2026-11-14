@@ -159,6 +159,7 @@ module Mcp
     def tool_error(error, tool_name:)
       text = case error
       when Mcp::Tool::ArgumentError then "Invalid arguments: #{error.message}"
+      when CanCan::AccessDenied then Mcp::Tool::Base::NOT_ALLOWED
       when ActiveRecord::RecordInvalid then error.message
       when ActiveRecord::RecordNotFound then "#{error.model || "Record"} not found"
       else

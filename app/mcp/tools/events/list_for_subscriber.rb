@@ -8,6 +8,7 @@ module Mcp
 
         tool_name "events_list_for_subscriber"
         read_only
+        requires_ability :read, ::Event
         description "Lists events for a subscriber, scoped to the calling team. Returns events ordered by occurred_at descending. Raises RecordNotFound if the subscriber does not belong to the team."
         arguments_schema(
           type: "object",

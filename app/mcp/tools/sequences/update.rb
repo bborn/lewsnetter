@@ -7,6 +7,7 @@ module Mcp
       # segments that gate it. Steps are not edited here.
       class Update < Mcp::Tool::Base
         tool_name "sequences_update"
+        requires_ability :manage, ::Team
         description "Updates a sequence on the calling team by id. All fields optional. " \
           "status: draft, active or paused (active only enrolls and sends while the team's " \
           "sequences_enabled flag is on, see sequences_set_enabled). exit_segment_id, " \

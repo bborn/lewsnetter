@@ -7,6 +7,8 @@ module Mcp
         include Mcp::Tools::Serializers
 
         tool_name "sender_addresses_verify"
+
+        requires_ability :verify_with_ses, ::SenderAddress
         description "Re-checks AWS SES verification status for a sender address. Optionally sends a verification email via SES first (send_verification_email: true). Raises RecordNotFound if the address does not belong to the calling team."
         arguments_schema(
           type: "object",

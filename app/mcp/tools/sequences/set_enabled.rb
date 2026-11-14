@@ -7,6 +7,7 @@ module Mcp
       # enrollment and sending without touching any sequence's own status.
       class SetEnabled < Mcp::Tool::Base
         tool_name "sequences_set_enabled"
+        requires_ability :manage, ::Team
         description "Turns the calling team's Sequences feature on or off (teams.sequences_enabled). " \
           "Off: nothing enrolls or sends, whatever each sequence's status. On: only sequences with " \
           "status active enroll and send; drafts and paused ones stay idle. Returns the flag and " \

@@ -7,6 +7,8 @@ module Mcp
         include Mcp::Tools::Serializers
 
         tool_name "subscribers_delete"
+
+        requires_ability :destroy, ::Subscriber
         description "Deletes a subscriber by id from the calling team. Raises RecordNotFound if the id does not belong to the team."
         arguments_schema(
           type: "object",

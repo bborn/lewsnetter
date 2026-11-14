@@ -11,6 +11,8 @@ module Mcp
     # `#call(arguments:, context:)`. The loader at boot enumerates
     # `Base.descendants` and registers each with the FastMcp server.
     class Base
+      NOT_ALLOWED = "Your role on this team doesn't allow this."
+
       class << self
         attr_reader :_tool_name, :_description, :_arguments_schema
 
@@ -40,6 +42,15 @@ module Mcp
           @_read_only == true
         end
 
+        # The CanCan ability a caller needs on the calling team, e.g.
+        # `requires_ability :destroy, Subscriber`. Checked by #invoke against
+        # the user's current roles (config/models/roles.yml); a tool that
+        # declares none is refused.
+        def requires_ability(action = nil, subject = nil)
+          return @_required_ability if action.nil?
+          @_required_ability = [action, subject]
+        end
+
         # Tracks every subclass so the loader doesn't have to walk the
         # filesystem twice.
         def descendants
@@ -59,11 +70,22 @@ module Mcp
       # Validates arguments, then dispatches to #call. The server invokes
       # this — never #call directly — so schema validation is centralized.
       def invoke(arguments:, context:)
+        authorize!(context)
         validate!(arguments)
         call(arguments: arguments, context: context)
       end
 
       private
+
+      # Roles change while sockets and tokens stay open, so build the Ability
+      # from a freshly loaded user rather than the one the context carries.
+      def authorize!(context)
+        action, model = self.class.requires_ability
+        raise CanCan::AccessDenied.new("#{self.class.tool_name} declares no ability") if action.nil?
+
+        subject = (model == ::Team) ? context.team : model.new(team_id: context.team.id)
+        Ability.new(User.find(context.user.id)).authorize!(action, subject)
+      end
 
       def validate!(arguments)
         schema = self.class.arguments_schema

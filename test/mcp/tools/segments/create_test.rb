@@ -34,8 +34,8 @@ module Mcp
         end
 
         test "segment is scoped to the calling team" do
-          other_team = create(:team)
-          other_ctx = Mcp::Tool::Context.new(user: create(:onboarded_user), team: other_team)
+          other_user = create(:onboarded_user)
+          other_ctx = Mcp::Tool::Context.new(user: other_user, team: other_user.current_team)
           Create.new.invoke(arguments: {"name" => "Other Team Segment"}, context: other_ctx)
           refute @team.segments.exists?(name: "Other Team Segment")
         end

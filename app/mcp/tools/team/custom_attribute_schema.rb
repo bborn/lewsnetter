@@ -6,6 +6,7 @@ module Mcp
       class CustomAttributeSchema < Mcp::Tool::Base
         tool_name "team_custom_attribute_schema"
         read_only
+        requires_ability :read, ::Team
         description "Returns the observed schema of custom_attributes across the team's subscribers. Useful for understanding what fields are available for segmentation and personalization."
         arguments_schema(
           type: "object",

@@ -10,6 +10,7 @@ class CampaignSequenceGuardTest < ActiveSupport::TestCase
     @step = create(:sequence_step, sequence: @sequence, delay_minutes: 30)
     @campaign = @step.campaign
     @user = create(:onboarded_user)
+    create(:membership, team: @team, user: @user, role_ids: [Role.admin.id])
     @ctx = Mcp::Tool::Context.new(user: @user, team: @team)
   end
 

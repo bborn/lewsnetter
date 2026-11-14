@@ -7,6 +7,8 @@ module Mcp
         include Mcp::Tools::Serializers
 
         tool_name "subscribers_bulk_upsert"
+
+        requires_ability :create, ::Subscriber
         description "Creates or updates multiple subscribers in a single call. Each record is processed independently — per-record errors are reported in the errors array without aborting the batch. The entire operation is wrapped in a transaction so a catastrophic failure rolls back cleanly."
         arguments_schema(
           type: "object",

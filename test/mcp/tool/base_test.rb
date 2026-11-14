@@ -7,6 +7,7 @@ module Mcp
     class BaseTest < ActiveSupport::TestCase
       class FakeTool < Base
         tool_name "fake.do_something"
+        requires_ability :read, ::Team
         description "Test tool"
         arguments_schema(
           type: "object",

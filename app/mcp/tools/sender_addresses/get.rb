@@ -8,6 +8,7 @@ module Mcp
 
         tool_name "sender_addresses_get"
         read_only
+        requires_ability :read, ::SenderAddress
         description "Fetches a single sender address by id. Raises RecordNotFound if it does not belong to the calling team."
         arguments_schema(
           type: "object",

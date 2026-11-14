@@ -8,6 +8,7 @@ module Mcp
 
         tool_name "segments_list"
         read_only
+        requires_ability :read, ::Segment
         description "Lists segments on the calling team. Supports limit and offset for pagination."
         arguments_schema(
           type: "object",

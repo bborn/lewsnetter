@@ -8,6 +8,7 @@ module Mcp
 
         tool_name "email_templates_list"
         read_only
+        requires_ability :read, ::EmailTemplate
         description "Lists email templates on the calling team. Supports limit and offset for pagination."
         arguments_schema(
           type: "object",

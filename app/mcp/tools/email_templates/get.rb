@@ -8,6 +8,7 @@ module Mcp
 
         tool_name "email_templates_get"
         read_only
+        requires_ability :read, ::EmailTemplate
         description "Returns a single email template by id. Raises RecordNotFound if the id does not belong to the calling team."
         arguments_schema(
           type: "object",

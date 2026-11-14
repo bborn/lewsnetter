@@ -7,6 +7,8 @@ module Mcp
         include Mcp::Tools::Serializers
 
         tool_name "campaigns_create"
+
+        requires_ability :create, ::Campaign
         description <<~DESC
           Creates a new campaign (status defaults to "draft"). Requires a subject.
           Provide body_markdown, body_mjml, or an email_template_id with body content —

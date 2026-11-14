@@ -7,6 +7,8 @@ module Mcp
         include Mcp::Tools::Serializers
 
         tool_name "segments_delete"
+
+        requires_ability :destroy, ::Segment
         description "Deletes a segment by id from the calling team. Returns an error if the segment has campaigns that reference it."
         arguments_schema(
           type: "object",

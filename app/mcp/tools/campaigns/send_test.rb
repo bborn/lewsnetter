@@ -7,6 +7,8 @@ module Mcp
         include Mcp::Tools::Serializers
 
         tool_name "campaigns_send_test"
+
+        requires_ability :test_send, ::Campaign
         description <<~DESC
           Sends a test copy of the campaign to a recipient email (defaults to the
           calling user's email). Mirrors the test_send controller action: uses the same

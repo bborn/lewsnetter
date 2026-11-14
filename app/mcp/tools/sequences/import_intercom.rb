@@ -13,6 +13,7 @@ module Mcp
       # already exists is skipped.
       class ImportIntercom < Mcp::Tool::Base
         tool_name "sequences_import_intercom"
+        requires_ability :manage, ::Team
         description "Ports one Intercom Series export into a DRAFT sequence on the calling team, " \
           "following a port spec. Dry run by default: reports the sequence name, step count, " \
           "segments and warnings without writing; pass dry_run: false to create. Never activates, " \

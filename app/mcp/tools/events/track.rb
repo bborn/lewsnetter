@@ -7,6 +7,8 @@ module Mcp
         include Mcp::Tools::Serializers
 
         tool_name "events_track"
+
+        requires_ability :create, ::Event
         description "Tracks a single event for a subscriber, resolved by external_id. Raises RecordNotFound if the subscriber does not exist on the calling team."
         arguments_schema(
           type: "object",

@@ -8,6 +8,7 @@ module Mcp
 
         tool_name "subscribers_find_by_external_id"
         read_only
+        requires_ability :read, ::Subscriber
         description "Looks up a subscriber by external_id within the calling team. Returns null (not an error) when no match is found."
         arguments_schema(
           type: "object",

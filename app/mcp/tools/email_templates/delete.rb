@@ -7,6 +7,8 @@ module Mcp
         include Mcp::Tools::Serializers
 
         tool_name "email_templates_delete"
+
+        requires_ability :destroy, ::EmailTemplate
         description "Deletes an email template by id from the calling team. Campaigns that reference this template will have their email_template_id set to null (dependent: :nullify)."
         arguments_schema(
           type: "object",

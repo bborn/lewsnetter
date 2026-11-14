@@ -113,6 +113,23 @@ module Mcp
       assert_match(/\AInvalid arguments: /, tool_error_text("subscribers_get", {id: "nope"}))
     end
 
+    test "tools/call refuses a write tool to a read-only member and allows an admin" do
+      member = create(:onboarded_user)
+      create(:membership, team: @team, user: member)
+      sub = @team.subscribers.create!(email: "keep@example.com", subscribed: true)
+      admin_token = @token
+      @token = Doorkeeper::AccessToken.create!(resource_owner_id: member.id, application: @platform_application,
+        scopes: "read write delete", token: SecureRandom.hex)
+
+      assert_equal Mcp::Tool::Base::NOT_ALLOWED, tool_error_text("subscribers_delete", {id: sub.id})
+      assert Subscriber.exists?(sub.id)
+
+      @token = admin_token
+      post_mcp(jsonrpc: "2.0", id: 6, method: "tools/call", params: {name: "subscribers_delete", arguments: {id: sub.id}})
+      assert_equal false, JSON.parse(response.body).dig("result", "isError")
+      assert_not Subscriber.exists?(sub.id)
+    end
+
     test "tools/call hides the message of an unexpected error" do
       tool = Mcp::Tools::Team::GetCurrent
       original = tool.instance_method(:call)

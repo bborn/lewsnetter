@@ -8,6 +8,7 @@ module Mcp
 
         tool_name "subscribers_count"
         read_only
+        requires_ability :read, ::Subscriber
         description "Returns the count of subscribers on the calling team, optionally filtered by subscribed status."
         arguments_schema(
           type: "object",

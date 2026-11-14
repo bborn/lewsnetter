@@ -7,6 +7,8 @@ module Mcp
         include Mcp::Tools::Serializers
 
         tool_name "email_templates_update"
+
+        requires_ability :update, ::EmailTemplate
         description "Updates an existing email template by id. Only provided fields are updated."
         arguments_schema(
           type: "object",

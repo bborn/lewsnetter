@@ -38,6 +38,8 @@ module Chats
           {error: "Not found: #{e.message}"}
         rescue Mcp::Tool::ArgumentError => e
           {error: "Invalid arguments: #{e.message}"}
+        rescue CanCan::AccessDenied
+          {error: Mcp::Tool::Base::NOT_ALLOWED}
         rescue => e
           {error: "#{e.class}: #{e.message}"}
         end

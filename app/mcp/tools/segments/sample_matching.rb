@@ -8,6 +8,7 @@ module Mcp
 
         tool_name "segments_sample_matching"
         read_only
+        requires_ability :read, ::Segment
         description "Returns a sample of subscribers matching the segment's predicate. Returns predicate_error if the predicate is invalid."
         arguments_schema(
           type: "object",
