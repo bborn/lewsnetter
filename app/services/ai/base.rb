@@ -38,9 +38,6 @@ module AI
       @chat ||= RubyLLM.chat(model: model_id)
     end
 
-    # LLM_DEFAULT_MODEL, then credentials.llm.default_model, then
-    # Llm::Configuration::DEFAULT_MODEL: the same model the in-app agent and
-    # RubyLLM.config.default_model use.
     def model_id
       Llm::Configuration.current.default_model
     end
