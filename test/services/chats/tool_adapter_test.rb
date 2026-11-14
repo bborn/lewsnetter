@@ -23,6 +23,18 @@ module Chats
       end
     end
 
+    # The agent sends every tool on every request, and Anthropic answers a
+    # single invalid schema with a 400, so one typo would break every chat.
+    test "every tool's schema is valid JSON Schema" do
+      metaschema = JSON::Validator.validator_for_name("draft4").metaschema
+
+      Mcp::Tool::Loader.load_all.each do |tool_class|
+        errors = JSON::Validator.fully_validate(metaschema, adapted_schema(tool_class))
+
+        assert_empty errors, "#{tool_class.tool_name}: #{errors.first}"
+      end
+    end
+
     test "subscribers_bulk_upsert declares records as objects that need an email" do
       records = adapted_schema(Mcp::Tools::Subscribers::BulkUpsert).dig("properties", "records")
 
