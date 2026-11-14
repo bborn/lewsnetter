@@ -107,7 +107,9 @@ module AI
     test "the LLM path falls back to the stub summary when a section is missing" do
       analyst, _calls = analyst_answering("what_worked" => "Fine.", "what_didnt" => "", "what_to_try_next" => "More.")
 
-      assert_match(/couldn't be generated/, analyst.call)
+      md = analyst.call
+      assert_match(/50\.0%/, md)
+      refute_match(/Fine\./, md)
     end
 
     test "the LLM path falls back to the stub summary when the call fails" do
