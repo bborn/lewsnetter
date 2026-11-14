@@ -93,11 +93,8 @@ jobs:
         # though the schema dumper considers the DB up-to-date.
         run: bundle exec rails db:migrate RAILS_ENV=test
 
-      # Scope the smoke suite to the directories we own. The wider Bullet Train
-      # scaffolded suite has pre-existing failures unrelated to Lewsnetter v2
-      # work — widen this back to `bin/rails test` once those are cleaned up.
-      - name: Run scoped tests
-        run: bundle exec rails test test/services test/jobs test/controllers/account
+      - name: Run tests
+        run: bundle exec rails test
 
   deploy:
     name: Build + deploy
