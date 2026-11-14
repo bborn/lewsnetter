@@ -421,7 +421,7 @@ GEM
     globalid (1.4.0)
       activesupport (>= 6.1)
     hashids (1.0.6)
-    hashie (5.1.0)
+    hashie (5.2.0)
       logger
     heapy (0.2.0)
       thor
@@ -571,11 +571,11 @@ GEM
       snaky_hash (~> 2.0, >= 2.0.3)
       version_gem (~> 1.1, >= 1.1.9)
     observer (0.1.2)
-    omniauth (2.1.4)
-      hashie (>= 3.4.6)
+    omniauth (2.2.0)
+      hashie (>= 3.5.2)
       logger
-      rack (>= 2.2.3)
-      rack-protection
+      rack (>= 2.2.8)
+      rack-protection (>= 2.2.0)
     omniauth-oauth2 (1.9.0)
       oauth2 (>= 2.0.2, < 3)
       omniauth (~> 2.0)
