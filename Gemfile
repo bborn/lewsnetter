@@ -334,7 +334,7 @@ gem "commonmarker"
 # no need to duplicate here.
 
 # LLM agent framework (already proven in IK Kit refactor).
-gem "ruby_llm"
+gem "ruby_llm", "~> 1.16.0"
 
 # Liquid templating for campaign body/subject/preheader variable substitution.
 # Standard email-marketing syntax (Shopify, Mailchimp, Customer.io use it),

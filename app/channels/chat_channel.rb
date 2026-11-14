@@ -74,44 +74,71 @@ class ChatChannel < ApplicationCable::Channel
     ctx = Mcp::Tool::Context.new(user: @chat.user, team: @chat.team)
     tools = Chats::ToolAdapter.adapt_all(context: ctx)
 
-    @chat.with_instructions(system_prompt(ctx), append: false)
+    @chat.with_instructions(system_prompt(ctx))
     @chat.with_tools(*tools) if tools.any?
 
-    # Wire ruby_llm callbacks → ActionCable broadcasts.
-    # on_new_message fires when a fresh assistant turn starts (after the user
-    # message persists). on_end_message fires when the LLM finishes a turn
-    # (final assistant or tool message saved). on_tool_call/on_tool_result
-    # bracket each tool invocation.
-    last_streamed_message_id = nil
-    user_msg_persisted = false
+    @streamed_message_id = nil
+    @user_message_broadcast = false
+    register_broadcast_callbacks
 
-    @chat.on_new_message do
-      # Persist + broadcast the user message before the assistant placeholder.
-      unless user_msg_persisted
+    # Block form: chunk-by-chunk streaming. Each chunk has .content (text
+    # delta). The first chunk starts a streaming bubble; subsequent chunks
+    # append. after_message replaces it with the final rendered HTML.
+    @chat.ask(content) do |chunk|
+      next unless chunk&.content&.present?
+      if @streamed_message_id.nil?
+        # The placeholder assistant message ruby_llm created for this reply.
+        @streamed_message_id = @chat.messages.order(:id).last&.id
+        broadcast(type: "message_start", message_id: @streamed_message_id, role: "assistant")
+      end
+      broadcast(
+        type: "chunk",
+        message_id: @streamed_message_id,
+        content_delta: chunk.content.to_s
+      )
+    end
+  end
+
+  # Wire ruby_llm callbacks to ActionCable broadcasts. The before_/after_
+  # callbacks add to the list instead of replacing, and the chat record
+  # keeps its RubyLLM::Chat for the life of this subscription, so register
+  # them once; per-turn state lives in instance variables reset each turn.
+  #
+  # before_message fires when an assistant reply starts (the user message is
+  # already saved). after_message fires once ruby_llm has saved a finished
+  # assistant or tool message. before_tool_call/after_tool_result bracket
+  # each tool invocation.
+  def register_broadcast_callbacks
+    return if @broadcast_callbacks_registered
+    @broadcast_callbacks_registered = true
+
+    @chat.before_message do
+      # Broadcast the user message before the assistant placeholder.
+      unless @user_message_broadcast
         user_msg = @chat.messages.where(role: "user").order(:id).last
         broadcast_full_message(user_msg) if user_msg
-        user_msg_persisted = true
+        @user_message_broadcast = true
       end
     end
 
-    @chat.on_end_message do |_msg|
+    @chat.after_message do |_msg|
       record = @chat.messages.order(:id).last
       next if record.nil?
 
       # Skip messages already represented by live events to avoid duplicate
       # renders in the chat panel:
-      # - assistant placeholders (empty content, only tool_calls) → the live
+      # - assistant placeholders (empty content, only tool_calls): the live
       #   tool_call event already drew the "→ name(args)" line
-      # - tool result messages → live tool_result event drew the "← result"
+      # - tool result messages: the live tool_result event drew "← result"
       role = record.role.to_s
       next if role == "tool"
       next if role == "assistant" && record.content.to_s.strip.empty?
 
       broadcast(type: "message_end", message_id: record.id, html: render_message_html(record))
-      last_streamed_message_id = nil
+      @streamed_message_id = nil
     end
 
-    @chat.on_tool_call do |tool_call|
+    @chat.before_tool_call do |tool_call|
       broadcast(
         type: "tool_call",
         tool_call_id: tool_call.id,
@@ -120,31 +147,14 @@ class ChatChannel < ApplicationCable::Channel
       )
     end
 
-    @chat.on_tool_result do |result|
+    @chat.after_tool_result do |result|
       # ruby_llm yields the raw tool return value (string/hash). Format
-      # compactly for the UI; full result is in the persisted Message
-      # (role: "tool") that on_end_message also broadcasts.
+      # compactly for the UI; the full result is in the saved Message
+      # (role: "tool").
       excerpt = result.is_a?(String) ? result : result.to_json
       broadcast(
         type: "tool_result",
         result_excerpt: excerpt.to_s.truncate(200)
-      )
-    end
-
-    # Block form: chunk-by-chunk streaming. Each chunk has .content (text
-    # delta). The first chunk starts a streaming bubble; subsequent chunks
-    # append. on_end_message replaces it with the final rendered HTML.
-    @chat.ask(content) do |chunk|
-      next unless chunk&.content&.present?
-      if last_streamed_message_id.nil?
-        # Find or create the placeholder assistant message id ruby_llm created.
-        last_streamed_message_id = @chat.messages.order(:id).last&.id
-        broadcast(type: "message_start", message_id: last_streamed_message_id, role: "assistant")
-      end
-      broadcast(
-        type: "chunk",
-        message_id: last_streamed_message_id,
-        content_delta: chunk.content.to_s
       )
     end
   end

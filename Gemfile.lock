@@ -378,7 +378,7 @@ GEM
     erubis (2.7.0)
     et-orbi (1.4.0)
       tzinfo
-    event_stream_parser (1.0.0)
+    event_stream_parser (1.0.1)
     factory_bot (6.6.0)
       activesupport (>= 6.1.0)
     factory_bot_rails (6.5.1)
@@ -747,7 +747,7 @@ GEM
       ffi (~> 1.12)
       logger
     ruby2_keywords (0.0.5)
-    ruby_llm (1.15.0)
+    ruby_llm (1.16.0)
       base64
       event_stream_parser (~> 1)
       faraday (>= 1.10.0)
@@ -757,7 +757,7 @@ GEM
       marcel (~> 1)
       ruby_llm-schema (~> 0)
       zeitwerk (~> 2)
-    ruby_llm-schema (0.3.0)
+    ruby_llm-schema (0.4.0)
     rubyzip (3.7.0)
     securerandom (0.4.1)
     selenium-webdriver (4.43.0)
@@ -955,7 +955,7 @@ DEPENDENCIES
   redis (~> 5.4.0)
   rqrcode
   ruby-vips
-  ruby_llm
+  ruby_llm (~> 1.16.0)
   selenium-webdriver
   sentry-rails
   sentry-ruby
