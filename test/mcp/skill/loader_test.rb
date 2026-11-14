@@ -23,6 +23,33 @@ module Mcp
           refute s.when_to_use.strip.empty?, "#{s.name} missing when_to_use"
         end
       end
+
+      # An agent follows a skill literally, so a renamed tool, argument or
+      # skill turns into a failed call. A backticked name that starts with
+      # a tool group (`campaigns_list`, `llm_analyze_send(campaign_id: ...)`)
+      # must be a registered tool, the `key:` arguments of a call must be in
+      # its schema, and a backticked kebab-case name must be a skill.
+      test "skills only name tools, arguments and skills that exist" do
+        tools = Mcp::Tool::Loader.load_all.index_by(&:tool_name)
+        groups = Dir.children(Rails.root.join("app/mcp/tools")).join("|")
+        skill_names = Loader.load_all.map(&:name)
+
+        Loader.load_all.each do |skill|
+          skill.raw_body.scan(/`((?:#{groups})_[a-z_]+)(?:\(([^)`]*)\))?`/).each do |name, args|
+            assert tools.key?(name), "#{skill.name} names `#{name}`, which is not a tool"
+            next if args.nil?
+
+            known = (tools[name].arguments_schema || {}).fetch(:properties, {}).keys.map(&:to_s)
+            args.scan(/(\w+):/).flatten.each do |arg|
+              assert_includes known, arg, "#{skill.name} calls #{name} with `#{arg}:`"
+            end
+          end
+
+          skill.raw_body.scan(/`([a-z]+(?:-[a-z]+)+)`/).flatten.each do |name|
+            assert_includes skill_names, name, "#{skill.name} points to a `#{name}` skill"
+          end
+        end
+      end
     end
   end
 end

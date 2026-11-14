@@ -2,7 +2,7 @@
 
 # Samples a team's subscribers' custom_attributes JSON and returns a
 # `{key => "type1|type2"}` hash describing the observed schema. Used by
-# the AI services (drafter, segment translator, post-send analyst) to
+# the AI services (drafter, post-send analyst) to
 # ground prompts in the team's actual data shape, and by the MCP
 # `team_custom_attribute_schema` tool so external agents can do the same.
 class Team
