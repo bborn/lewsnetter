@@ -16,6 +16,10 @@ Rails.application.config.after_initialize do
     c.anthropic_api_key = config.api_key if config.api_key.present?
     c.default_model = config.default_model
     c.request_timeout = 60
+    # Keeps one oversized tool result (say, a long subscribers_list) from
+    # filling the context window and failing every later reply in the chat.
+    # The values ruby_llm's install generator writes.
+    c.context_budget = {per_result: 0.25, per_request: 0.7}
 
     if config.base_url.present?
       case config.provider
