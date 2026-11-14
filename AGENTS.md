@@ -12,10 +12,10 @@ The fastest way to grok the architecture: read the design spec at [`docs/superpo
 
 | Path | What's there |
 |---|---|
-| `app/mcp/` | MCP server: `Mcp::Server`, `Mcp::Tool::Base`, `Mcp::DoorkeeperAuth`, all 45 tools under `tools/<group>/<verb>.rb`, 6 markdown skills under `skills/` |
+| `app/mcp/` | MCP server: `Mcp::Server`, `Mcp::Tool::Base`, `Mcp::DoorkeeperAuth`, every tool under `tools/<group>/<verb>.rb`, markdown skills under `skills/` |
 | `app/services/llm/configuration.rb` | Single source of truth for LLM keys/base URL/provider. All AI code reads this. |
 | `app/services/chats/tool_adapter.rb` | Bridges `Mcp::Tool::Base` → `RubyLLM::Tool` for the in-app agent (so external MCP and in-app agent share one tool surface). |
-| `app/services/ai/` | Three task-specific AI services (campaign drafter, segment translator, post-send analyst). The `llm_*` MCP tools wrap these. |
+| `app/services/ai/` | Two task-specific AI services (campaign drafter, post-send analyst). The `llm_*` MCP tools wrap these. |
 | `app/services/campaign_renderer.rb` | Renders a campaign body for one subscriber: Liquid substitution → markdown → MJML → HTML → premailer-inlined. |
 | `app/channels/chat_channel.rb` | ActionCable channel for the in-app agent. Streaming + tool indicators. |
 | `app/models/{chat,message,tool_call,model}.rb` | `acts_as_chat` from `ruby_llm`. Don't add custom logic here unless necessary. |
@@ -47,9 +47,7 @@ bin/rails test test/services/           # service objects (incl. CampaignRendere
 bin/rails test test/system/             # Capybara/Chrome system tests
 ```
 
-Pre-existing failures (don't introduce more, don't fix as part of unrelated work):
-- `test/controllers/api/v1/subscribers_controller_test.rb` — missing `:subscriber` factory
-- A handful of BulletTrain scaffolded `tangible_things` controller tests
+The full suite passes on `master`, so treat any failure as new.
 
 ## Conventions
 
