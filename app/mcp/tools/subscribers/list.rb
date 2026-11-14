@@ -7,6 +7,7 @@ module Mcp
         include Mcp::Tools::Serializers
 
         tool_name "subscribers_list"
+        read_only
         description "Lists subscribers on the calling team. Supports limit, offset, subscribed filter, and a query that matches email (exact), name (substring), or external_id (substring)."
         arguments_schema(
           type: "object",

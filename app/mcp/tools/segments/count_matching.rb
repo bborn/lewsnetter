@@ -7,6 +7,7 @@ module Mcp
         include Mcp::Tools::Serializers
 
         tool_name "segments_count_matching"
+        read_only
         description "Returns the number of subscribers matching the segment's predicate, plus the total team subscriber count. Returns predicate_error if the predicate is invalid."
         arguments_schema(
           type: "object",

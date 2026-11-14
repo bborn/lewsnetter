@@ -65,9 +65,10 @@ Pre-existing failures (don't introduce more, don't fix as part of unrelated work
 Adding a new tool? Convention:
 1. Create `app/mcp/tools/<group>/<verb>.rb` subclassing `Mcp::Tool::Base`.
 2. Declare `tool_name` (snake_case, `<group>_<verb>` — fast-mcp strips dots), `description`, `arguments_schema` (JSON Schema).
-3. Implement `call(arguments:, context:)`. **Always scope to `context.team`** — never bare `Model.find(id)`. Use `find_by!(id: ...)` (BulletTrain's `ObfuscatesId` overrides `.find` with URL-style obfuscation; MCP clients send raw integers).
-4. Return a JSON-serializable hash (symbol keys OK; the wrapper JSON-encodes).
-5. Add a test at `test/mcp/tools/<group>/<verb>_test.rb` covering happy path, team-scoping, and one error case.
+3. Add `read_only` if the tool never changes data or sends anything. Tools without it need a token that may write: one granted only `mcp:read` gets `Unauthorized`.
+4. Implement `call(arguments:, context:)`. **Always scope to `context.team`** — never bare `Model.find(id)`. Use `find_by!(id: ...)` (BulletTrain's `ObfuscatesId` overrides `.find` with URL-style obfuscation; MCP clients send raw integers).
+5. Return a JSON-serializable hash (symbol keys OK; the wrapper JSON-encodes).
+6. Add a test at `test/mcp/tools/<group>/<verb>_test.rb` covering happy path, team-scoping, and one error case.
 
 The tool is auto-loaded by `Mcp::Tool::Loader` at boot; no manifest to update.
 

@@ -80,7 +80,8 @@ module Mcp
         lambda do |env|
           Thread.current[:mcp_context] = Mcp::Tool::Context.new(
             user: env.fetch("mcp.user"),
-            team: env.fetch("mcp.team")
+            team: env.fetch("mcp.team"),
+            scopes: env.fetch("mcp.scopes")
           )
           transport.call(env)
         ensure
@@ -119,6 +120,10 @@ module Mcp
         # in the server serialises correctly. We bypass the Dry::Schema
         # machinery and return the raw hash our DSL carries.
         define_singleton_method(:input_schema_to_json) { schema }
+
+        # FastMcp checks this before #call and answers a refusal with a
+        # JSON-RPC "Unauthorized" error, so the tool never runs.
+        authorize { Thread.current[:mcp_context]&.may_call?(our_tool) || false }
 
         # Override input_schema with a no-op Dry schema that always passes,
         # because our Mcp::Tool::Base#invoke does its own JSON-Schema validation.

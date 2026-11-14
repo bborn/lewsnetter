@@ -5,6 +5,7 @@ module Mcp
     module Llm
       class AnalyzeSend < Mcp::Tool::Base
         tool_name "llm_analyze_send"
+        read_only
         description "Generates a post-send analysis of a campaign in markdown: what worked, what didn't, and 3 specific actions. Wraps AI::PostSendAnalyst."
         arguments_schema(
           type: "object",

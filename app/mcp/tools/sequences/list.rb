@@ -5,6 +5,7 @@ module Mcp
     module Sequences
       class List < Mcp::Tool::Base
         tool_name "sequences_list"
+        read_only
         description "Lists automated email sequences on the calling team with their trigger, " \
           "status, step count and enrollment counts by state. `sequences_enabled` says whether " \
           "the team's Sequences feature flag is on (when off, nothing enrolls or sends)."

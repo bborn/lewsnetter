@@ -27,6 +27,18 @@ module Mcp
       assert_equal @team.id, payload["team_id"]
     end
 
+    test "passes the token's scopes on to the MCP server" do
+      seen = nil
+      middleware = DoorkeeperAuth.new(->(env) {
+        seen = env["mcp.scopes"]
+        [200, {}, ["{}"]]
+      })
+      env = Rack::MockRequest.env_for("/mcp", "HTTP_AUTHORIZATION" => "Bearer #{@token.token}", :method => "POST")
+      middleware.call(env)
+
+      assert_equal %w[read write delete], seen
+    end
+
     test "returns 401 JSON-RPC error when no Authorization header" do
       env = Rack::MockRequest.env_for("/mcp", method: "POST")
       status, headers, body = @middleware.call(env)

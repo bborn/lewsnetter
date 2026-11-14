@@ -7,6 +7,7 @@ module Mcp
         include Mcp::Tools::Serializers
 
         tool_name "email_templates_render_preview"
+        read_only
         description <<~DESC
           Renders an email template to HTML for preview. Optionally supply a subscriber_id
           to use that subscriber's attributes for variable substitution, or a sample_data
