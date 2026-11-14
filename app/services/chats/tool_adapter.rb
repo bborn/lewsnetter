@@ -7,6 +7,9 @@ module Chats
   # closes over a specific Mcp::Tool::Context so the running chat's user +
   # team scope every tool call.
   module ToolAdapter
+    # What Mcp::Server publishes for a tool that declares no arguments.
+    EMPTY_ARGUMENTS_SCHEMA = {type: "object", properties: {}}.freeze
+
     module_function
 
     def adapt_all(context:)
@@ -20,15 +23,11 @@ module Chats
       Class.new(RubyLLM::Tool) do
         description our_tool.description.to_s
 
-        schema = our_tool.arguments_schema || {}
-        required = Array(schema[:required] || schema["required"]).map(&:to_s)
-        properties = schema[:properties] || schema["properties"] || {}
-        properties.each do |key, prop|
-          key_s = key.to_s
-          ruby_type = ToolAdapter.json_schema_to_ruby_llm_type(prop[:type] || prop["type"])
-          desc = prop[:description] || prop["description"] || ""
-          param key_s.to_sym, type: ruby_type, desc: desc, required: required.include?(key_s)
-        end
+        # Hand ruby_llm the tool's JSON Schema as is, so the agent sees what
+        # an MCP client gets from tools/list. Rebuilding it with `param` kept
+        # only each property's top-level type: arrays of objects became
+        # arrays of strings, and unions, enums, and bounds were dropped.
+        params(our_tool.arguments_schema || EMPTY_ARGUMENTS_SCHEMA)
 
         # ruby_llm calls tool_instance.name to get the wire name. Override
         # the instance method so external clients see our snake_case names.
@@ -44,18 +43,6 @@ module Chats
         rescue => e
           {error: "#{e.class}: #{e.message}"}
         end
-      end
-    end
-
-    def json_schema_to_ruby_llm_type(json_type)
-      case json_type.to_s
-      when "string" then :string
-      when "integer" then :integer
-      when "number" then :number
-      when "boolean" then :boolean
-      when "array" then :array
-      when "object" then :object
-      else :string
       end
     end
   end
