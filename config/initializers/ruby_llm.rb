@@ -3,9 +3,6 @@
 # API-key-and-gateway config. Deferred to after_initialize so that Zeitwerk
 # has finished loading app/services/llm/configuration.rb before we call it.
 #
-# `use_new_acts_as = true` is set in config/application.rb (must run BEFORE
-# the ruby_llm Railtie's on_load(:active_record) callback fires).
-#
 # When the config is unusable (no API key, e.g. local dev without secrets),
 # the block is a no-op and AI::* services run in stub mode.
 #

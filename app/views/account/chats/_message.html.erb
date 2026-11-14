@@ -30,8 +30,9 @@
   </div>
 <% end %>
 
+<%# tool_calls is a Hash of provider tool-call id => RubyLLM::ToolCall. %>
 <% if message.respond_to?(:tool_calls) && message.tool_calls.any? %>
-  <% message.tool_calls.each do |tc| %>
+  <% message.tool_calls.each_value do |tc| %>
     <div class="flex items-center gap-2 text-xs text-zinc-500 font-mono px-2 py-1">
       <span class="text-orange-500">→</span>
       <span class="text-zinc-700"><%= tc.name %></span><span>(<%= tc.arguments&.to_json %>)</span>

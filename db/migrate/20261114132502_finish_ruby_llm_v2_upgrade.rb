@@ -1,0 +1,185 @@
+# frozen_string_literal: true
+
+class FinishRubyLlmV2Upgrade < ActiveRecord::Migration[8.1]
+  disable_ddl_transaction!
+
+  PROGRESS_TABLE = :ruby_llm_v2_backfills
+  BACKFILL_TASKS = %w[message_content tool_results usages].freeze
+
+  def up
+    raise "Generate this migration with --mode copy" if table_exists?(:ruby_llm_v2_upgrades)
+    verify_completed_backfills
+    verify_message_content
+    verify_tool_results
+    verify_usages
+    enforce_required_defaults
+    relax_legacy_message_constraints
+    mark_finished
+  end
+
+  def down
+    raise ActiveRecord::IrreversibleMigration, "RubyLLM 2.0 changes persisted record ownership"
+  end
+
+  private
+
+  def relax_legacy_message_constraints
+    %i[model_id tool_call_id].each do |column|
+      next unless column_definition(:messages, column)&.null == false
+
+      with_upgrade_safety { change_column_null :messages, column, true }
+    end
+  end
+
+  def mark_finished
+    progress = migration_record(PROGRESS_TABLE)
+    return if progress.where(task: "finished", completed: true).exists?
+
+    progress.insert_all!([{task: "finished", completed: true}], returning: false)
+  end
+
+  def enforce_required_defaults
+    {
+      chats: {cancelled: false},
+      messages: {cache_until_here: false},
+      ruby_llm_tool_calls: {message_type: "Message"}
+    }.each do |table, attributes|
+      migration_record(table).where(attributes.transform_values { nil }).in_batches(of: 10_000) do |batch|
+        batch.update_all(attributes)
+      end
+    end
+    enforce_not_null(:chats, :cancelled)
+    enforce_not_null(:messages, :cache_until_here)
+    enforce_not_null(:ruby_llm_tool_calls, :message_type)
+  end
+
+  def enforce_not_null(table, column)
+    missing = migration_record(table).where(column => nil).limit(1).pick(connection.primary_key(table))
+    raise "#{table} id #{missing} has a NULL #{column}" if missing
+    return unless column_definition(table, column)&.null
+
+    with_upgrade_safety { change_column_null table, column, false }
+  end
+
+  def verify_completed_backfills
+    raise "Run BackfillRubyLlmV2Data before this migration" unless table_exists?(PROGRESS_TABLE)
+
+    completed = migration_record(PROGRESS_TABLE).where(completed: true).pluck(:task)
+    missing = BACKFILL_TASKS - completed
+    return if missing.empty?
+
+    raise "RubyLLM 2.0 backfills are incomplete: #{missing.join(", ")}"
+  end
+
+  def verify_message_content
+    return unless column_exists?(:messages, :content_raw)
+
+    missing = migration_record(:messages)
+      .where.not(content_raw: nil)
+      .where("raw_content IS NULL OR content IS NULL")
+      .limit(1)
+      .pick(connection.primary_key(:messages))
+    raise "Message #{missing} did not preserve content_raw" if missing
+  end
+
+  def verify_tool_results
+    result_reference = :tool_call_id
+    return unless column_exists?(:messages, result_reference)
+
+    missing = select_value(<<~SQL)
+      SELECT legacy_messages.#{quoted_primary_key(:messages)}
+        FROM #{quote_table(:messages)} legacy_messages
+        LEFT JOIN #{quote_table(:ruby_llm_tool_calls)} migrated_tool_calls
+          ON #{message_value(result_reference)} = migrated_tool_calls.#{quoted_primary_key(:ruby_llm_tool_calls)}
+         AND migrated_tool_calls.result_type = #{connection.quote("Message")}
+         AND migrated_tool_calls.result_id = legacy_messages.#{quoted_primary_key(:messages)}
+       WHERE #{message_value(result_reference)} IS NOT NULL
+         AND migrated_tool_calls.#{quoted_primary_key(:ruby_llm_tool_calls)} IS NULL
+       LIMIT 1
+    SQL
+    raise "Message #{missing} did not preserve its tool result association" if missing
+  end
+
+  def verify_usages
+    joins = usage_identity_joins
+    conditions = legacy_usage_conditions
+    return if conditions.empty?
+
+    missing = select_value(<<~SQL)
+      SELECT #{message_value(connection.primary_key(:messages))}
+        FROM #{quote_table(:messages)} legacy_messages
+        #{joins}
+       WHERE (#{conditions.join(" OR ")})
+         AND NOT EXISTS (
+           SELECT 1
+             FROM #{quote_table(:ruby_llm_usages)} migrated_usages
+            WHERE migrated_usages.message_type = #{connection.quote("Message")}
+              AND migrated_usages.message_id = #{message_value(connection.primary_key(:messages))}
+              AND migrated_usages.operation = 'chat'
+              AND migrated_usages.status = 'succeeded'
+         )
+       LIMIT 1
+    SQL
+    raise "Message #{missing} did not receive its RubyLLM usage entry" if missing
+  end
+
+  def usage_identity_joins
+    joins = []
+    registry = quote_table(:ruby_llm_models)
+    registry_key = quoted_primary_key(:ruby_llm_models)
+    if column_exists?(:messages, :model_id) &&
+        column_definition(:messages, :model_id).type != :string
+      joins << "LEFT JOIN #{registry} legacy_message_models " \
+               "ON #{message_value(:model_id)} = legacy_message_models.#{registry_key}"
+    end
+    if column_exists?(:chats, :ruby_llm_model_id)
+      joins << "LEFT JOIN #{quote_table(:chats)} legacy_chats " \
+               "ON #{message_value(:chat_id)} = legacy_chats.#{quoted_primary_key(:chats)}"
+      joins << "LEFT JOIN #{registry} legacy_chat_models " \
+               "ON legacy_chats.#{quote_column(:ruby_llm_model_id)} = legacy_chat_models.#{registry_key}"
+    end
+    joins.join("\n")
+  end
+
+  def legacy_usage_conditions
+    columns = %i[
+      input_tokens output_tokens cached_tokens cache_creation_tokens cache_read_tokens cache_write_tokens
+      thinking_tokens total_cost
+    ]
+    conditions = columns.filter_map do |column|
+      "#{message_value(column)} IS NOT NULL" if column_exists?(:messages, column)
+    end
+    if column_exists?(:messages, :cost_details)
+      costs = %w[input output cache_read cache_write thinking total].map do |key|
+        "#{legacy_cost_detail(key)} IS NOT NULL"
+      end
+      conditions << "(#{costs.join(" OR ")})"
+    end
+    conditions << "#{message_value(:role)} = 'assistant'" if column_exists?(:messages, :role)
+    conditions
+  end
+
+  def legacy_cost_detail(key)
+    details = message_value(:cost_details)
+    "json_extract(#{details}, '$.#{key}')"
+  end
+
+  def with_upgrade_safety(&)
+    return safety_assured(&) if respond_to?(:safety_assured, true)
+
+    yield
+  end
+
+  def column_definition(table, column) = connection.columns(table).find { |candidate| candidate.name == column.to_s }
+  def message_value(column) = "legacy_messages.#{quote_column(column)}"
+  def quoted_primary_key(table) = quote_column(connection.primary_key(table))
+  def quote_table(table) = connection.quote_table_name(table)
+  def quote_column(column) = connection.quote_column_name(column)
+
+  def migration_record(table)
+    Class.new(ActiveRecord::Base) do
+      self.table_name = table.to_s
+      self.inheritance_column = :_type_disabled
+    end
+  end
+end

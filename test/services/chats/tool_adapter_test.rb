@@ -85,7 +85,7 @@ module Chats
     test "execution still validates against the schema server-side" do
       adapted = ToolAdapter.adapt(Mcp::Tools::Subscribers::BulkUpsert, context: @ctx).new
 
-      result = adapted.call({"records" => [{"name" => "No email"}]})
+      result = adapted.call("records" => [{"name" => "No email"}])
 
       assert_match(/\AInvalid arguments: .*email/, result[:error])
       assert_equal 0, @team.subscribers.count
@@ -95,7 +95,7 @@ module Chats
       other_team = create(:onboarded_user).current_team
       adapted = ToolAdapter.adapt(Mcp::Tools::Subscribers::BulkUpsert, context: @ctx).new
 
-      result = adapted.call({"records" => [{"email" => "ada@example.com", "custom_attributes" => {"plan" => "pro"}}]})
+      result = adapted.call("records" => [{"email" => "ada@example.com", "custom_attributes" => {"plan" => "pro"}}])
 
       assert_equal 1, result[:created]
       assert_equal "pro", @team.subscribers.find_by!(email: "ada@example.com").custom_attributes["plan"]
@@ -105,7 +105,7 @@ module Chats
     private
 
     def adapted_schema(tool_class)
-      ToolAdapter.adapt(tool_class, context: @ctx).new.params_schema
+      ToolAdapter.adapt(tool_class, context: @ctx).new.parameters_schema
     end
 
     # A stand-in tool class that is not an Mcp::Tool::Base subclass, so it

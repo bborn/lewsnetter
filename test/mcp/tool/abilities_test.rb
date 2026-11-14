@@ -38,7 +38,7 @@ module Mcp
       end
 
       test "a read-only member can read but not write through the agent" do
-        assert_equal 1, agent_tool(@member, "subscribers_list").execute({})[:total]
+        assert_equal 1, agent_tool(@member, "subscribers_list").execute[:total]
 
         result = agent_tool(@member, "subscribers_delete").execute(id: @subscriber.id)
 
@@ -47,8 +47,8 @@ module Mcp
       end
 
       test "a read-only member cannot reach sequences, which are admin-only over HTTP too" do
-        assert_equal({error: Base::NOT_ALLOWED}, agent_tool(@member, "sequences_list").execute({}))
-        assert_not_includes agent_tool(@admin, "sequences_list").execute({}).keys, :error
+        assert_equal({error: Base::NOT_ALLOWED}, agent_tool(@member, "sequences_list").execute)
+        assert_not_includes agent_tool(@admin, "sequences_list").execute.keys, :error
       end
 
       test "an admin can write through the agent" do

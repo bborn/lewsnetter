@@ -15,7 +15,7 @@ class ChatChannelTest < ActionCable::Channel::TestCase
     @membership = create(:membership, team: @team, user: @member)
     # An existing registry row keeps acts_as_chat from resolving a model,
     # which needs a provider key.
-    model = Model.create!(model_id: "claude-sonnet-4-6", name: "Claude Sonnet 4.6", provider: "anthropic")
+    model = RubyLLM::ActiveRecord::Model.create!(model_id: "claude-sonnet-4-6", name: "Claude Sonnet 4.6", provider: "anthropic")
     @chat = @team.chats.create!(user: @member, model: model)
   end
 
@@ -28,7 +28,22 @@ class ChatChannelTest < ActionCable::Channel::TestCase
     subscribe chat_id: @chat.id
 
     assert subscription.confirmed?
-    assert_has_stream_for @chat
+    assert_has_stream "chat:#{@chat.to_gid_param}"
+  end
+
+  # acts_as_chat records are Enumerable over their messages, so handing the
+  # chat itself to stream_for/broadcast_to names the stream after whatever
+  # messages ruby_llm holds at that moment. Both sides must use the chat's
+  # GlobalID instead.
+  test "a turn broadcasts on the chat's GlobalID stream" do
+    stub_connection current_user: @member
+    subscribe chat_id: @chat.id
+
+    # The unconfigured path saves the user message and a reply, broadcasting
+    # each.
+    assert_broadcasts("chat:#{@chat.to_gid_param}", 2) do
+      perform :send_message, content: "hello"
+    end
   end
 
   test "another member of the same team cannot subscribe to someone else's chat" do
