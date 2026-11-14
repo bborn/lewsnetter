@@ -45,6 +45,13 @@ module Llm
       assert_equal "https://env.example.com", config.base_url
     end
 
+    test "ENV LLM_DEFAULT_MODEL overrides credentials default_model" do
+      creds = {llm: {api_key: "k", default_model: "claude-opus-4-1"}}
+      env = {"LLM_DEFAULT_MODEL" => "claude-haiku-4-5"}
+      config = Configuration.new(credentials: creds, env: env)
+      assert_equal "claude-haiku-4-5", config.default_model
+    end
+
     test ".current returns a Configuration built from app credentials + ENV" do
       assert_kind_of Configuration, Configuration.current
     end

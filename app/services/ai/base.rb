@@ -6,8 +6,6 @@ module AI
   # implement `#call` and `#stub_result` (used when no API key is set or
   # when a real call fails).
   class Base
-    DEFAULT_MODEL = "claude-sonnet-4-6"
-
     class << self
       # Allow tests / callers to flip stub mode on regardless of ENV.
       attr_accessor :force_stub
@@ -41,7 +39,7 @@ module AI
     end
 
     def model_id
-      DEFAULT_MODEL
+      Llm::Configuration.current.default_model
     end
 
     # Issue a single-shot prompt and return the response content as a String.
