@@ -5,6 +5,20 @@ module AI
   # In stub mode, returns a deterministic markdown summary built from the
   # campaign's own stats hash.
   class PostSendAnalyst < Base
+    # The model writes each section; #call adds the headings.
+    SECTIONS = {
+      "what_worked" => "What worked",
+      "what_didnt" => "What didn't",
+      "what_to_try_next" => "What to try next"
+    }.freeze
+
+    # The shape the model answers in (structured output).
+    class AnalysisSchema < Schematist::Schema
+      string :what_worked, description: "2-4 sentences of markdown, no heading"
+      string :what_didnt, description: "2-4 sentences of markdown, no heading"
+      string :what_to_try_next, description: "2-4 sentences of markdown, no heading"
+    end
+
     def initialize(campaign:)
       super()
       @campaign = campaign
@@ -15,9 +29,13 @@ module AI
       return stub_markdown if stub_mode?
       return stub_markdown unless @campaign
 
-      raw = ask_llm(system: system_prompt, user: user_prompt)
-      return stub_markdown if raw.blank?
-      raw.to_s
+      parsed = ask_llm(system: system_prompt, user: user_prompt, schema: AnalysisSchema)
+      return stub_markdown unless parsed.is_a?(Hash)
+
+      sections = SECTIONS.map { |key, heading| [heading, parsed[key].to_s.strip] }
+      return stub_markdown if sections.any? { |_, text| text.blank? }
+
+      sections.map { |heading, text| "## #{heading}\n\n#{text}\n" }.join("\n")
     rescue => e
       Rails.logger.warn("[AI::PostSendAnalyst] #{e.class}: #{e.message}")
       stub_markdown
@@ -28,12 +46,8 @@ module AI
     def system_prompt
       <<~PROMPT
         You are an email marketing analyst. Read this campaign's stats and
-        copy, compare against the team's historical baseline, and produce a
-        3-paragraph markdown postmortem with these sections (use ## headers):
-
-        ## What worked
-        ## What didn't
-        ## What to try next
+        copy, compare against the team's historical baseline, and write a
+        three-part postmortem: what worked, what didn't, and what to try next.
 
         Keep each section to 2-4 sentences. Be specific — cite the actual
         open/click/bounce/complaint rates. If data is missing or zero, say so

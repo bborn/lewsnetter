@@ -61,6 +61,59 @@ module AI
       assert_equal({model: "claude-opus-4-1"}, @chat_kwargs)
     end
 
+    test "ask_llm with a schema asks for structured output and returns the parsed answer" do
+      fake = FakeChat.new(content: '{"a":1}', parsed: {"a" => 1})
+      service = Plain.new
+      service.instance_variable_set(:@chat, fake)
+
+      assert_equal({"a" => 1}, service.send(:ask_llm, system: "sys", user: "hi", schema: :the_schema))
+      assert_equal [[:with_instructions, "sys"], [:with_schema, :the_schema], [:ask, "hi"]], fake.calls
+    end
+
+    test "ask_llm without a schema returns the response text" do
+      fake = FakeChat.new(content: "plain text", parsed: nil)
+      service = Plain.new
+      service.instance_variable_set(:@chat, fake)
+
+      assert_equal "plain text", service.send(:ask_llm, system: "sys", user: "hi")
+      assert_not_includes fake.calls.map(&:first), :with_schema
+    end
+
+    test "ask_llm returns nil when the call raises" do
+      fake = FakeChat.new(content: nil, parsed: nil)
+      fake.define_singleton_method(:ask) { |_| raise RubyLLM::Error, "boom" }
+      service = Plain.new
+      service.instance_variable_set(:@chat, fake)
+
+      assert_nil service.send(:ask_llm, system: "sys", user: "hi", schema: :the_schema)
+    end
+
+    # Records the RubyLLM::Chat calls ask_llm makes.
+    class FakeChat
+      Response = Struct.new(:content, :parsed)
+      attr_reader :calls
+
+      def initialize(content:, parsed:)
+        @response = Response.new(content, parsed)
+        @calls = []
+      end
+
+      def with_instructions(text)
+        @calls << [:with_instructions, text]
+        self
+      end
+
+      def with_schema(schema)
+        @calls << [:with_schema, schema]
+        self
+      end
+
+      def ask(text)
+        @calls << [:ask, text]
+        @response
+      end
+    end
+
     private
 
     def use_config(env:, credentials:)

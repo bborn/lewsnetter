@@ -53,6 +53,56 @@ module AI
       assert draft.success?
     end
 
+    test "the LLM path asks for the draft schema and builds the draft from the answer" do
+      answer = {
+        "subject_candidates" => [
+          {"subject" => "Spring is here", "rationale" => "Seasonal"},
+          {"subject" => " ", "rationale" => "blank subjects are dropped"}
+        ],
+        "preheader" => "New things",
+        "markdown_body" => "## Hi\n\nBody",
+        "suggested_send_time" => "Monday 9am Eastern"
+      }
+      drafter, calls = drafter_answering(answer)
+
+      draft = drafter.call
+
+      assert_equal AI::CampaignDrafter::DraftSchema, calls.sole[:schema]
+      assert_not draft.stub?
+      assert draft.success?
+      assert_equal ["Spring is here"], draft.subject_candidates.map(&:subject)
+      assert_equal "New things", draft.preheader
+      assert_equal "## Hi\n\nBody", draft.markdown_body
+      assert_match(/<h2>Hi<\/h2>/, draft.mjml_body)
+      assert_equal "Monday 9am Eastern", draft.suggested_send_time
+    end
+
+    test "the LLM path falls back to the stub draft when the call fails" do
+      drafter, _calls = drafter_answering(nil)
+
+      draft = drafter.call
+
+      assert draft.stub?
+      assert_equal ["LLM did not return a draft"], draft.errors
+    end
+
+    test "the LLM path falls back to the stub draft without a markdown body" do
+      drafter, _calls = drafter_answering("subject_candidates" => [], "markdown_body" => "")
+
+      draft = drafter.call
+
+      assert draft.stub?
+      assert_equal ["LLM did not return a markdown_body"], draft.errors
+    end
+
+    test "the draft schema requires every field and allows no others" do
+      schema = AI::CampaignDrafter::DraftSchema.new.to_json_schema
+
+      assert_equal %w[subject_candidates preheader markdown_body suggested_send_time], schema["required"]
+      assert_equal false, schema["additionalProperties"]
+      assert_equal %w[subject rationale], schema.dig("properties", "subject_candidates", "items", "required")
+    end
+
     test "markdown_to_mjml_fallback wraps markdown HTML in a complete MJML document" do
       drafter = AI::CampaignDrafter.new(team: @team, brief: "x")
       mjml = drafter.send(:markdown_to_mjml_fallback, "## Hello\n\nWorld")
@@ -61,6 +111,18 @@ module AI
       assert_match(/<mj-body/, mjml)
       assert_match(/<h2/, mjml)
       assert_match(/Hello/, mjml)
+    end
+
+    private
+
+    # A drafter in LLM mode whose ask_llm returns +answer+ and records its
+    # arguments.
+    def drafter_answering(answer)
+      calls = []
+      drafter = AI::CampaignDrafter.new(team: @team, brief: "- launch")
+      drafter.define_singleton_method(:stub_mode?) { false }
+      drafter.define_singleton_method(:ask_llm) { |**kwargs| (calls << kwargs) && answer }
+      [drafter, calls]
     end
   end
 end

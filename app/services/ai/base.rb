@@ -2,7 +2,7 @@
 
 module AI
   # Common wiring for AI services: stub-mode detection, LLM client
-  # construction, JSON-output parsing, and prompt helpers. Subclasses
+  # construction, structured output, and prompt helpers. Subclasses
   # implement `#call` and `#stub_result` (used when no API key is set or
   # when a real call fails).
   class Base
@@ -42,33 +42,18 @@ module AI
       Llm::Configuration.current.default_model
     end
 
-    # Issue a single-shot prompt and return the response content as a String.
-    # Returns nil on any error so callers can degrade to stub output.
+    # Issue a single-shot prompt. Returns the response text, or, given a
+    # schema (a Schematist::Schema class or a JSON Schema Hash), the Hash the
+    # model answered in that shape: the provider constrains the output to
+    # the schema, so there is no JSON to dig out of prose. Returns nil on any
+    # error so callers can degrade to stub output.
     def ask_llm(system:, user:, schema: nil)
       client = chat.with_instructions(system)
       client = client.with_schema(schema) if schema
       result = client.ask(user)
-      result.respond_to?(:content) ? result.content : result.to_s
+      schema ? result.parsed : result.content
     rescue => e
       Rails.logger.warn("[AI::#{self.class.name}] LLM call failed: #{e.class}: #{e.message}") if defined?(Rails)
-      nil
-    end
-
-    # Try to parse a JSON object out of the model response. Models often wrap
-    # JSON in fenced code blocks (```json ... ```) or include preamble text;
-    # this peels off the outermost {...} block.
-    def parse_json(raw)
-      return nil if raw.blank?
-      text = raw.to_s
-      # Strip code fences if present.
-      text = text.sub(/\A```(?:json)?\s*/i, "").sub(/```\s*\z/, "")
-      # Find first {...} block.
-      first = text.index("{")
-      last = text.rindex("}")
-      return nil unless first && last && last > first
-      JSON.parse(text[first..last])
-    rescue JSON::ParserError => e
-      Rails.logger.warn("[AI::#{self.class.name}] JSON parse failed: #{e.message}") if defined?(Rails)
       nil
     end
 
