@@ -24,9 +24,7 @@ module Chats
         description our_tool.description.to_s
 
         # Hand ruby_llm the tool's JSON Schema as is, so the agent sees what
-        # an MCP client gets from tools/list. Rebuilding it with `param` kept
-        # only each property's top-level type: arrays of objects became
-        # arrays of strings, and unions, enums, and bounds were dropped.
+        # an MCP client gets from tools/list.
         params(our_tool.arguments_schema || EMPTY_ARGUMENTS_SCHEMA)
 
         # ruby_llm calls tool_instance.name to get the wire name. Override
