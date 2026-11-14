@@ -93,5 +93,36 @@ module Mcp
         "Expected subscriber.id == #{sub.id}, got #{parsed.inspect}"
       assert_equal "alice@example.com", parsed.dig("subscriber", "email")
     end
+
+    def tool_error_text(name, arguments)
+      post_mcp(jsonrpc: "2.0", id: 5, method: "tools/call", params: {name: name, arguments: arguments})
+      assert_response :success
+      result = JSON.parse(response.body)["result"]
+      assert_equal true, result["isError"]
+      result.dig("content", 0, "text")
+    end
+
+    test "tools/call reports a missing record without SQL or a backtrace" do
+      text = tool_error_text("subscribers_get", {id: 999_999})
+
+      assert_equal "Subscriber not found", text
+    end
+
+    test "tools/call keeps validation and argument messages" do
+      assert_equal "Validation failed: Name can't be blank", tool_error_text("segments_create", {name: ""})
+      assert_match(/\AInvalid arguments: /, tool_error_text("subscribers_get", {id: "nope"}))
+    end
+
+    test "tools/call hides the message of an unexpected error" do
+      tool = Mcp::Tools::Team::GetCurrent
+      original = tool.instance_method(:call)
+      tool.define_method(:call) { |**| raise "boom at /srv/app/secret.rb" }
+
+      text = tool_error_text("team_get_current", {})
+
+      assert_equal "Tool failed. The error has been logged.", text
+    ensure
+      tool.define_method(:call, original)
+    end
   end
 end

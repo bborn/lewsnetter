@@ -144,8 +144,23 @@ module Mcp
             our_tool.new.invoke(arguments: string_args, context: ctx)
           end
           result.is_a?(String) ? result : JSON.generate(result)
+        rescue => e
+          # FastMcp answers any exception with its message and full backtrace.
+          Server.tool_error(e, tool_name: our_tool._tool_name)
         end
       end
+    end
+
+    def tool_error(error, tool_name:)
+      text = case error
+      when Mcp::Tool::ArgumentError then "Invalid arguments: #{error.message}"
+      when ActiveRecord::RecordInvalid then error.message
+      when ActiveRecord::RecordNotFound then "#{error.model || "Record"} not found"
+      else
+        Rails.logger.error("[mcp] tool=#{tool_name} failed: #{error.class}: #{error.message}\n#{Array(error.backtrace).first(10).join("\n")}")
+        "Tool failed. The error has been logged."
+      end
+      {content: [{type: "text", text: text}], isError: true}
     end
 
     # Dynamically creates a FastMcp::Resource subclass for a Mcp::Skill::Base
