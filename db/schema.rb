@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_14_134416) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_14_135036) do
   create_table "account_onboarding_invitation_lists", force: :cascade do |t|
     t.integer "team_id", null: false
     t.json "invitations"
@@ -317,6 +317,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_134416) do
     t.json "server_tool_calls"
     t.json "raw_content"
     t.json "raw_reasoning"
+    t.string "cache_ttl"
     t.index ["chat_id"], name: "index_messages_on_chat_id"
   end
 
@@ -409,6 +410,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_134416) do
     t.index ["status"], name: "index_ruby_llm_batches_on_status"
   end
 
+  create_table "ruby_llm_mcp_credentials", force: :cascade do |t|
+    t.string "owner_type"
+    t.bigint "owner_id"
+    t.string "key", null: false
+    t.text "data"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["key"], name: "index_ruby_llm_mcp_credentials_on_key", unique: true
+    t.index ["owner_type", "owner_id"], name: "index_ruby_llm_mcp_credentials_on_owner"
+  end
+
   create_table "ruby_llm_models", force: :cascade do |t|
     t.string "model_id", null: false
     t.string "name", null: false
@@ -430,6 +442,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_134416) do
     t.index ["provider"], name: "index_ruby_llm_models_on_provider"
   end
 
+  create_table "ruby_llm_provider_files", force: :cascade do |t|
+    t.string "blob_key", null: false
+    t.string "provider", null: false
+    t.string "account", null: false
+    t.text "file_id", null: false
+    t.datetime "expires_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["blob_key", "provider", "account"], name: "index_ruby_llm_provider_files_uniqueness", unique: true
+  end
+
   create_table "ruby_llm_tool_calls", force: :cascade do |t|
     t.string "tool_call_id", null: false
     t.string "name", null: false
@@ -443,6 +466,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_134416) do
     t.integer "result_id"
     t.string "approval"
     t.boolean "remote", default: false, null: false
+    t.json "mcp_state"
+    t.json "mcp_result"
     t.index ["message_type", "message_id"], name: "index_ruby_llm_tool_calls_on_message_type_and_message_id"
     t.index ["name"], name: "index_ruby_llm_tool_calls_on_name"
     t.index ["result_type", "result_id"], name: "index_ruby_llm_tool_calls_on_result_type_and_result_id"
@@ -450,8 +475,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_134416) do
   end
 
   create_table "ruby_llm_usages", force: :cascade do |t|
-    t.string "chat_type", null: false
-    t.integer "chat_id", null: false
+    t.string "chat_type"
+    t.integer "chat_id"
     t.string "message_type"
     t.integer "message_id"
     t.string "operation", null: false
@@ -471,10 +496,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_134416) do
     t.decimal "total_cost", precision: 16, scale: 10
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.json "server_tool_use"
+    t.string "owner_type"
+    t.bigint "owner_id"
     t.index ["chat_type", "chat_id"], name: "index_ruby_llm_usages_on_chat_type_and_chat_id"
     t.index ["message_type", "message_id"], name: "index_ruby_llm_usages_on_message_type_and_message_id"
+    t.index ["owner_type", "owner_id"], name: "index_ruby_llm_usages_on_owner"
     t.index ["status"], name: "index_ruby_llm_usages_on_status"
-    t.check_constraint "operation IN ('chat', 'embedding', 'moderation', 'image', 'speech', 'transcription', 'ocr', 'rerank')"
+    t.check_constraint "operation IN ('chat', 'embedding', 'moderation', 'image', 'speech', 'transcription', 'ocr', 'rerank', 'judgment', 'video', 'research')"
     t.check_constraint "status IN ('pending', 'succeeded', 'failed', 'cancelled')"
   end
 
