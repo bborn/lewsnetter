@@ -16,7 +16,7 @@
 class ChatChannel < ApplicationCable::Channel
   def subscribed
     chat = Chat.find_by(id: params[:chat_id])
-    if chat.nil? || chat.user_id != current_user.id
+    unless authorized?(chat)
       reject
       return
     end
@@ -27,6 +27,13 @@ class ChatChannel < ApplicationCable::Channel
 
   def send_message(data)
     return if @chat.nil?
+
+    # A subscription lives as long as the socket, so the check in
+    # #subscribed goes stale once the user leaves the team.
+    unless authorized?(@chat)
+      stop_all_streams
+      return
+    end
 
     content = data["content"].to_s
     return if content.blank?
@@ -53,6 +60,15 @@ class ChatChannel < ApplicationCable::Channel
   end
 
   private
+
+  # The rule Ability grants Chat by (`team_id: user.team_ids, user_id:
+  # user.id`), read fresh each time. Tools run against chat.team, so the
+  # owner must still belong to that team on every turn.
+  def authorized?(chat)
+    chat.present? &&
+      chat.user_id == current_user.id &&
+      Membership.exists?(team_id: chat.team_id, user_id: current_user.id)
+  end
 
   def run_chat_turn(content)
     ctx = Mcp::Tool::Context.new(user: @chat.user, team: @chat.team)
