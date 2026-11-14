@@ -47,7 +47,7 @@
   "packageManager": "yarn@4.2.2",
   "resolutions": {
     "daterangepicker/jquery": "^3.7.1",
-    "dompurify": "^3.4.11",
+    "dompurify": "^3.4.17",
     "ws": "^7.5.11",
     "undici": "^6.27.0",
     "yaml": "^2.8.3",
