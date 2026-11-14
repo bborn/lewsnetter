@@ -157,7 +157,13 @@ module Mcp
     end
 
     def tool_error(error, tool_name:)
-      text = case error
+      {content: [{type: "text", text: tool_error_message(error, tool_name: tool_name)}], isError: true}
+    end
+
+    # What a caller sees when a tool raises; Chats::ToolAdapter hands the
+    # in-app agent the same text.
+    def tool_error_message(error, tool_name:)
+      case error
       when Mcp::Tool::ArgumentError then "Invalid arguments: #{error.message}"
       when CanCan::AccessDenied then Mcp::Tool::Base::NOT_ALLOWED
       when ActiveRecord::RecordInvalid then error.message
@@ -166,7 +172,6 @@ module Mcp
         Rails.logger.error("[mcp] tool=#{tool_name} failed: #{error.class}: #{error.message}\n#{Array(error.backtrace).first(10).join("\n")}")
         "Tool failed. The error has been logged."
       end
-      {content: [{type: "text", text: text}], isError: true}
     end
 
     # Dynamically creates a FastMcp::Resource subclass for a Mcp::Skill::Base

@@ -36,14 +36,8 @@ module Chats
         define_method(:execute) do |**args|
           string_args = args.transform_keys(&:to_s)
           our_tool.new.invoke(arguments: string_args, context: ctx)
-        rescue ActiveRecord::RecordNotFound => e
-          {error: "Not found: #{e.message}"}
-        rescue Mcp::Tool::ArgumentError => e
-          {error: "Invalid arguments: #{e.message}"}
-        rescue CanCan::AccessDenied
-          {error: Mcp::Tool::Base::NOT_ALLOWED}
         rescue => e
-          {error: "#{e.class}: #{e.message}"}
+          {error: Mcp::Server.tool_error_message(e, tool_name: our_tool.tool_name)}
         end
       end
     end
