@@ -7,6 +7,7 @@ module Mcp
         include Mcp::Tools::Serializers
 
         tool_name "email_templates_list"
+        read_only
         description "Lists email templates on the calling team. Supports limit and offset for pagination."
         arguments_schema(
           type: "object",

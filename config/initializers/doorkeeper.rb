@@ -268,10 +268,10 @@ Doorkeeper.configure do
   # For now, every connection is an admin on the team it connects to.
   default_scopes :admin
   # mcp:read / mcp:write are requested by external MCP clients (Claude Desktop,
-  # Cursor, etc.) via the OAuth authorization-code flow. The Mcp::DoorkeeperAuth
-  # middleware doesn't enforce scope-level restrictions yet — any valid token
-  # gets full read/write — but advertising them lets RFC 7591 dynamic
-  # registration negotiate properly.
+  # Cursor, etc.) via the OAuth authorization-code flow. A token granted
+  # mcp:read without mcp:write or admin may only call tools that declare
+  # `read_only` (Mcp::Tool::Context#may_call?). Tokens without mcp:* scopes
+  # keep full access.
   optional_scopes :"mcp:read", :"mcp:write"
 
   # Allows to restrict only certain scopes for grant_type.

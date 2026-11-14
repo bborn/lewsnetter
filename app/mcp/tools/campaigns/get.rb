@@ -7,6 +7,7 @@ module Mcp
         include Mcp::Tools::Serializers
 
         tool_name "campaigns_get"
+        read_only
         description "Fetches a single campaign by id. Raises RecordNotFound if the campaign does not belong to the calling team."
         arguments_schema(
           type: "object",

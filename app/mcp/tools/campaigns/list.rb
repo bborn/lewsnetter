@@ -7,6 +7,7 @@ module Mcp
         include Mcp::Tools::Serializers
 
         tool_name "campaigns_list"
+        read_only
         description "Lists campaigns on the calling team. Supports pagination and optional status filter."
         arguments_schema(
           type: "object",

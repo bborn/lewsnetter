@@ -7,6 +7,7 @@ module Mcp
         include Mcp::Tools::Serializers
 
         tool_name "segments_sample_matching"
+        read_only
         description "Returns a sample of subscribers matching the segment's predicate. Returns predicate_error if the predicate is invalid."
         arguments_schema(
           type: "object",

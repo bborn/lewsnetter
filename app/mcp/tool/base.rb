@@ -29,6 +29,17 @@ module Mcp
           @_arguments_schema = schema
         end
 
+        # Declares that the tool only reads team data, so a token granted
+        # just mcp:read may call it. Tools that don't say so need write
+        # access (see Mcp::Tool::Context#may_call?).
+        def read_only
+          @_read_only = true
+        end
+
+        def read_only?
+          @_read_only == true
+        end
+
         # Tracks every subclass so the loader doesn't have to walk the
         # filesystem twice.
         def descendants

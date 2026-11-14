@@ -5,6 +5,7 @@ module Mcp
     module Team
       class ListCompanies < Mcp::Tool::Base
         tool_name "team_list_companies"
+        read_only
         description "Lists companies on the calling team. Supports pagination and a query that matches name or external_id."
         arguments_schema(
           type: "object",

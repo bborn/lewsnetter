@@ -5,6 +5,7 @@ module Mcp
     module Sequences
       class Stats < Mcp::Tool::Base
         tool_name "sequences_stats"
+        read_only
         description "Per-step funnel for one sequence: for each step, how many subscribers are " \
           "waiting on it, how many were skipped by its skip segment, and sent / delivered / " \
           "opened / clicked / bounced / unsubscribed from its deliveries. Also returns " \

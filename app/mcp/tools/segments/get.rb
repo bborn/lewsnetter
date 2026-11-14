@@ -7,6 +7,7 @@ module Mcp
         include Mcp::Tools::Serializers
 
         tool_name "segments_get"
+        read_only
         description "Returns a single segment by id. Raises RecordNotFound if the id does not belong to the calling team."
         arguments_schema(
           type: "object",

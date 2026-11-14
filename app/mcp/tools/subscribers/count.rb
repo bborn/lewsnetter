@@ -7,6 +7,7 @@ module Mcp
         include Mcp::Tools::Serializers
 
         tool_name "subscribers_count"
+        read_only
         description "Returns the count of subscribers on the calling team, optionally filtered by subscribed status."
         arguments_schema(
           type: "object",

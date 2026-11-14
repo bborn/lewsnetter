@@ -7,6 +7,7 @@ module Mcp
         include Mcp::Tools::Serializers
 
         tool_name "segments_list"
+        read_only
         description "Lists segments on the calling team. Supports limit and offset for pagination."
         arguments_schema(
           type: "object",
