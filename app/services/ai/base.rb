@@ -6,8 +6,6 @@ module AI
   # implement `#call` and `#stub_result` (used when no API key is set or
   # when a real call fails).
   class Base
-    DEFAULT_MODEL = "claude-sonnet-4-6"
-
     class << self
       # Allow tests / callers to flip stub mode on regardless of ENV.
       attr_accessor :force_stub
@@ -40,8 +38,11 @@ module AI
       @chat ||= RubyLLM.chat(model: model_id)
     end
 
+    # LLM_DEFAULT_MODEL, then credentials.llm.default_model, then
+    # Llm::Configuration::DEFAULT_MODEL: the same model the in-app agent and
+    # RubyLLM.config.default_model use.
     def model_id
-      DEFAULT_MODEL
+      Llm::Configuration.current.default_model
     end
 
     # Issue a single-shot prompt and return the response content as a String.
