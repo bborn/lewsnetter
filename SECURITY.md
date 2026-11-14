@@ -1,5 +1,14 @@
-# Security Policy
+# Security policy
 
-## Reporting a Vulnerability
+## Reporting a vulnerability
 
-Please report security issues to Andrew Culver privately [via DM on Twitter](https://twitter.com/andrewculver) or via DM after joining [the Bullet Train Discord server](https://discord.gg/bullettrain). (Please double check the profile you're messaging is marked as the "Server Owner".) If you don't have a reply within two business days, please contact [Adam Pallozzi](https://twitter.com/adampallozzi) and [Gabriel Zayas](https://twitter.com/gazayas) via DM on Twitter only. We do not currently have a bounty program.
+Please don't open a public issue for a security problem. Report it privately through GitHub instead:
+go to the [Security tab](https://github.com/bborn/lewsnetter/security) and choose **Report a vulnerability**.
+
+Include what you found, how to reproduce it, and what an attacker could do with it. A patch is welcome
+but not required. You'll get a reply within a few days, and we'll agree on timing before anything is
+made public.
+
+## Supported versions
+
+Only the latest `master` is supported. Fixes aren't backported.
