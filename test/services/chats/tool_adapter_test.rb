@@ -91,6 +91,47 @@ module Chats
       assert_equal 0, @team.subscribers.count
     end
 
+    # The agent reports a failed tool the way the MCP server does
+    # (Mcp::Server.tool_error), so the model never sees SQL, paths or
+    # exception classes, and the failure shows up in the log.
+    test "an unexpected error is logged and the model gets a short message" do
+      tool = Mcp::Tools::Team::GetCurrent
+      original = tool.instance_method(:call)
+      tool.define_method(:call) { |**| raise "boom at /srv/app/secret.rb" }
+      adapted = ToolAdapter.adapt(tool, context: @ctx).new
+
+      result = nil
+      log = capture_log { result = adapted.call }
+
+      assert_equal({error: "Tool failed. The error has been logged."}, result)
+      assert_match(/tool=team_get_current failed: RuntimeError: boom at/, log)
+    ensure
+      tool.define_method(:call, original)
+    end
+
+    test "a missing record names the model without the query" do
+      adapted = ToolAdapter.adapt(Mcp::Tools::Subscribers::Get, context: @ctx).new
+
+      assert_equal({error: "Subscriber not found"}, adapted.call("id" => 999_999))
+    end
+
+    test "a validation failure keeps its message without the exception class" do
+      adapted = ToolAdapter.adapt(Mcp::Tools::Segments::Create, context: @ctx).new
+
+      assert_equal({error: "Validation failed: Name can't be blank"}, adapted.call("name" => ""))
+    end
+
+    test "a refused ability keeps the role message" do
+      member = create(:onboarded_user)
+      create(:membership, team: @team, user: member)
+      sub = @team.subscribers.create!(email: "keep@example.com", subscribed: true)
+      ctx = Mcp::Tool::Context.new(user: member, team: @team)
+      adapted = ToolAdapter.adapt(Mcp::Tools::Subscribers::Delete, context: ctx).new
+
+      assert_equal({error: Mcp::Tool::Base::NOT_ALLOWED}, adapted.call("id" => sub.id))
+      assert Subscriber.exists?(sub.id)
+    end
+
     test "execution runs against the context's team" do
       other_team = create(:onboarded_user).current_team
       adapted = ToolAdapter.adapt(Mcp::Tools::Subscribers::BulkUpsert, context: @ctx).new
@@ -103,6 +144,17 @@ module Chats
     end
 
     private
+
+    def capture_log
+      io = StringIO.new
+      logger = ActiveSupport::Logger.new(io)
+      original = Rails.logger
+      Rails.logger = logger
+      yield
+      io.string
+    ensure
+      Rails.logger = original
+    end
 
     def adapted_schema(tool_class)
       ToolAdapter.adapt(tool_class, context: @ctx).new.parameters_schema
