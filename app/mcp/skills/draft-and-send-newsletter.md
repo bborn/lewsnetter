@@ -20,8 +20,8 @@ You're helping the user ship an email campaign on Lewsnetter. The team you're wo
 
 ## The flow
 
-1. **Pick the audience.** Use `segments_list` to see existing segments. If none fits, use the `translate-question-to-segment` skill first.
-2. **Draft the body.** Call `llm_draft_campaign` (Phase 4 — once available) or write the body yourself. The body is markdown; it gets composed into the team's email template at render time.
+1. **Pick the audience.** Use `segments_list` to see existing segments. If none fits, create one with `segments_create`, using the `segment-cookbook` skill for predicate patterns, and check its size with `segments_count_matching`.
+2. **Draft the body.** Call `llm_draft_campaign` or write the body yourself. The body is markdown; it gets composed into the team's email template at render time.
 3. **Pick a template.** `email_templates_list` to see options. Templates carry the chrome (header, logo, footer, unsubscribe link). The body fills the `{{body}}` placeholder.
 4. **Pick a sender.** `sender_addresses_list`; only verified senders can send. If the desired one is unverified, use `sender_addresses_verify` to re-check or trigger verification.
 5. **Create the campaign.** `campaigns_create` with `subject`, `body_markdown`, `email_template_id`, `segment_id`, `sender_address_id`. Status defaults to `draft`.

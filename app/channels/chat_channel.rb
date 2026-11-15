@@ -198,9 +198,8 @@ class ChatChannel < ApplicationCable::Channel
 
       You have tools that mirror the full Lewsnetter API: list/get/create/update
       subscribers, segments, email templates, campaigns, sender addresses;
-      send tests; trigger sends; etc. Plus three LLM tools that wrap the existing
-      AI services (draft a campaign, translate a question into a segment,
-      analyze a sent campaign).
+      send tests; trigger sends; etc. Plus two LLM tools that wrap the existing
+      AI services (draft a campaign, analyze a sent campaign).
 
       Use tools when the user asks for an action. Don't fabricate data — if you
       don't have it, look it up via a tool first. Be terse; users prefer short

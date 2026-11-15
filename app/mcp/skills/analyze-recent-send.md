@@ -24,7 +24,7 @@ The team has no sent campaigns yet. There's nothing to analyze. Suggest the user
 ## The flow
 
 1. **Pull the stats.** `campaigns_postmortem(id: ...)` returns a `stats` hash (sent, opened, clicked, bounced, complained, unsubscribed) and `top_links`.
-2. **Get LLM commentary.** `llm_analyze_send(id: ...)` (Phase 4) returns markdown commentary with 3 specific actions.
+2. **Get LLM commentary.** `llm_analyze_send(campaign_id: ...)` returns markdown commentary: what worked, what didn't, and 3 specific actions.
 3. **Cross-reference with subscribers.** If `bounced` is high, run `subscribers_list(query: ...)` to spot patterns. If `unsubscribed` is high, look at the subject + first paragraph; the user may want to revise tone.
 
 ## What the numbers mean
