@@ -22,7 +22,7 @@ module Mcp
 
         test "enqueues SendCampaignJob for a sendable campaign" do
           assert_enqueued_with(job: SendCampaignJob) do
-            result = SendNow.new.invoke(arguments: {"id" => @campaign.id}, context: @ctx)
+            result = SendNow.new.invoke(arguments: {"id" => @campaign.id, "all_subscribers" => true}, context: @ctx)
             assert result[:enqueued]
             assert_equal @campaign.id, result[:campaign_id]
             assert_equal "sending", result[:status_after]
@@ -31,13 +31,13 @@ module Mcp
 
         test "returns subscriber_count" do
           @team.subscribers.create!(email: "a@b.com", external_id: "sub1", subscribed: true)
-          result = SendNow.new.invoke(arguments: {"id" => @campaign.id}, context: @ctx)
+          result = SendNow.new.invoke(arguments: {"id" => @campaign.id, "all_subscribers" => true}, context: @ctx)
           assert_equal 1, result[:subscriber_count]
         end
 
         test "refuses to send an already-sent campaign" do
           @campaign.update!(status: "sent")
-          result = SendNow.new.invoke(arguments: {"id" => @campaign.id}, context: @ctx)
+          result = SendNow.new.invoke(arguments: {"id" => @campaign.id, "all_subscribers" => true}, context: @ctx)
           refute result[:enqueued]
           assert_equal "sent", result[:status_after]
           assert result[:error].include?("sent")
@@ -45,7 +45,7 @@ module Mcp
 
         test "refuses to send a failed campaign" do
           @campaign.update!(status: "failed")
-          result = SendNow.new.invoke(arguments: {"id" => @campaign.id}, context: @ctx)
+          result = SendNow.new.invoke(arguments: {"id" => @campaign.id, "all_subscribers" => true}, context: @ctx)
           refute result[:enqueued]
           assert_equal "failed", result[:status_after]
         end
@@ -55,6 +55,23 @@ module Mcp
           other = other_team.campaigns.create!(subject: "Other", status: "draft", body_markdown: "body")
           assert_raises(ActiveRecord::RecordNotFound) do
             SendNow.new.invoke(arguments: {"id" => other.id}, context: @ctx)
+          end
+        end
+
+        test "refuses a campaign with no segment unless all_subscribers is true" do
+          assert_no_enqueued_jobs(only: SendCampaignJob) do
+            error = assert_raises(Mcp::Tool::ArgumentError) do
+              SendNow.new.invoke(arguments: {"id" => @campaign.id}, context: @ctx)
+            end
+            assert_match(/no segment/, error.message)
+          end
+        end
+
+        test "sends a campaign with a segment without all_subscribers" do
+          segment = @team.segments.create!(name: "Everyone", predicate: "subscribers.subscribed = 1")
+          @campaign.update!(segment: segment)
+          assert_enqueued_with(job: SendCampaignJob) do
+            assert SendNow.new.invoke(arguments: {"id" => @campaign.id}, context: @ctx)[:enqueued]
           end
         end
       end

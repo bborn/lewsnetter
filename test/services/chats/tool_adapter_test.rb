@@ -169,5 +169,15 @@ module Chats
         define_singleton_method(:arguments_schema) { schema }
       end
     end
+
+    test "adapt_all leaves out tools hidden from the in-app agent" do
+      user = create(:onboarded_user)
+      ctx = Mcp::Tool::Context.new(user: user, team: user.current_team)
+      names = Chats::ToolAdapter.adapt_all(context: ctx).map { |t| t.new.name }
+
+      assert_includes names, "campaigns_send_test"
+      refute_includes names, "campaigns_send_now"
+      refute_includes names, "campaigns_schedule"
+    end
   end
 end

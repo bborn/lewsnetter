@@ -5,10 +5,12 @@ module Mcp
     module Campaigns
       class Schedule < Mcp::Tool::Base
         include Mcp::Tools::Serializers
+        include Mcp::Tool::AudienceGuard
 
         tool_name "campaigns_schedule"
 
         requires_ability :send_now, ::Campaign
+        hidden_from_in_app_agent
         description <<~DESC
           Schedules a campaign for future delivery by setting status to "scheduled" and
           recording the scheduled_for datetime. The scheduled_for argument must be an
@@ -20,12 +22,14 @@ module Mcp
           required: ["id", "scheduled_for"],
           properties: {
             id: {type: "integer"},
-            scheduled_for: {type: "string", description: "ISO8601 datetime string"}
+            scheduled_for: {type: "string", description: "ISO8601 datetime string"},
+            all_subscribers: Mcp::Tool::AudienceGuard::ALL_SUBSCRIBERS_PROPERTY
           }
         )
 
         def call(arguments:, context:)
           campaign = context.team.campaigns.find_by!(id: arguments["id"])
+          require_audience!(campaign, arguments)
 
           parsed_time = begin
             Time.parse(arguments["scheduled_for"])

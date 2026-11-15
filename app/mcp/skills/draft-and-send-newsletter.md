@@ -26,7 +26,7 @@ You're helping the user ship an email campaign on Lewsnetter. The team you're wo
 4. **Pick a sender.** `sender_addresses_list`; only verified senders can send. If the desired one is unverified, use `sender_addresses_verify` to re-check or trigger verification.
 5. **Create the campaign.** `campaigns_create` with `subject`, `body_markdown`, `email_template_id`, `segment_id`, `sender_address_id`. Status defaults to `draft`.
 6. **Preview it.** `email_templates_render_preview` with the campaign's template + a sample subscriber, OR just call `campaigns_get` to inspect the body.
-7. **Send a test.** `campaigns_send_test` with `recipient_email` (defaults to the calling user). The test email lands in their inbox prefixed `[TEST]`. Confirm it looks right.
+7. **Send a test.** `campaigns_send_test` with `recipient_email` (defaults to the calling user; only team members' addresses are accepted). The test email lands in their inbox prefixed `[TEST]`. Confirm it looks right.
 8. **Send for real.** `campaigns_send_now`. This enqueues a job that delivers to the segment. Status moves to `sending` → `sent` when complete.
 
 ## Common pitfalls
@@ -34,7 +34,7 @@ You're helping the user ship an email campaign on Lewsnetter. The team you're wo
 - **Empty body** — both `body_markdown` and `body_mjml` blank → validation error. At least one must have content.
 - **Unverified sender** — `campaigns_send_now` will succeed but messages will fail at SES. Confirm `sender_addresses_get` returns `verified: true` first.
 - **Segment with bad predicate** — `segments_count_matching` returns `predicate_error: "..."` — fix the predicate before sending.
-- **No segment set** — `campaigns_send_now` will refuse. A campaign without a segment can't know who to send to.
+- **No segment set** — the campaign would go to every subscribed contact, so `campaigns_send_now` refuses unless you pass `all_subscribers: true`. Only do that when the user asked for everyone.
 
 ## What "done" looks like
 

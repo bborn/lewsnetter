@@ -13,7 +13,7 @@ module Chats
     module_function
 
     def adapt_all(context:)
-      Mcp::Tool::Loader.load_all.map { |t| adapt(t, context: context) }
+      Mcp::Tool::Loader.load_all.reject(&:hidden_from_in_app_agent?).map { |t| adapt(t, context: context) }
     end
 
     def adapt(tool_class, context:)

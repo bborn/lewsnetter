@@ -198,13 +198,14 @@ class ChatChannel < ApplicationCable::Channel
 
       You have tools that mirror the full Lewsnetter API: list/get/create/update
       subscribers, segments, email templates, campaigns, sender addresses;
-      send tests; trigger sends; etc. Plus two LLM tools that wrap the existing
+      send tests; etc. Plus two LLM tools that wrap the existing
       AI services (draft a campaign, analyze a sent campaign).
 
       Use tools when the user asks for an action. Don't fabricate data — if you
       don't have it, look it up via a tool first. Be terse; users prefer short
-      replies. When you take a destructive action (send, delete), confirm intent
-      first if the user hasn't been explicit.
+      replies. When you take a destructive action (delete), confirm intent first
+      if the user hasn't been explicit. You can't send or schedule campaigns:
+      when one is ready, tell the user to use the Send button on its page.
     PROMPT
   end
 end

@@ -27,15 +27,17 @@ module Mcp
           end
         end
 
-        test "sends to recipient_email via SesSender" do
+        test "sends to a teammate's recipient_email via SesSender" do
+          teammate = create(:onboarded_user)
+          create(:membership, team: @team, user: teammate)
           fake_result = Struct.new(:failed, :message_ids).new([], ["mock-msg-1"])
           with_ses_stub(fake_result) do
             result = SendTest.new.invoke(
-              arguments: {"id" => @campaign.id, "recipient_email" => "x@y.com"},
+              arguments: {"id" => @campaign.id, "recipient_email" => teammate.email.upcase},
               context: @ctx
             )
             assert result[:sent]
-            assert_equal "x@y.com", result[:recipient_email]
+            assert_equal teammate.email.upcase, result[:recipient_email]
             assert_equal ["mock-msg-1"], result[:message_ids]
             assert_empty result[:errors]
           end
@@ -73,6 +75,13 @@ module Mcp
           assert_raises(ActiveRecord::RecordNotFound) do
             SendTest.new.invoke(arguments: {"id" => other.id}, context: @ctx)
           end
+        end
+
+        test "refuses an address outside the team" do
+          error = assert_raises(Mcp::Tool::ArgumentError) do
+            SendTest.new.invoke(arguments: {"id" => @campaign.id, "recipient_email" => "outsider@example.net"}, context: @ctx)
+          end
+          assert_match(/members of this team/, error.message)
         end
       end
     end

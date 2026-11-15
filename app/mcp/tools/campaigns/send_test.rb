@@ -10,8 +10,8 @@ module Mcp
 
         requires_ability :test_send, ::Campaign
         description <<~DESC
-          Sends a test copy of the campaign to a recipient email (defaults to the
-          calling user's email). Mirrors the test_send controller action: uses the same
+          Sends a test copy of the campaign to a team member's email (defaults to the
+          calling user's email). Other addresses are refused. Mirrors the test_send controller action: uses the same
           render pipeline, prefixes the subject with [TEST], and never changes campaign
           status or records stats.
         DESC
@@ -28,7 +28,10 @@ module Mcp
         def call(arguments:, context:)
           campaign = context.team.campaigns.find_by!(id: arguments["id"])
 
-          recipient = arguments["recipient_email"] || context.user.email
+          recipient = arguments["recipient_email"].presence || context.user.email
+          unless context.team.users.where("LOWER(users.email) = ?", recipient.downcase).exists?
+            raise Mcp::Tool::ArgumentError, "Test sends can only go to members of this team."
+          end
           user_name = [context.user.first_name, context.user.last_name].compact.join(" ").presence || context.user.email
 
           fake = Subscriber.new(

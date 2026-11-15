@@ -42,6 +42,17 @@ module Mcp
           @_read_only == true
         end
 
+        # Keeps the tool out of the in-app agent; external MCP clients still
+        # get it. The agent reads team data that outsiders can write, so sends
+        # stay a button the user presses.
+        def hidden_from_in_app_agent
+          @_hidden_from_in_app_agent = true
+        end
+
+        def hidden_from_in_app_agent?
+          @_hidden_from_in_app_agent == true
+        end
+
         # The CanCan ability a caller needs on the calling team, e.g.
         # `requires_ability :destroy, Subscriber`. Checked by #invoke against
         # the user's current roles (config/models/roles.yml); a tool that

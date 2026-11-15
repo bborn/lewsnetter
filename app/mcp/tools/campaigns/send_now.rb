@@ -5,10 +5,12 @@ module Mcp
     module Campaigns
       class SendNow < Mcp::Tool::Base
         include Mcp::Tools::Serializers
+        include Mcp::Tool::AudienceGuard
 
         tool_name "campaigns_send_now"
 
         requires_ability :send_now, ::Campaign
+        hidden_from_in_app_agent
         description <<~DESC
           Enqueues the campaign for immediate delivery via SendCampaignJob. Only draft
           or scheduled campaigns are sendable — any other status returns an error.
@@ -20,7 +22,8 @@ module Mcp
           additionalProperties: false,
           required: ["id"],
           properties: {
-            id: {type: "integer"}
+            id: {type: "integer"},
+            all_subscribers: Mcp::Tool::AudienceGuard::ALL_SUBSCRIBERS_PROPERTY
           }
         )
 
@@ -36,6 +39,7 @@ module Mcp
             }
           end
 
+          require_audience!(campaign, arguments)
           subscriber_count = campaign.recipient_count || 0
           SendCampaignJob.perform_later(campaign.id)
 
