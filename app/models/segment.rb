@@ -9,10 +9,8 @@ class Segment < ApplicationRecord
   has_paper_trail on: [:create, :update, :destroy],
     ignore: [:updated_at]
 
-  # Forbidden tokens kept in sync with AI::SegmentTranslator::FORBIDDEN_TOKENS —
-  # defense in depth at the job/scope-application layer. If the AI service
-  # ever changes how predicates are sourced (UI builder, manual edit, etc.)
-  # we still refuse to execute anything that looks like a statement.
+  # Predicates come from people and agents, so refuse anything that looks
+  # like a statement rather than a WHERE clause.
   FORBIDDEN_PREDICATE_TOKENS = %w[
     DROP DELETE INSERT UPDATE TRUNCATE ALTER GRANT REVOKE CREATE
     ATTACH DETACH COPY VACUUM EXEC EXECUTE CALL
@@ -132,7 +130,7 @@ class Segment < ApplicationRecord
 
     # Auto-join companies when the predicate references the companies table
     # (or its JSON custom_attributes). We can't reach company-level columns
-    # without a JOIN, and asking the AI translator (or a hand author) to spell
+    # without a JOIN, and asking an agent (or a hand author) to spell
     # out joins is fragile, so the segment layer handles it.
     scope = scope.joins(:company) if pred.match?(/\bcompanies\./i)
     scope.where(self.class.scope_subqueries(pred, team_id))
@@ -164,8 +162,8 @@ class Segment < ApplicationRecord
     ).map(&:downcase).to_set
   end
 
-  # Mirror of AI::SegmentTranslator#validate_predicate. Returns an array of
-  # error messages; empty array means the predicate passes the allowlist.
+  # Returns an array of error messages; empty means the predicate passes
+  # the allowlist.
   def self.validate_predicate(predicate)
     errors = []
     return ["Predicate is blank"] if predicate.to_s.strip.blank?

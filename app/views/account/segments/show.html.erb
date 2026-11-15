@@ -78,9 +78,9 @@
             <div class="text-center px-6 py-10">
               <div class="font-mono text-[11px] uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-2">No predicate</div>
               <p class="text-zinc-600 dark:text-zinc-400 max-w-md mx-auto mb-5">
-                No predicate set yet — tell the AI translator who this segment
-                targets (e.g. "brand-tenant managers active in the last 30
-                days") or write SQL against the subscribers table directly.
+                No predicate set yet. Write SQL against the subscribers table,
+                or ask the agent who this segment should target (for example,
+                "brand-tenant managers active in the last 30 days").
               </p>
               <% if can? :edit, @segment %>
                 <%= link_to "Edit segment →", [:edit, :account, @segment], class: "button" %>

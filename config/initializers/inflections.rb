@@ -19,7 +19,6 @@ ActiveSupport::Inflector.inflections(:en) do |inflect|
   # ✅ YOUR APPLICATION'S INFLECTIONS
   # You can add your own custom inflections below.
 
-  # So app/services/ai/segment_translator.rb autoloads as AI::SegmentTranslator
-  # rather than Ai::SegmentTranslator.
+  # So app/services/ai/*.rb autoloads as AI::CampaignDrafter, not Ai::.
   inflect.acronym "AI"
 end

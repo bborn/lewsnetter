@@ -7,7 +7,7 @@ module Mcp
         tool_name "llm_analyze_send"
         read_only
         requires_ability :read, ::Campaign
-        description "Generates a post-send analysis of a campaign in markdown: what worked, what didn't, and 3 specific actions. Wraps AI::PostSendAnalyst."
+        description "Generates a post-send analysis of a campaign in markdown: what worked, what didn't, and what to try next. Wraps AI::PostSendAnalyst."
         arguments_schema(
           type: "object",
           additionalProperties: false,

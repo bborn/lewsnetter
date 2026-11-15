@@ -185,8 +185,8 @@ module Account
           scope.order(updated_at: :desc).limit(PER_GROUP_RECENT_LIMIT)
         else
           needle = "%#{query.downcase}%"
-          # natural_language_source is the column the AI translator writes
-          # the user's plain-English segment description to. Search both so
+          # natural_language_source holds the plain-English segment
+          # description. Search both so
           # users can find segments by name OR by the prompt they typed.
           scope.where("LOWER(name) LIKE :n OR LOWER(natural_language_source) LIKE :n", n: needle)
             .order(:name)
