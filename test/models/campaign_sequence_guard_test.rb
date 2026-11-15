@@ -21,7 +21,7 @@ class CampaignSequenceGuardTest < ActiveSupport::TestCase
   test "campaigns_schedule can't schedule a step's campaign" do
     assert_raises(ActiveRecord::RecordInvalid) do
       Mcp::Tools::Campaigns::Schedule.new.invoke(
-        arguments: {"id" => @campaign.id, "scheduled_for" => 1.day.from_now.iso8601},
+        arguments: {"id" => @campaign.id, "scheduled_for" => 1.day.from_now.iso8601, "all_subscribers" => true},
         context: @ctx
       )
     end
