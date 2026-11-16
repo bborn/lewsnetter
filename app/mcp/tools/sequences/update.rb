@@ -8,6 +8,8 @@ module Mcp
       class Update < Mcp::Tool::Base
         tool_name "sequences_update"
         requires_ability :manage, ::Team
+        # An active sequence enrolls and mails subscribers by itself.
+        requires_approval { |arguments| arguments["status"] == "active" }
         description "Updates a sequence on the calling team by id. All fields optional. " \
           "status: draft, active or paused (active only enrolls and sends while the team's " \
           "sequences_enabled flag is on, see sequences_set_enabled). exit_segment_id, " \
@@ -32,6 +34,11 @@ module Mcp
         )
 
         FIELDS = %w[name status exit_segment_id goal_segment_id trigger_segment_id goal_event_name reentry_days].freeze
+
+        def approval_summary(arguments:, context:)
+          "Activate sequence #{record_label(context.team.sequences, arguments["id"], :name)}: " \
+            "it enrolls and sends while Sequences is on"
+        end
 
         def call(arguments:, context:)
           sequence = context.team.sequences.find_by!(id: arguments["id"])

@@ -31,6 +31,13 @@ module Chats
         # the instance method so external clients see our snake_case names.
         define_method(:name) { our_tool.tool_name }
 
+        # ruby_llm asks this for every call the model makes. When it says
+        # yes, the call is saved as pending instead of run, and waits for
+        # ChatChannel#approve or #decline.
+        define_method(:requires_approval?) do |tool_call = nil|
+          our_tool.requires_approval?(ToolAdapter.string_arguments(tool_call))
+        end
+
         # ruby_llm passes the arguments as keywords. A bare **args accepts
         # any of them, so the MCP tool's own validation decides.
         define_method(:execute) do |**args|
@@ -40,6 +47,20 @@ module Chats
           {error: Mcp::Server.tool_error_message(e, tool_name: our_tool.tool_name)}
         end
       end
+    end
+
+    # What the chat panel shows above Approve and Decline for a pending
+    # call (a RubyLLM::ToolCall).
+    def approval_summary(tool_call, context:)
+      tool_class = Mcp::Tool::Loader.load_all.find { |t| t.tool_name == tool_call.name }
+      return "Run #{tool_call.name}" if tool_class.nil?
+
+      tool_class.new.approval_summary(arguments: string_arguments(tool_call), context: context)
+    end
+
+    def string_arguments(tool_call)
+      arguments = tool_call&.arguments
+      arguments.is_a?(Hash) ? arguments.transform_keys(&:to_s) : {}
     end
   end
 end

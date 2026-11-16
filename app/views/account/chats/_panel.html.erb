@@ -29,6 +29,9 @@
       <% (chat&.messages || []).each do |m| %>
         <%= render partial: "account/chats/message", locals: {message: m} %>
       <% end %>
+      <% chat&.pending_questions&.select(&:approval?)&.each do |question| %>
+        <%= render partial: "account/chats/approval", locals: {question: question, chat: chat} %>
+      <% end %>
     </div>
 
     <form data-action="submit->agent-chat#submit"
