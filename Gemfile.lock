@@ -628,7 +628,7 @@ GEM
       binding_of_caller (>= 1.0)
       pry (~> 0.13)
     public_suffix (7.0.5)
-    puma (8.0.2)
+    puma (8.0.3)
       nio4r (~> 2.0)
     pwned (2.4.1)
     raabro (1.4.0)
