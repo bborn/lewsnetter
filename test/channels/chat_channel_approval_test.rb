@@ -145,4 +145,16 @@ class ChatChannelApprovalTest < ActionCable::Channel::TestCase
     assert_equal "You have one campaign.", last_reply
     assert_empty events("approval_request")
   end
+  test "an approve that loses the race to a decline in another tab keeps the decline" do
+    ask_to_delete_campaign
+    # The approve read the call as pending, then another tab declined it
+    # before the approve recorded its decision.
+    stale = pending_approval
+    @chat.decline(stale, "no")
+    subscription.define_singleton_method(:pending_approvals) { [stale] }
+    stub_replies "Okay."
+    perform :approve, tool_call_id: stale.id
+
+    assert Campaign.exists?(@campaign.id)
+  end
 end

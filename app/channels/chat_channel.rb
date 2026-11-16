@@ -73,7 +73,9 @@ class ChatChannel < ApplicationCable::Channel
   end
 
   def approve(data)
-    decide(data, approved: true) { |question| @chat.approve(question) }
+    # answer, not approve: approve records over a decision another tab made
+    # since we read the call as pending; answer lets the first one stand.
+    decide(data, approved: true) { |question| @chat.answer(question) }
   end
 
   def decline(data)
