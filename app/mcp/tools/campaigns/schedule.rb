@@ -11,6 +11,7 @@ module Mcp
 
         requires_ability :send_now, ::Campaign
         hidden_from_in_app_agent
+        destructive
         description <<~DESC
           Schedules a campaign for future delivery by setting status to "scheduled" and
           recording the scheduled_for datetime. The scheduled_for argument must be an
