@@ -11,6 +11,7 @@ module Mcp
 
         requires_ability :send_now, ::Campaign
         hidden_from_in_app_agent
+        destructive
         description <<~DESC
           Enqueues the campaign for immediate delivery via SendCampaignJob. Only draft
           or scheduled campaigns are sendable — any other status returns an error.

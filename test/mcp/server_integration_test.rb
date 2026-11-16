@@ -54,6 +54,20 @@ module Mcp
       assert_includes names, "team_get_current"
     end
 
+    # MCP hosts decide what to confirm from these hints, so a read must say
+    # it only reads, and a delete or a send must say it can't be undone.
+    test "tools/list tells hosts which tools only read and which destroy or send" do
+      post_mcp(jsonrpc: "2.0", id: 2, method: "tools/list")
+      hints = JSON.parse(response.body).dig("result", "tools").to_h { |t| [t["name"], t["annotations"]] }
+
+      assert_equal({"readOnlyHint" => true}, hints["subscribers_list"])
+      assert_equal({"readOnlyHint" => false}, hints["subscribers_update"])
+      %w[campaigns_delete subscribers_delete sequences_set_enabled sequences_update campaigns_send_now campaigns_schedule].each do |name|
+        assert_equal({"readOnlyHint" => false, "destructiveHint" => true}, hints[name], name)
+      end
+      assert hints.values.all?, "every tool should carry annotations"
+    end
+
     test "tools/call team_get_current returns the calling team" do
       post_mcp(jsonrpc: "2.0", id: 3, method: "tools/call", params: {
         name: "team_get_current",

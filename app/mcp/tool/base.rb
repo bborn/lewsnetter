@@ -68,6 +68,18 @@ module Mcp
           !@_approval_condition.nil? && @_approval_condition.call(arguments) == true
         end
 
+        # Declares that the tool can delete data or reach subscribers in a
+        # way that can't be undone. MCP clients see it as destructiveHint
+        # (Mcp::Server.tool_annotations). Tools that declare
+        # requires_approval count as destructive too.
+        def destructive
+          @_destructive = true
+        end
+
+        def destructive?
+          @_destructive == true || !@_approval_condition.nil?
+        end
+
         # The CanCan ability a caller needs on the calling team, e.g.
         # `requires_ability :destroy, Subscriber`. Checked by #invoke against
         # the user's current roles (config/models/roles.yml); a tool that

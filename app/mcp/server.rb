@@ -115,6 +115,7 @@ module Mcp
         # Class-level DSL
         tool_name our_tool._tool_name
         description our_tool._description
+        annotations Server.tool_annotations(our_tool)
 
         # Provide a compatible input_schema_to_json so handle_tools_list
         # in the server serialises correctly. We bypass the Dry::Schema
@@ -154,6 +155,18 @@ module Mcp
           Server.tool_error(e, tool_name: our_tool._tool_name)
         end
       end
+    end
+
+    # MCP's tool annotations, which hosts use to decide which calls to
+    # confirm with the person. They are hints, not a check: Base#invoke
+    # still authorizes every call. A write that declares nothing gets no
+    # destructiveHint, which the spec reads as possibly destructive.
+    def tool_annotations(tool_class)
+      return {read_only_hint: true} if tool_class.read_only?
+
+      hints = {read_only_hint: false}
+      hints[:destructive_hint] = true if tool_class.destructive?
+      hints
     end
 
     def tool_error(error, tool_name:)
