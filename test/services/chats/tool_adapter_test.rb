@@ -170,6 +170,14 @@ module Chats
       end
     end
 
+    def agent_tool(name)
+      Chats::ToolAdapter.adapt_all(context: @ctx).map(&:new).find { |tool| tool.name == name }
+    end
+
+    def llm_call(name, arguments)
+      RubyLLM::ToolCall.new(id: "call_1", name: name, arguments: arguments)
+    end
+
     test "adapt_all leaves out tools hidden from the in-app agent" do
       user = create(:onboarded_user)
       ctx = Mcp::Tool::Context.new(user: user, team: user.current_team)
@@ -178,6 +186,43 @@ module Chats
       assert_includes names, "campaigns_send_test"
       refute_includes names, "campaigns_send_now"
       refute_includes names, "campaigns_schedule"
+    end
+
+    # The calls the user approves in the chat panel before they run.
+    APPROVED_TOOLS = %w[
+      campaigns_delete email_templates_delete segments_delete subscribers_delete sequences_set_enabled
+    ].freeze
+
+    test "deletes and turning Sequences on or off wait for approval" do
+      APPROVED_TOOLS.each do |name|
+        assert agent_tool(name).requires_approval?(llm_call(name, "id" => 1, "enabled" => true)), "#{name} should ask first"
+      end
+    end
+
+    test "sequences_update asks only when it activates a sequence" do
+      tool = agent_tool("sequences_update")
+
+      assert tool.requires_approval?(llm_call("sequences_update", "id" => 1, "status" => "active"))
+      assert_not tool.requires_approval?(llm_call("sequences_update", "id" => 1, "status" => "paused"))
+      assert_not tool.requires_approval?(llm_call("sequences_update", id: 1, name: "Renamed"))
+    end
+
+    test "other tools run without asking" do
+      tools = Chats::ToolAdapter.adapt_all(context: @ctx).map(&:new)
+      asking = tools.select { |tool| tool.requires_approval?(llm_call(tool.name, "id" => 1, "status" => "active", "enabled" => true)) }
+
+      assert_equal (APPROVED_TOOLS + ["sequences_update"]).sort, asking.map(&:name).sort
+    end
+
+    test "the approval line names the record the call would change" do
+      campaign = create(:campaign, team: @team, subject: "Spring launch")
+      other_team = create(:onboarded_user).current_team
+      hidden = create(:campaign, team: other_team, subject: "Not yours")
+
+      assert_equal %(Delete campaign "Spring launch" (##{campaign.id})),
+        Chats::ToolAdapter.approval_summary(llm_call("campaigns_delete", "id" => campaign.id), context: @ctx)
+      assert_equal "Delete campaign ##{hidden.id}",
+        Chats::ToolAdapter.approval_summary(llm_call("campaigns_delete", "id" => hidden.id), context: @ctx)
     end
   end
 end

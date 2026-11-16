@@ -53,6 +53,21 @@ module Mcp
           @_hidden_from_in_app_agent == true
         end
 
+        # Makes the in-app agent wait for the user before running the tool:
+        # the chat panel shows Approve and Decline, and the call runs only
+        # once approved (Chats::ToolAdapter, ChatChannel#approve). A block
+        # limits it to the calls whose string-keyed arguments it returns
+        # true for. External MCP clients aren't paused: the user consented
+        # when they authorized the token, and MCP hosts confirm calls
+        # themselves.
+        def requires_approval(&condition)
+          @_approval_condition = condition || ->(_arguments) { true }
+        end
+
+        def requires_approval?(arguments)
+          !@_approval_condition.nil? && @_approval_condition.call(arguments) == true
+        end
+
         # The CanCan ability a caller needs on the calling team, e.g.
         # `requires_ability :destroy, Subscriber`. Checked by #invoke against
         # the user's current roles (config/models/roles.yml); a tool that
@@ -78,6 +93,12 @@ module Mcp
         raise NotImplementedError, "#{self.class} must implement #call"
       end
 
+      # The line the chat panel shows above Approve and Decline. Tools that
+      # declare requires_approval override it to say what the call changes.
+      def approval_summary(arguments:, context:)
+        "Run #{self.class.tool_name}"
+      end
+
       # Validates arguments, then dispatches to #call. The server invokes
       # this — never #call directly — so schema validation is centralized.
       def invoke(arguments:, context:)
@@ -87,6 +108,13 @@ module Mcp
       end
 
       private
+
+      # `"Spring launch" (#12)` for an approval summary, or `#12` when the
+      # team has no such record (the call then fails as not found).
+      def record_label(scope, id, attribute)
+        value = scope.find_by(id: id)&.public_send(attribute)
+        value.present? ? %("#{value}" (##{id})) : "##{id}"
+      end
 
       # Roles change while sockets and tokens stay open, so build the Ability
       # from a freshly loaded user rather than the one the context carries.

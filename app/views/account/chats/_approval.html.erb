@@ -1,0 +1,19 @@
+<%# A tool call waiting for the user to approve it. Rendered at page load %>
+<%# and broadcast by ChatChannel when a turn pauses on it. %>
+<%# locals: { question: RubyLLM::Question (an approval), chat: Chat } %>
+<% tool_call = question.tool_call %>
+<% context = Mcp::Tool::Context.new(user: chat.user, team: chat.team) %>
+<div data-approval-id="<%= question.id %>"
+     class="border border-orange-200 bg-orange-50 rounded-lg px-3 py-2 space-y-2">
+  <div class="text-[11px] uppercase tracking-wider text-zinc-500 font-mono">Approval needed</div>
+  <div class="text-sm text-zinc-900"><%= Chats::ToolAdapter.approval_summary(tool_call, context: context) %></div>
+  <div class="text-xs text-zinc-500 font-mono break-all"><%= tool_call.name %>(<%= tool_call.arguments.to_json %>)</div>
+  <div data-approval-actions class="flex gap-2">
+    <button type="button" class="button button-smaller"
+            data-action="agent-chat#approve"
+            data-agent-chat-tool-call-id-param="<%= question.id %>">Approve</button>
+    <button type="button" class="button button-secondary button-smaller"
+            data-action="agent-chat#decline"
+            data-agent-chat-tool-call-id-param="<%= question.id %>">Decline</button>
+  </div>
+</div>

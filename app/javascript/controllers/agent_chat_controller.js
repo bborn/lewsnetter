@@ -42,6 +42,24 @@ export default class extends Controller {
     this.inputTarget.value = ""
   }
 
+  // Approve / Decline on a pending tool call card (account/chats/_approval).
+  // The buttons go at once so a second click sends nothing; the server
+  // ignores a decision on a call that is already answered anyway.
+  approve(e) {
+    this.decide("approve", e)
+  }
+
+  decline(e) {
+    this.decide("decline", e)
+  }
+
+  decide(action, e) {
+    const toolCallId = e.params.toolCallId
+    if (!toolCallId || !this.subscription) return
+    e.currentTarget.closest("[data-approval-actions]")?.querySelectorAll("button").forEach(b => { b.disabled = true })
+    this.subscription.perform(action, { tool_call_id: String(toolCallId) })
+  }
+
   // ⌘+Enter (mac) / Ctrl+Enter (everyone else) submits. Plain Enter inserts
   // a newline so multi-line prompts still work. Wired via:
   //   data-action="keydown->agent-chat#keydown"
@@ -59,6 +77,8 @@ export default class extends Controller {
   //   message_end     {message_id, html}                          — replace bubble with final markdown-rendered HTML
   //   tool_call       {tool_call_id, name, arguments}             — "→ Calling foo({…})"
   //   tool_result     {result_excerpt}                            — "← result"
+  //   approval_request {tool_call_id, html}                       — Approve/Decline card for a paused call
+  //   approval_decided {tool_call_id, approved}                   — swap the card's buttons for the decision
   handleEvent(event) {
     if (!this.hasMessagesTarget) return
 
@@ -80,6 +100,12 @@ export default class extends Controller {
         break
       case "tool_result":
         this.appendHtml(this.toolResultHtml(event.result_excerpt))
+        break
+      case "approval_request":
+        this.showApproval(event.tool_call_id, event.html)
+        break
+      case "approval_decided":
+        this.markDecided(event.tool_call_id, event.approved)
         break
       case "error":
         this.appendHtml(event.html || `<div class="text-rose-700 text-sm">error</div>`)
@@ -141,6 +167,30 @@ export default class extends Controller {
     // next user turn isn't blocked.
     if (this.suppressTimer) clearTimeout(this.suppressTimer)
     this.suppressTimer = setTimeout(() => { this.suppressStreaming = false }, 1500)
+  }
+
+  // A turn that pauses on several calls sends every card still pending, so
+  // replace a card already on the page instead of adding it twice.
+  showApproval(toolCallId, html) {
+    const existing = this.approvalCard(toolCallId)
+    if (existing) {
+      existing.outerHTML = html
+    } else {
+      this.appendHtml(html)
+    }
+  }
+
+  markDecided(toolCallId, approved) {
+    const actions = this.approvalCard(toolCallId)?.querySelector("[data-approval-actions]")
+    if (!actions) return
+    const label = approved ? "Approved" : "Declined"
+    const color = approved ? "text-emerald-700 border-emerald-600 bg-emerald-50" : "text-zinc-600 border-zinc-300 bg-white"
+    actions.outerHTML = `<div class="inline-block text-[11px] uppercase tracking-wider font-mono border rounded px-1.5 py-0.5 ${color}">${label}</div>`
+  }
+
+  approvalCard(toolCallId) {
+    return Array.from(this.messagesTarget.querySelectorAll("[data-approval-id]"))
+      .find(node => node.dataset.approvalId === String(toolCallId))
   }
 
   // Pretty tool call line. Argument hash gets compact JSON; long lists truncated.

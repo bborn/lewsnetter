@@ -8,6 +8,7 @@ module Mcp
       class SetEnabled < Mcp::Tool::Base
         tool_name "sequences_set_enabled"
         requires_ability :manage, ::Team
+        requires_approval
         description "Turns the calling team's Sequences feature on or off (teams.sequences_enabled). " \
           "Off: nothing enrolls or sends, whatever each sequence's status. On: only sequences with " \
           "status active enroll and send; drafts and paused ones stay idle. Returns the flag and " \
@@ -18,6 +19,15 @@ module Mcp
           required: ["enabled"],
           properties: {enabled: {type: "boolean"}}
         )
+
+        def approval_summary(arguments:, context:)
+          if arguments["enabled"]
+            active = context.team.sequences.where(status: "active").count
+            "Turn Sequences on: #{active} active #{"sequence".pluralize(active)} start enrolling and sending"
+          else
+            "Turn Sequences off: nothing enrolls or sends until it's back on"
+          end
+        end
 
         def call(arguments:, context:)
           team = context.team

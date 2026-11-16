@@ -9,6 +9,7 @@ module Mcp
         tool_name "email_templates_delete"
 
         requires_ability :destroy, ::EmailTemplate
+        requires_approval
         description "Deletes an email template by id from the calling team. Campaigns that reference this template will have their email_template_id set to null (dependent: :nullify)."
         arguments_schema(
           type: "object",
@@ -18,6 +19,10 @@ module Mcp
             id: {type: "integer"}
           }
         )
+
+        def approval_summary(arguments:, context:)
+          "Delete email template #{record_label(context.team.email_templates, arguments["id"], :name)}"
+        end
 
         def call(arguments:, context:)
           template = context.team.email_templates.find_by!(id: arguments["id"])
