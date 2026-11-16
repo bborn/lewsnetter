@@ -157,4 +157,27 @@ class ChatChannelApprovalTest < ActionCable::Channel::TestCase
 
     assert Campaign.exists?(@campaign.id)
   end
+
+  test "a call on another chat can't be approved from this one" do
+    other_chat = @team.chats.create!(user: create(:onboarded_user), model: @chat.model)
+    ask_to_delete_campaign
+    forged = pending_approval
+    forged_row = RubyLLM::ActiveRecord::ToolCall.find_by!(tool_call_id: forged.id)
+    forged_row.message.update!(chat_id: other_chat.id)
+
+    perform :approve, tool_call_id: forged.id
+
+    assert Campaign.exists?(@campaign.id)
+    assert_equal "pending", forged_row.reload.approval
+  end
+
+  test "a pending call can be approved after a reload" do
+    ask_to_delete_campaign
+    unsubscribe
+    subscribe chat_id: @chat.id
+    perform :approve, tool_call_id: pending_approval.id
+
+    assert_not Campaign.exists?(@campaign.id)
+    assert_equal "Deleted it.", last_reply
+  end
 end
