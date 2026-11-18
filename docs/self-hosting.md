@@ -137,6 +137,9 @@ The shipped config is for the hosted Lewsnetter deployment. You'll want to chang
 - `env.clear.MARKETING_BASE_URL` → drop it unless you split marketing + app onto two hosts; single-host deployments leave it unset
 - `env.clear.BRANDED_HOST_CNAME_TARGET` → drop it unless tenants brand their unsubscribe/tracking subdomains; if you keep it, point it at a DNS-only host that resolves straight to your origin. Unset, it falls back to the `BASE_URL` host
 - `env.clear.LEWSNETTER_LEGAL_EMAIL` + `LEWSNETTER_ABUSE_EMAIL` → real mailboxes you check
+- `env.clear.DEVELOPER_EMAILS` → your operator's exact account email for instance admin access; do not keep the hosted address
+- `env.clear.BILLING_EXEMPT_EMAILS` → your operator's exact account email if their team should connect its own SES account without a Stripe subscription; do not keep the hosted address
+- `env.clear.LEWSNETTER_PUBLIC_SIGNUPS` → the shipped config has `"true"`; set it to `"false"` except for a controlled window if you need to create the first operator account
 - `env.clear.LITESTREAM_REPLICA_*` → **Path A (no R2):** delete this block. **Path B (R2):** point it at your R2 / S3 bucket details
 - `registry.username` → your GHCR (or other) username
 
@@ -146,7 +149,7 @@ The shipped config is for the hosted Lewsnetter deployment. You'll want to chang
 bundle exec kamal setup    # first run only — installs Docker, builds + pushes image, starts containers
 ```
 
-About 5-15 minutes later, your app is live at https://your-domain.com. The first user to sign up is auto-promoted to admin.
+About 5-15 minutes later, your app is live at https://your-domain.com. Creating a team account does not grant instance admin access. Sign in with the account listed in `DEVELOPER_EMAILS`. If you opened public signups to create it, set `LEWSNETTER_PUBLIC_SIGNUPS` back to `false` and redeploy.
 
 Subsequent deploys:
 

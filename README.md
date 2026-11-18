@@ -54,7 +54,7 @@ echo "<your-server-ip>" > .kamal/SERVER_HOST
 bundle exec kamal setup                      # first deploy: sets up Docker, Traefik, your app
 ```
 
-About 20 minutes later, your app is live. Visit `https://your-domain.com`, sign in as the first user (auto-promoted to admin), and send your first campaign.
+About 20 minutes later, your app is live. Visit `https://your-domain.com`, create your account, and send your first campaign. Instance admin access comes from `DEVELOPER_EMAILS`, not from signing up first; see [`docs/self-hosting.md`](docs/self-hosting.md).
 
 Production reference: `config/deploy.yml` is heavily commented (Litestream replication to R2, per-tenant SES, Cloudflare proxy), and `.github/workflows/deploy.yml` documents the secret matrix.
 
@@ -65,7 +65,7 @@ bin/setup     # installs deps + creates dev DB
 bin/dev       # boots Puma, Solid Queue, esbuild --watch, Tailwind --watch
 ```
 
-Visit http://localhost:3000. First user is auto-admin.
+Visit http://localhost:3000. To reach `/admin/avo`, set `DEVELOPER_EMAILS` to your account email.
 
 ## Connect an MCP client
 
