@@ -92,7 +92,12 @@ if defined?(Api::V1::ApplicationController)
         summary[:processed] += 1
         begin
           row = JSON.parse(line).deep_symbolize_keys
-          external_id = row[:external_id]
+          external_id = row[:external_id].presence
+          unless external_id
+            summary[:errors] << {line: line_number, error: "external_id is required"}
+            next
+          end
+
           subscriber = team.subscribers.find_by(external_id: external_id)
 
           if subscriber.nil?
