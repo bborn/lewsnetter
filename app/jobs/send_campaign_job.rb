@@ -12,12 +12,10 @@ class SendCampaignJob < ApplicationJob
   def perform(campaign_id)
     campaign = Campaign.find(campaign_id)
 
-    unless campaign.status.in?(%w[draft scheduled])
+    unless claim_campaign(campaign)
       Rails.logger.warn("[SendCampaignJob] Campaign #{campaign.id} is in status=#{campaign.status}; skipping.")
       return
     end
-
-    campaign.update!(status: "sending", stats: campaign.stats.merge("sent" => 0, "failed" => 0, "suppressed" => 0, "duplicates" => 0, "errors" => []))
 
     recipients =
       begin
@@ -89,6 +87,14 @@ class SendCampaignJob < ApplicationJob
   end
 
   private
+
+  def claim_campaign(campaign)
+    campaign.with_lock do
+      next false unless campaign.sendable?
+
+      campaign.update!(status: "sending", stats: campaign.stats.merge("sent" => 0, "failed" => 0, "suppressed" => 0, "duplicates" => 0, "errors" => []))
+    end
+  end
 
   # Apply the team-wide subscribed scope, then narrow by segment predicate
   # if one is attached. Predicate validation lives on Segment#applies_to.

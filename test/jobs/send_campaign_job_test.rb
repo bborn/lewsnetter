@@ -113,6 +113,31 @@ class SendCampaignJobTest < ActiveJob::TestCase
     assert_equal "sent", @campaign.reload.status
   end
 
+  test "a worker with a stale draft cannot send a campaign already claimed by another worker" do
+    original_client = Rails.application.config.ses_client
+    original_find = Campaign.method(:find)
+    id = @campaign.id
+    stale = original_find.call(id)
+    Rails.application.config.ses_client = :stub
+
+    SendCampaignJob.perform_now(id)
+    assert_equal "sent", @campaign.reload.status
+    assert_equal "draft", stale.status
+    assert_equal 2, @campaign.deliveries.count
+
+    Campaign.define_singleton_method(:find) do |*ids|
+      (ids == [id]) ? stale : original_find.call(*ids)
+    end
+
+    assert_no_difference -> { @campaign.deliveries.count } do
+      SendCampaignJob.perform_now(id)
+    end
+    assert_equal "sent", @campaign.reload.status
+  ensure
+    Campaign.define_singleton_method(:find, original_find)
+    Rails.application.config.ses_client = original_client
+  end
+
   test "marks as failed on exception" do
     SesSender.singleton_class.class_eval do
       alias_method :_orig_send_bulk, :send_bulk
