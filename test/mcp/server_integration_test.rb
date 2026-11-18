@@ -144,6 +144,77 @@ module Mcp
       assert_not Subscriber.exists?(sub.id)
     end
 
+    # FastMcp writes every response to every open SSE stream. Any token can
+    # open one, so a stream must only carry results for the token's own
+    # user and team.
+    def open_sse(token, params = {})
+      io = StringIO.new
+      get "/mcp/sse", params: params, headers: {"Authorization" => "Bearer #{token.token}"},
+        env: {"rack.hijack" => -> { io }, "rack.hijack_io" => io}
+      (@sse_streams ||= []) << io
+      io
+    end
+
+    def sse_results(io)
+      io.string.scan(/^data: (\{.*\})$/).map { |(json)| JSON.parse(json) }.select { |message| message.key?("result") }
+    end
+
+    def other_team_token
+      outsider = create(:onboarded_user)
+      application = create(:platform_application, team: outsider.current_team)
+      Doorkeeper::AccessToken.create!(resource_owner_id: outsider.id, application: application,
+        scopes: "read write delete", token: SecureRandom.hex)
+    end
+
+    teardown { @sse_streams&.each(&:close) }
+
+    test "another team's SSE stream does not receive this team's tool results" do
+      outsider_stream = open_sse(other_team_token)
+
+      post_mcp(jsonrpc: "2.0", id: 7, method: "tools/call", params: {name: "team_get_current", arguments: {}})
+
+      assert_equal @team.name, JSON.parse(JSON.parse(response.body).dig("result", "content", 0, "text"))["name"]
+      assert_empty sse_results(outsider_stream)
+    end
+
+    test "an SSE stream that reuses another team's client_id does not take over its results" do
+      open_sse(@token, client_id: "shared-client")
+      takeover = open_sse(other_team_token, client_id: "shared-client")
+
+      post_mcp(jsonrpc: "2.0", id: 8, method: "tools/call", params: {name: "team_get_current", arguments: {}})
+
+      assert_empty sse_results(takeover)
+    end
+
+    test "another member's SSE stream on the same team does not receive this caller's results" do
+      member = create(:onboarded_user)
+      create(:membership, team: @team, user: member)
+      member_stream = open_sse(Doorkeeper::AccessToken.create!(resource_owner_id: member.id,
+        application: @platform_application, scopes: "read", token: SecureRandom.hex))
+
+      post_mcp(jsonrpc: "2.0", id: 10, method: "tools/call", params: {name: "team_get_current", arguments: {}})
+
+      assert_empty sse_results(member_stream)
+    end
+
+    test "the caller's own SSE stream still receives its results" do
+      own_stream = open_sse(@token)
+
+      post_mcp(jsonrpc: "2.0", id: 9, method: "tools/call", params: {name: "team_get_current", arguments: {}})
+
+      assert_equal [9], sse_results(own_stream).map { |message| message["id"] }
+    end
+
+    test "a dropped SSE stream does not break the caller's response" do
+      dropped = open_sse(@token)
+      def dropped.write(data) = data.start_with?("data: ") ? raise(Errno::EPIPE) : super
+
+      post_mcp(jsonrpc: "2.0", id: 11, method: "tools/call", params: {name: "team_get_current", arguments: {}})
+
+      assert_response :success
+      assert_equal 11, JSON.parse(response.body)["id"]
+    end
+
     test "tools/call hides the message of an unexpected error" do
       tool = Mcp::Tools::Team::GetCurrent
       original = tool.instance_method(:call)

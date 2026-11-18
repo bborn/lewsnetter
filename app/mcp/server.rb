@@ -44,15 +44,51 @@ module Mcp
     # `server.handle_request`, which in turn returns whatever `send_message`
     # returns.  By returning [json_string] here we satisfy the Rack body
     # contract and make the HTTP response body non-empty.
+    #
+    # FastMcp's own send_message writes every response to every open SSE
+    # stream, whoever opened it (yjacquin/fast-mcp#40), and any valid token
+    # can open one. So each stream records the user and team that opened
+    # it, and a response is written only to that caller's streams.
     class SyncTransport < FastMcp::Transports::RackTransport
+      def register_sse_client(client_id, stream, mutex = nil)
+        super
+        owner = sse_owner
+        @sse_clients_mutex.synchronize { @sse_clients[client_id]&.store(:owner, owner) }
+      end
+
       def send_message(message)
         json_message = message.is_a?(String) ? message : JSON.generate(message)
         Thread.current[:mcp_last_response] = [json_message]
-        # Still broadcast to any active SSE clients (no-op when none exist).
-        super
+        write_to_own_streams(json_message)
         # Return a Rack-body-compatible array so handle_request's caller can
         # use it directly as the HTTP response body.
         [json_message]
+      end
+
+      private
+
+      def sse_owner
+        context = Thread.current[:mcp_context]
+        [context.user.id, context.team.id] if context
+      end
+
+      def write_to_own_streams(json_message)
+        owner = sse_owner
+        disconnected = []
+        @sse_clients_mutex.synchronize do
+          @sse_clients.each do |client_id, client|
+            next unless client[:owner] == owner
+
+            client[:mutex].synchronize do
+              client[:stream].write("data: #{json_message}\n\n")
+              client[:stream].flush if client[:stream].respond_to?(:flush)
+            end
+          rescue IOError, SystemCallError => e
+            @logger.info("Client #{client_id} disconnected: #{e.message}")
+            disconnected << client_id
+          end
+        end
+        disconnected.each { |client_id| unregister_sse_client(client_id) }
       end
     end
 
