@@ -153,9 +153,11 @@ class Account::EmailSendingControllerTest < ActionDispatch::IntegrationTest
   test "update redirects to billing plan picker when team is not exempt and has no subscription" do
     # Temporarily flip the exempt list to something that won't match the
     # factory user's @example.com email — simulates a real paying customer
-    # who hasn't subscribed yet.
+    # who hasn't subscribed yet. Billing has to be configured for the
+    # paywall to apply at all.
     original = ENV["BILLING_EXEMPT_EMAILS"]
     ENV["BILLING_EXEMPT_EMAILS"] = "nobody@nowhere.invalid"
+    stub_billing_enabled(true)
     begin
       patch account_team_email_sending_path(@team), params: {
         team_ses_configuration: {
@@ -170,6 +172,31 @@ class Account::EmailSendingControllerTest < ActionDispatch::IntegrationTest
       assert_nil @team.reload.ses_configuration
     ensure
       ENV["BILLING_EXEMPT_EMAILS"] = original
+      unstub_billing_enabled
+    end
+  end
+
+  # Without Stripe/Paddle configured there's no way to pay, so the plan
+  # picker would be a dead end. Non-exempt teams save credentials normally.
+  test "update saves credentials for a non-exempt team when billing is not configured" do
+    stub_verifier_result(status: "verified", sandbox: false, quota_max: 50_000, quota_sent: 100)
+    original = ENV["BILLING_EXEMPT_EMAILS"]
+    ENV["BILLING_EXEMPT_EMAILS"] = "nobody@nowhere.invalid"
+    stub_billing_enabled(false)
+    begin
+      patch account_team_email_sending_path(@team), params: {
+        team_ses_configuration: {
+          encrypted_access_key_id: "AKIANEW",
+          encrypted_secret_access_key: "secretnew",
+          region: "us-west-2"
+        }
+      }
+      assert_response :redirect
+      refute_match(/billing/, response.location)
+      assert_equal "us-west-2", @team.reload.ses_configuration&.region
+    ensure
+      ENV["BILLING_EXEMPT_EMAILS"] = original
+      unstub_billing_enabled
     end
   end
 
@@ -272,5 +299,16 @@ class Account::EmailSendingControllerTest < ActionDispatch::IntegrationTest
       alias_method :_orig_call, :call unless method_defined?(:_orig_call)
       define_method(:call) { result }
     end
+  end
+
+  # BulletTrain decides at boot whether billing is on (STRIPE_SECRET_KEY /
+  # PADDLE_SECRET_KEY), so flipping ENV mid-test would leave Ability out of
+  # step. Stub the controller's view of it instead.
+  def stub_billing_enabled(value)
+    Account::EmailSendingController.define_method(:billing_enabled?) { value }
+  end
+
+  def unstub_billing_enabled
+    Account::EmailSendingController.remove_method(:billing_enabled?)
   end
 end

@@ -12,6 +12,9 @@
   template_label = @campaign.email_template&.name.presence || "No template"
   count_for_label = recipient_count || 0
   send_label = recipient_count.nil? ? "Send" : "Send to #{recipient_count} subscriber#{"s" unless recipient_count == 1}"
+  resumable = @campaign.resumable?
+  remaining_count = resumable ? @campaign.remaining_recipient_count : nil
+  resume_label = remaining_count.nil? ? "Resume send" : "Resume send to #{remaining_count} remaining"
 %>
 <%= render 'account/shared/page' do |page| %>
   <%# Visually-hidden page title: the hero block IS the visual title for this
@@ -66,6 +69,15 @@
               <% end %>
             <% end %>
 
+            <% if resumable && can?(:update, @campaign) %>
+              <%= button_to "#{resume_label} →".html_safe,
+                    resume_send_account_campaign_path(@campaign),
+                    method: :post,
+                    class: "btn-editorial btn-editorial--primary",
+                    form: { class: "inline" },
+                    data: { turbo_confirm: "Send to the #{remaining_count || "remaining"} subscriber#{"s" unless remaining_count == 1} who haven't received this campaign? Anyone already sent to is skipped." } %>
+            <% end %>
+
             <% if can?(:update, @campaign) %>
               <%= button_to "Send test to me",
                     test_send_account_campaign_path(@campaign),
@@ -108,6 +120,26 @@
       <%# ============================================================
           Confidence cue / warning callout
           ============================================================ %>
+      <% if resumable %>
+        <aside class="campaign-show-callout campaign-show-callout--warn">
+          <% if @campaign.failed? %>
+            <strong>This send stopped before it finished.</strong>
+          <% else %>
+            <strong>This send has stopped making progress.</strong>
+          <% end %>
+          <% handled_count = @campaign.deliveries.count %>
+          <%= handled_count %> subscriber<%= "s" unless handled_count == 1 %> already went through the send (sent, failed or suppressed).
+          Resuming only mails the <%= remaining_count || "remaining" %> who didn't, so nobody gets this campaign twice.
+        </aside>
+      <% end %>
+
+      <% if @campaign.draft? && @campaign.unscheduled_reason.present? %>
+        <aside class="campaign-show-callout campaign-show-callout--warn">
+          <strong>Not sent at the scheduled time.</strong>
+          <%= @campaign.unscheduled_reason %>
+        </aside>
+      <% end %>
+
       <% if @campaign.draft? %>
         <% if zero_recipients %>
           <aside class="campaign-show-callout campaign-show-callout--warn">

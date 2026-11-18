@@ -229,4 +229,89 @@ class SendCampaignJobTest < ActiveJob::TestCase
       "Expected stats[errors] to mention forbidden token, got #{@campaign.stats["errors"].inspect}"
     )
   end
+
+  # --- Resend safety -------------------------------------------------------
+
+  def with_stub_ses
+    original = Rails.application.config.ses_client
+    Rails.application.config.ses_client = :stub
+    yield
+  ensure
+    Rails.application.config.ses_client = original
+  end
+
+  def subscriber(email)
+    @team.subscribers.find_by!(email: email)
+  end
+
+  test "never mails a subscriber who already has a delivery for the campaign" do
+    a = subscriber("a@example.com")
+    @campaign.deliveries.create!(subscriber: a, status: "sent", ses_message_id: "earlier-run", sent_at: 1.hour.ago)
+
+    with_stub_ses { SendCampaignJob.perform_now(@campaign.id) }
+
+    assert_equal "sent", @campaign.reload.status
+    assert_equal 1, @campaign.deliveries.where(subscriber: a).count
+    assert_equal ["earlier-run"], @campaign.deliveries.where(subscriber: a).pluck(:ses_message_id)
+    assert_equal 1, @campaign.deliveries.where(subscriber: subscriber("b@example.com")).count
+    assert_nil a.reload.last_contacted_at
+  end
+
+  test "resuming a failed send only mails subscribers who weren't sent to" do
+    a = subscriber("a@example.com")
+    @campaign.deliveries.create!(subscriber: a, status: "sent", ses_message_id: "first-run", sent_at: 1.hour.ago)
+    @campaign.update!(status: "sending")
+    @campaign.update!(status: "failed", stats: {"sent" => 1, "failed" => 0, "suppressed" => 0, "duplicates" => 0, "errors" => ["boom"]})
+
+    with_stub_ses { SendCampaignJob.perform_now(@campaign.id, resume: true) }
+
+    @campaign.reload
+    assert_equal "sent", @campaign.status
+    assert_equal 2, @campaign.deliveries.count
+    assert_equal 1, @campaign.deliveries.where(subscriber: a).count
+    # Counters carry on from the interrupted run.
+    assert_equal 2, @campaign.stats["sent"]
+  end
+
+  test "resume also skips another subscriber row sharing an address already sent to" do
+    a = subscriber("a@example.com")
+    twin = @team.subscribers.create!(email: "A@example.com", external_id: "job-a-twin", subscribed: true)
+    @campaign.deliveries.create!(subscriber: a, status: "sent", ses_message_id: "first-run", sent_at: 1.hour.ago)
+    @campaign.update!(status: "sending")
+    @campaign.update!(status: "failed")
+
+    with_stub_ses { SendCampaignJob.perform_now(@campaign.id, resume: true) }
+
+    assert_equal 0, @campaign.deliveries.where(subscriber: twin).count
+    assert_equal 2, @campaign.deliveries.count
+  end
+
+  test "resume picks up a campaign stuck in sending after its worker died" do
+    a = subscriber("a@example.com")
+    @campaign.update!(status: "sending")
+    delivery = @campaign.deliveries.create!(subscriber: a, status: "sent", ses_message_id: "first-run", sent_at: 1.hour.ago)
+    delivery.update_columns(created_at: 1.hour.ago)
+    @campaign.update_columns(updated_at: 1.hour.ago)
+
+    with_stub_ses { SendCampaignJob.perform_now(@campaign.id, resume: true) }
+
+    assert_equal "sent", @campaign.reload.status
+    assert_equal 2, @campaign.deliveries.count
+  end
+
+  test "resume leaves a campaign that is still actively sending alone" do
+    @campaign.update!(status: "sending")
+
+    assert_no_difference -> { Delivery.count } do
+      with_stub_ses { SendCampaignJob.perform_now(@campaign.id, resume: true) }
+    end
+    assert_equal "sending", @campaign.reload.status
+  end
+
+  test "resume does nothing for draft or sent campaigns" do
+    assert_no_difference -> { Delivery.count } do
+      with_stub_ses { SendCampaignJob.perform_now(@campaign.id, resume: true) }
+    end
+    assert_equal "draft", @campaign.reload.status
+  end
 end

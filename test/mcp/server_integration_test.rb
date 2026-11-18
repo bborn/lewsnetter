@@ -62,7 +62,7 @@ module Mcp
 
       assert_equal({"readOnlyHint" => true}, hints["subscribers_list"])
       assert_equal({"readOnlyHint" => false}, hints["subscribers_update"])
-      %w[campaigns_delete subscribers_delete sequences_set_enabled sequences_update campaigns_send_now campaigns_schedule].each do |name|
+      %w[campaigns_delete subscribers_delete sequences_set_enabled sequences_update campaigns_send_now campaigns_schedule campaigns_resume_send].each do |name|
         assert_equal({"readOnlyHint" => false, "destructiveHint" => true}, hints[name], name)
       end
       assert hints.values.all?, "every tool should carry annotations"

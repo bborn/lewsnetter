@@ -52,6 +52,7 @@ class Campaign < ApplicationRecord
   scope :draft, -> { where(status: "draft") }
   scope :scheduled, -> { where(status: "scheduled") }
   scope :sent, -> { where(status: "sent") }
+  scope :due_for_sending, ->(now = Time.current) { scheduled.where(scheduled_for: ..now) }
   # 🚅 add scopes above.
 
   validates :subject, presence: true
@@ -69,6 +70,7 @@ class Campaign < ApplicationRecord
   # carries a template. Enforced as a callback (not just in the form) so the
   # MCP/API path can't persist the contradictory state either.
   before_validation :clear_template_when_plain_text
+  before_save :clear_unscheduled_reason
   before_destroy :keep_while_step_exists, prepend: true
   # 🚅 add callbacks above.
 
@@ -84,6 +86,49 @@ class Campaign < ApplicationRecord
   # The send-now flow + view buttons gate on this.
   def sendable?
     draft? || scheduled?
+  end
+
+  # A "sending" campaign with no new Delivery rows (and no claim) for this
+  # long is treated as stuck: its worker died mid-send.
+  STUCK_SENDING_AFTER = 15.minutes
+
+  # Can an interrupted send be picked up where it stopped? Failed sends can,
+  # and so can sends stuck in "sending" with no recent activity. Resuming
+  # only mails subscribers without a Delivery for this campaign (see
+  # SendCampaignJob), so it can't re-mail anyone already sent to.
+  def resumable?(now: Time.current)
+    return true if failed?
+    sending? && last_send_activity_at <= now - STUCK_SENDING_AFTER
+  end
+
+  # Latest sign of life for an in-flight send: the newest Delivery row or
+  # the campaign's own claim/update, whichever is later.
+  def last_send_activity_at
+    [deliveries.maximum(:created_at), updated_at].compact.max
+  end
+
+  # Everyone this campaign goes to: subscribed team subscribers, narrowed by
+  # the segment predicate when one is attached. Raises
+  # Segment::InvalidPredicate for a bad predicate.
+  def audience
+    base = team.subscribers.subscribed
+    return base if segment.blank?
+
+    segment.applies_to(base)
+  end
+
+  # The audience minus anyone who already has a Delivery for this campaign
+  # (sent, failed or suppressed). This is what a send or resume mails.
+  def unsent_audience
+    audience.where.not(id: deliveries.select(:subscriber_id))
+  end
+
+  # How many subscribers a resume would still mail. nil when the segment
+  # predicate is invalid.
+  def remaining_recipient_count
+    unsent_audience.count
+  rescue Segment::InvalidPredicate
+    nil
   end
 
   def valid_email_templates
@@ -105,14 +150,9 @@ class Campaign < ApplicationRecord
   # If the segment's predicate is invalid we surface nil; callers should treat
   # that as "we don't know" rather than a real zero.
   def recipient_count
-    base = team.subscribers.subscribed
-    return base.count if segment.blank?
-
-    begin
-      segment.applies_to(base).count
-    rescue Segment::InvalidPredicate
-      nil
-    end
+    audience.count
+  rescue Segment::InvalidPredicate
+    nil
   end
 
   # Renders the campaign body to HTML for an in-app preview. Uses the first
@@ -322,6 +362,12 @@ class Campaign < ApplicationRecord
     when "sending"
       errors.add(:status, "can't reopen a campaign while it's sending") unless status.in?(%w[sent failed])
     end
+  end
+
+  # The dispatcher's "why this didn't send" note only describes the draft it
+  # left behind; drop it as soon as the campaign moves on.
+  def clear_unscheduled_reason
+    self.unscheduled_reason = nil if will_save_change_to_status? && status != "draft"
   end
 
   # Deleted with its step (SequenceStep belongs_to campaign, dependent:

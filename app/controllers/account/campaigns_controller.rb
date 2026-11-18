@@ -2,7 +2,7 @@ class Account::CampaignsController < Account::ApplicationController
   account_load_and_authorize_resource :campaign,
     through: :team,
     through_association: :campaigns,
-    member_actions: [:send_now, :test_send, :preview_as, :preview_frame, :destroy_asset, :upload_asset]
+    member_actions: [:send_now, :resume_send, :test_send, :preview_as, :preview_frame, :destroy_asset, :upload_asset]
 
   # GET /account/teams/:team_id/campaigns
   # GET /account/teams/:team_id/campaigns.json
@@ -147,6 +147,20 @@ class Account::CampaignsController < Account::ApplicationController
       redirect_to [:account, @campaign], notice: "Campaign queued for sending."
     else
       redirect_to [:account, @campaign], alert: "Only draft or scheduled campaigns can be sent."
+    end
+  end
+
+  # POST /account/campaigns/:id/resume_send
+  #
+  # Picks up a failed send, or one stuck in "sending" after its worker died.
+  # SendCampaignJob only mails subscribers without a Delivery for this
+  # campaign, so nobody already sent to gets it twice.
+  def resume_send
+    if @campaign.resumable?
+      SendCampaignJob.perform_later(@campaign.id, resume: true)
+      redirect_to [:account, @campaign], notice: "Resuming the send. Only subscribers who haven't received this campaign will get it."
+    else
+      redirect_to [:account, @campaign], alert: "Only a failed send, or one that has stopped making progress, can be resumed."
     end
   end
 

@@ -19,6 +19,19 @@ class Api::V1::CampaignLifecycleTest < Api::V1::Test
     assert_equal "draft", @campaign.reload.status
   end
 
+  # Scheduling over the API would skip the all-subscribers confirmation
+  # campaigns_schedule enforces, so status writes other than "draft" are
+  # ignored.
+  test "a campaign can't be scheduled or sent by setting status through the API" do
+    @campaign = @team.campaigns.create!(subject: "Draft", body_markdown: "Hi", status: "draft")
+
+    %w[scheduled sending sent].each do |status|
+      update_status(status)
+      assert_response :success
+      assert_equal "draft", @campaign.reload.status, status
+    end
+  end
+
   private
 
   def update_status(status)

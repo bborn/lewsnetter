@@ -134,6 +134,20 @@ class SequenceTest < ActiveSupport::TestCase
     assert_equal 0, SequenceEnrollment.where(sequence_id: @sequence.id).count
   end
 
+  # Re-entry mails the same subscriber the same step again, so the one-row-
+  # per-subscriber rule for broadcasts must not apply to step deliveries,
+  # and deleting the step must still work with repeats present.
+  test "a step can mail the same subscriber twice and still be deleted" do
+    step = @sequence.steps.first
+    2.times { Delivery.create!(campaign: step.campaign, subscriber: @subscriber, status: "sent") }
+    assert_equal 2, step.deliveries.count
+
+    campaign_id = step.campaign_id
+    step.destroy!
+    assert_not Campaign.exists?(campaign_id)
+    assert_equal 0, Delivery.where(campaign_id: campaign_id).count
+  end
+
   test "destroying the team cleans up sequences" do
     @sequence.enroll!(@subscriber)
     @team.destroy!

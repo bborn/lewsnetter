@@ -2,6 +2,10 @@
 # Pro subscription or a member on the BILLING_EXEMPT_EMAILS allowlist.
 # Everything else in the app stays free.
 #
+# Only applies when billing is configured (BulletTrain's `billing_enabled?`,
+# i.e. a Stripe or Paddle secret key is set). A self-hosted instance without
+# billing has no way to take payment, so the plan picker would be a dead end.
+#
 # Mixed into the two controllers that can write SES credentials:
 #   - Account::EmailSendingSetupController (4-step wizard)
 #   - Account::EmailSendingController     (settings page)
@@ -13,6 +17,7 @@ module Billing::RequiresSubscriptionForSes
   private
 
   def require_active_subscription_for_ses
+    return unless billing_enabled?
     return if @team.billing_exempt?
     return if @team.current_billing_subscription.present?
 

@@ -23,6 +23,7 @@ module Mcp
           assert_equal "scheduled", result[:campaign][:status]
           assert_equal "scheduled", @campaign.reload.status
           assert_not_nil @campaign.scheduled_for
+          assert @campaign.all_subscribers_confirmed, "the dispatcher needs the confirmation recorded"
         end
 
         test "returns scheduled_for as ISO8601 string" do
@@ -56,6 +57,7 @@ module Mcp
           @campaign.update!(segment: segment)
           result = Schedule.new.invoke(arguments: {"id" => @campaign.id, "scheduled_for" => 1.day.from_now.iso8601}, context: @ctx)
           assert result[:scheduled]
+          refute @campaign.reload.all_subscribers_confirmed
         end
 
         test "raises RecordNotFound for campaign on another team" do

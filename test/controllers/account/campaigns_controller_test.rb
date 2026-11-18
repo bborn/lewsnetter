@@ -149,6 +149,92 @@ class Account::CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Only draft or scheduled/, flash[:alert].to_s)
   end
 
+  # A test send uses an unsaved stand-in subscriber with the author's email.
+  # It must leave no subscriber or Delivery behind, or the real send would
+  # count the author as already sent and skip their real subscriber row.
+  test "a test send doesn't stop the author getting the real send" do
+    author = @team.subscribers.create!(email: @user.email, external_id: "author-real", subscribed: true)
+    original = Rails.application.config.ses_client
+    Rails.application.config.ses_client = :stub
+    begin
+      assert_no_difference -> { @team.subscribers.count } do
+        post test_send_account_campaign_url(@campaign)
+      end
+      assert_match(/Test email sent/, flash[:notice].to_s)
+      assert_equal 0, @campaign.deliveries.count
+
+      SendCampaignJob.perform_now(@campaign.id)
+    ensure
+      Rails.application.config.ses_client = original
+    end
+
+    assert_equal "sent", @campaign.reload.status
+    assert_equal 1, @campaign.deliveries.where(subscriber: author).where.not(ses_message_id: nil).count
+  end
+
+  test "show explains why a scheduled campaign went back to draft" do
+    @campaign.update_columns(unscheduled_reason: ScheduledCampaignDispatchJob::UNCONFIRMED_REASON)
+
+    get account_campaign_url(@campaign)
+
+    assert_response :success
+    assert_match(/Not sent at the scheduled time/, response.body)
+    assert_match(/without a segment/, response.body)
+  end
+
+  def fail_partway!
+    a = @team.subscribers.create!(email: "a@example.com", external_id: "resume-a", subscribed: true)
+    @team.subscribers.create!(email: "b@example.com", external_id: "resume-b", subscribed: true)
+    @campaign.update!(status: "sending")
+    @campaign.deliveries.create!(subscriber: a, status: "sent", ses_message_id: "first-run", sent_at: 1.hour.ago)
+    @campaign.update!(status: "failed")
+    a
+  end
+
+  test "show offers to resume a failed send to the remaining subscribers" do
+    fail_partway!
+
+    get account_campaign_url(@campaign)
+
+    assert_response :success
+    assert_match(/action="#{Regexp.escape(resume_send_account_campaign_path(@campaign))}"/, response.body)
+    assert_match(/Resume send to 1 remaining/, response.body)
+    assert_match(/stopped before it finished/, response.body)
+  end
+
+  test "show does not offer resume while a send is still making progress" do
+    @campaign.update!(status: "sending")
+
+    get account_campaign_url(@campaign)
+
+    assert_response :success
+    refute_match(/resume_send/, response.body)
+  end
+
+  test "resume_send mails only subscribers who haven't received the campaign" do
+    a = fail_partway!
+    original = Rails.application.config.ses_client
+    Rails.application.config.ses_client = :stub
+    begin
+      post resume_send_account_campaign_url(@campaign)
+    ensure
+      Rails.application.config.ses_client = original
+    end
+
+    assert_redirected_to account_campaign_url(@campaign)
+    assert_equal "sent", @campaign.reload.status
+    assert_equal 2, @campaign.deliveries.count
+    assert_equal ["first-run"], @campaign.deliveries.where(subscriber: a).pluck(:ses_message_id)
+  end
+
+  test "resume_send is rejected for a campaign that isn't failed or stuck" do
+    post resume_send_account_campaign_url(@campaign)
+
+    assert_redirected_to account_campaign_url(@campaign)
+    assert_match(/can be resumed/, flash[:alert].to_s)
+    assert_equal "draft", @campaign.reload.status
+  end
+
   # The campaign edit form's Audience + Settings sections rely on visible
   # native <select> dropdowns for segment, sender, and template. The
   # upstream super_select / select2 chain wasn't surfacing a visible widget

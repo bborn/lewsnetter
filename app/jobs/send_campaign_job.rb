@@ -4,15 +4,21 @@
 # the error in campaign.stats["errors"] without re-raising. On any other
 # unexpected exception we set status=failed and re-raise so the queue retries
 # / surfaces the failure.
+#
+# Resume: `perform(id, resume: true)` picks up a failed or stuck send (see
+# Campaign#resumable?). Every send, fresh or resumed, skips subscribers who
+# already have a Delivery for the campaign, and the unique index on
+# deliveries(campaign_id, subscriber_id) backs that up, so nobody is mailed
+# the same broadcast twice.
 class SendCampaignJob < ApplicationJob
   BATCH_SIZE = 50
 
   queue_as :default
 
-  def perform(campaign_id)
+  def perform(campaign_id, resume: false)
     campaign = Campaign.find(campaign_id)
 
-    unless claim_campaign(campaign)
+    unless claim_campaign(campaign, resume: resume)
       Rails.logger.warn("[SendCampaignJob] Campaign #{campaign.id} is in status=#{campaign.status}; skipping.")
       return
     end
@@ -26,18 +32,26 @@ class SendCampaignJob < ApplicationJob
         return
       end
 
-    sent_count = 0
-    failed_count = 0
-    suppressed_count = 0
-    duplicate_count = 0
-    errors = []
+    # A resume keeps counting from where the interrupted run left off; a
+    # fresh send was reset to zero by the claim.
+    sent_count = campaign.stats["sent"].to_i
+    failed_count = campaign.stats["failed"].to_i
+    suppressed_count = campaign.stats["suppressed"].to_i
+    duplicate_count = campaign.stats["duplicates"].to_i
+    errors = Array(campaign.stats["errors"])
 
     # One address, one send. A person can exist as multiple subscriber rows
     # (the sync keys on external_id, not email, so duplicate source records
     # become duplicate rows sharing an address). De-dupe by normalized email
     # across the whole send so nobody is emailed twice. find_in_batches yields
     # in ascending id order, so the oldest row for an address wins.
+    #
+    # On a resume, addresses already sent to by an earlier run count as seen,
+    # so a second subscriber row sharing one of them is skipped too.
     seen_emails = Set.new
+    Subscriber.where(id: campaign.deliveries.select(:subscriber_id)).find_each do |subscriber|
+      seen_emails << subscriber.email.to_s.strip.downcase
+    end
 
     recipients.find_in_batches(batch_size: BATCH_SIZE) do |batch|
       unique_batch = []
@@ -56,6 +70,7 @@ class SendCampaignJob < ApplicationJob
         sent_count += result.message_ids.size
         failed_count += result.failed.size
         suppressed_count += result.suppressed.size
+        duplicate_count += Array(result.already_delivered).size
         errors.concat(result.failed.map { |f| "#{f[:subscriber]&.email}: #{f[:error]}" })
 
         bump_last_contacted!(unique_batch, result)
@@ -88,21 +103,28 @@ class SendCampaignJob < ApplicationJob
 
   private
 
-  def claim_campaign(campaign)
+  # Row lock so overlapping scheduler ticks, a manual Send and a Resume
+  # can't all start the same campaign. A resume also stamps updated_at,
+  # which keeps a second resume out until this run goes quiet again.
+  def claim_campaign(campaign, resume:)
     campaign.with_lock do
-      next false unless campaign.sendable?
+      if resume
+        next false unless campaign.resumable?
 
-      campaign.update!(status: "sending", stats: campaign.stats.merge("sent" => 0, "failed" => 0, "suppressed" => 0, "duplicates" => 0, "errors" => []))
+        campaign.update!(status: "sending", updated_at: Time.current)
+      else
+        next false unless campaign.sendable?
+
+        campaign.update!(status: "sending", stats: campaign.stats.merge("sent" => 0, "failed" => 0, "suppressed" => 0, "duplicates" => 0, "errors" => []))
+      end
+      true
     end
   end
 
-  # Apply the team-wide subscribed scope, then narrow by segment predicate
-  # if one is attached. Predicate validation lives on Segment#applies_to.
+  # The campaign's audience minus anyone who already has a Delivery for it.
+  # Predicate validation lives on Segment#applies_to.
   def audience_for(campaign)
-    scope = campaign.team.subscribers.subscribed
-    return scope unless campaign.segment
-
-    campaign.segment.applies_to(scope)
+    campaign.unsent_audience
   end
 
   def record_failure(campaign, message)
