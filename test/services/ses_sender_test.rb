@@ -216,4 +216,22 @@ class SesSenderTest < ActiveSupport::TestCase
     refute body.key?(:html), "plain-text campaign must omit the HTML part"
     assert_equal "Just text", body.dig(:text, :data)
   end
+
+  # Two runs racing over the same subscriber: the unique index lets only one
+  # Delivery row exist, and the loser must not send.
+  test "skips a subscriber whose delivery row for this campaign already exists" do
+    @campaign.deliveries.create!(subscriber: @s1, status: "sent", ses_message_id: "other-run", sent_at: Time.current)
+
+    original = Rails.application.config.ses_client
+    Rails.application.config.ses_client = :stub
+    begin
+      result = SesSender.send_bulk(campaign: @campaign, subscribers: [@s1, @s2])
+      assert_equal 1, result.message_ids.size
+      assert_equal [@s1], result.already_delivered
+      assert_equal 1, @campaign.deliveries.where(subscriber: @s1).count
+      assert_equal 1, @campaign.deliveries.where(subscriber: @s2).count
+    ensure
+      Rails.application.config.ses_client = original
+    end
+  end
 end

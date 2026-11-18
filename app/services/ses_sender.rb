@@ -18,7 +18,14 @@
 # delivered events. Failed sends still get a row (status="failed") so the
 # postmortem aggregations match the audience size.
 class SesSender
-  Result = Struct.new(:message_ids, :failed, :suppressed, :delivery_write_errors, keyword_init: true)
+  # `already_delivered`: subscribers skipped because a Delivery row for this
+  # campaign already existed (another run got there first). Nothing was sent.
+  Result = Struct.new(:message_ids, :failed, :suppressed, :delivery_write_errors, :already_delivered, keyword_init: true)
+
+  # Raised by build_delivery when the unique index on
+  # deliveries(campaign_id, subscriber_id) says this subscriber already has
+  # a row for this broadcast.
+  class AlreadyDelivered < StandardError; end
 
   class << self
     # campaign: Campaign with a sender_address + body
@@ -26,7 +33,7 @@ class SesSender
     def send_bulk(campaign:, subscribers:)
       subscribers = Array(subscribers)
       if subscribers.empty?
-        return Result.new(message_ids: [], failed: [], suppressed: [], delivery_write_errors: 0)
+        return Result.new(message_ids: [], failed: [], suppressed: [], delivery_write_errors: 0, already_delivered: [])
       end
 
       team = campaign.team
@@ -44,6 +51,7 @@ class SesSender
       message_ids = []
       failed = []
       suppressed = []
+      already_delivered = []
       delivery_write_errors = 0
 
       subscribers.each do |subscriber|
@@ -53,8 +61,11 @@ class SesSender
           # this person got nothing. We use a dedicated "suppressed" status
           # rather than "failed" so the postmortem can show it separately
           # (suppressed != something-went-wrong; the system worked).
-          record_suppressed_delivery(campaign: campaign, subscriber: subscriber)
-          suppressed << subscriber
+          if record_suppressed_delivery(campaign: campaign, subscriber: subscriber) == :already_delivered
+            already_delivered << subscriber
+          else
+            suppressed << subscriber
+          end
           next
         end
 
@@ -65,8 +76,16 @@ class SesSender
         # or flip to status="failed" if anything in this loop iteration blows
         # up. If we can't even create the row (validation drift, DB hiccup),
         # we still attempt the render+send so the recipient gets the email —
-        # we just don't get tracking on that one delivery.
-        delivery = build_delivery(campaign: campaign, subscriber: subscriber)
+        # we just don't get tracking on that one delivery. The exception is
+        # a unique-index hit: this subscriber already has a row for this
+        # broadcast, so they've been handled and must not be mailed again.
+        delivery =
+          begin
+            build_delivery(campaign: campaign, subscriber: subscriber)
+          rescue AlreadyDelivered
+            already_delivered << subscriber
+            next
+          end
         delivery_write_errors += 1 if delivery.nil?
 
         rendered =
@@ -131,7 +150,8 @@ class SesSender
         message_ids: message_ids,
         failed: failed,
         suppressed: suppressed,
-        delivery_write_errors: delivery_write_errors
+        delivery_write_errors: delivery_write_errors,
+        already_delivered: already_delivered
       )
     end
 
@@ -154,6 +174,8 @@ class SesSender
         ses_message_id: nil,
         sent_at: nil
       )
+    rescue ActiveRecord::RecordNotUnique
+      raise AlreadyDelivered
     rescue => e
       Rails.logger.warn(
         "[SesSender] failed to create Delivery for subscriber=#{subscriber.id} " \
@@ -191,6 +213,8 @@ class SesSender
         ses_message_id: nil,
         sent_at: nil
       )
+    rescue ActiveRecord::RecordNotUnique
+      :already_delivered
     rescue => e
       Rails.logger.warn(
         "[SesSender] failed to record suppressed Delivery for subscriber=#{subscriber.id} " \

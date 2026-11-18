@@ -220,6 +220,7 @@ Rails.application.routes.draw do
         resources :campaigns do
           member do
             post :send_now
+            post :resume_send
             post :test_send
             post :preview_as
             post :draft, to: "campaign_drafts#create"

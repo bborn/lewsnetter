@@ -22,7 +22,11 @@ class SequenceStep < ApplicationRecord
   belongs_to :campaign, optional: true, dependent: :destroy
   # 🚅 add belongs_to associations above.
 
-  has_many :deliveries, dependent: :nullify
+  # Destroyed, not nullified: the backing campaign (destroyed right after)
+  # takes these rows with it anyway, and nullifying first would turn a
+  # re-entered subscriber's repeat rows into broadcast duplicates that the
+  # unique deliveries(campaign_id, subscriber_id) index rejects.
+  has_many :deliveries, dependent: :destroy
   # 🚅 add has_many associations above.
 
   # 🚅 add has_one associations above.

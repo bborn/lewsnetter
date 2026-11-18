@@ -149,6 +149,59 @@ class Account::CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Only draft or scheduled/, flash[:alert].to_s)
   end
 
+  def fail_partway!
+    a = @team.subscribers.create!(email: "a@example.com", external_id: "resume-a", subscribed: true)
+    @team.subscribers.create!(email: "b@example.com", external_id: "resume-b", subscribed: true)
+    @campaign.update!(status: "sending")
+    @campaign.deliveries.create!(subscriber: a, status: "sent", ses_message_id: "first-run", sent_at: 1.hour.ago)
+    @campaign.update!(status: "failed")
+    a
+  end
+
+  test "show offers to resume a failed send to the remaining subscribers" do
+    fail_partway!
+
+    get account_campaign_url(@campaign)
+
+    assert_response :success
+    assert_match(/action="#{Regexp.escape(resume_send_account_campaign_path(@campaign))}"/, response.body)
+    assert_match(/Resume send to 1 remaining/, response.body)
+    assert_match(/stopped before it finished/, response.body)
+  end
+
+  test "show does not offer resume while a send is still making progress" do
+    @campaign.update!(status: "sending")
+
+    get account_campaign_url(@campaign)
+
+    assert_response :success
+    refute_match(/resume_send/, response.body)
+  end
+
+  test "resume_send mails only subscribers who haven't received the campaign" do
+    a = fail_partway!
+    original = Rails.application.config.ses_client
+    Rails.application.config.ses_client = :stub
+    begin
+      post resume_send_account_campaign_url(@campaign)
+    ensure
+      Rails.application.config.ses_client = original
+    end
+
+    assert_redirected_to account_campaign_url(@campaign)
+    assert_equal "sent", @campaign.reload.status
+    assert_equal 2, @campaign.deliveries.count
+    assert_equal ["first-run"], @campaign.deliveries.where(subscriber: a).pluck(:ses_message_id)
+  end
+
+  test "resume_send is rejected for a campaign that isn't failed or stuck" do
+    post resume_send_account_campaign_url(@campaign)
+
+    assert_redirected_to account_campaign_url(@campaign)
+    assert_match(/can be resumed/, flash[:alert].to_s)
+    assert_equal "draft", @campaign.reload.status
+  end
+
   # The campaign edit form's Audience + Settings sections rely on visible
   # native <select> dropdowns for segment, sender, and template. The
   # upstream super_select / select2 chain wasn't surfacing a visible widget

@@ -186,6 +186,7 @@ module Chats
       assert_includes names, "campaigns_send_test"
       refute_includes names, "campaigns_send_now"
       refute_includes names, "campaigns_schedule"
+      refute_includes names, "campaigns_resume_send"
     end
 
     # The calls the user approves in the chat panel before they run.
