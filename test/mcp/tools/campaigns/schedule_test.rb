@@ -68,6 +68,21 @@ module Mcp
             )
           end
         end
+
+        %w[sending sent].each do |status|
+          test "scheduling cannot reopen a #{status} campaign" do
+            @campaign.update!(status: status)
+
+            assert_raises(ActiveRecord::RecordInvalid) do
+              Schedule.new.invoke(
+                arguments: {"id" => @campaign.id, "scheduled_for" => 1.day.from_now.iso8601, "all_subscribers" => true},
+                context: @ctx
+              )
+            end
+            assert_equal status, @campaign.reload.status
+            assert_nil @campaign.scheduled_for
+          end
+        end
       end
     end
   end
