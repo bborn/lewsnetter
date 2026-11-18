@@ -118,7 +118,59 @@ module AI
       assert_match(/50\.0%/, analyst.call)
     end
 
+    test "the prompt includes the current Markdown campaign copy" do
+      @campaign.update!(body_markdown: "## Markdown-only copy", body_mjml: nil)
+
+      assert_includes analysis_prompt, "## Markdown-only copy"
+    end
+
+    test "the prompt prefers Markdown and keeps a legacy text fallback" do
+      assert_includes analysis_prompt, "Body excerpt:\nHi there"
+
+      @campaign.update!(body_markdown: "Preferred copy")
+      prompt = analysis_prompt
+      assert_includes prompt, "Body excerpt:\nPreferred copy"
+      refute_includes prompt, "Hi there"
+    end
+
+    test "the baseline averages prior human rates per campaign and skips nontracking sends" do
+      first = historical_campaign("First", sent: 4)
+      second = historical_campaign("Second", sent: 2)
+      historical_campaign("Empty", sent: 0)
+      historical_campaign("Plain", sent: 5, plain_text_only: true)
+      subscriber = @campaign.deliveries.first.subscriber
+
+      first_delivery = first.deliveries.create!(subscriber: subscriber, status: "sent", ses_message_id: "history-first")
+      first_delivery.click_events.create!(url: "https://example.test/", clicked_at: 1.day.ago, user_agent: "Firefox")
+      second_delivery = second.deliveries.create!(subscriber: subscriber, status: "sent", ses_message_id: "history-second")
+      second_delivery.open_events.create!(opened_at: 1.day.ago, user_agent: "Thunderbird", automated: true)
+
+      prompt = analysis_prompt
+      assert_includes prompt, '"open_rate_pct" => 12.5'
+      assert_includes prompt, '"click_rate_pct" => 12.5'
+    end
+
+    test "an empty historical sample has no fabricated engagement rates" do
+      historical_campaign("Empty", sent: 0)
+      historical_campaign("Plain", sent: 5, plain_text_only: true)
+
+      refute_match(/(?:open|click)_rate_pct/, analysis_prompt)
+    end
+
     private
+
+    def historical_campaign(subject, sent:, plain_text_only: false)
+      @team.campaigns.create!(
+        subject: subject, body_markdown: "Prior copy", plain_text_only: plain_text_only,
+        status: "sent", sent_at: 2.days.ago, stats: {"sent" => sent}
+      )
+    end
+
+    def analysis_prompt
+      analyst, calls = analyst_answering(nil)
+      analyst.call
+      calls.sole.fetch(:user)
+    end
 
     # An analyst in LLM mode whose ask_llm returns +answer+ and records its
     # arguments.

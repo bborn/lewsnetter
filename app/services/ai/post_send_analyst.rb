@@ -69,8 +69,15 @@ module AI
         Subject: #{@campaign.subject}
         Preheader: #{@campaign.preheader}
         Body excerpt:
-        #{(@campaign.body_mjml || "").to_s.gsub(/<[^>]+>/, " ").squish[0, 800]}
+        #{body_excerpt}
       PROMPT
+    end
+
+    def body_excerpt
+      return @campaign.body_markdown.strip[0, 800] if @campaign.markdown_body?
+
+      mjml = @campaign.body_mjml.presence || @campaign.email_template&.mjml_body
+      mjml.to_s.gsub(/<[^>]+>/, " ").squish[0, 800]
     end
 
     def stats
@@ -103,9 +110,9 @@ module AI
       prior = @campaign.team.campaigns
         .where(status: "sent")
         .where.not(id: @campaign.id)
-        .order(sent_at: :desc)
+        .order(sent_at: :desc, id: :desc)
         .limit(10)
-        .pluck(:stats)
+        .map { |campaign| historical_stats(campaign) }
       return {} if prior.empty?
       keys = prior.flat_map(&:keys).uniq
       keys.each_with_object({}) do |k, acc|
@@ -115,6 +122,18 @@ module AI
         values = prior.map { |row| row[k] }.grep(Numeric)
         acc[k] = (values.sum.to_f / values.size).round(2) if values.any?
       end
+    end
+
+    def historical_stats(campaign)
+      stats = campaign.stats.to_h.stringify_keys
+      sent = stats["sent"]
+      return stats unless sent.is_a?(Numeric) && sent.positive? && !campaign.plain_text_only?
+
+      engagement = campaign.delivery_stats
+      stats.merge(
+        "open_rate_pct" => 100.0 * engagement.fetch(:opened) / sent,
+        "click_rate_pct" => 100.0 * engagement.fetch(:clicked) / sent
+      )
     end
 
     def stub_markdown
