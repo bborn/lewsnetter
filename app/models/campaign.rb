@@ -60,6 +60,7 @@ class Campaign < ApplicationRecord
   validates :segment, scope: true
   validate :body_present_in_some_form
   validate :sequence_status_is_permanent
+  validate :send_status_cannot_be_reopened, on: :update
   validate :plain_text_requires_markdown_body
   validate :assets_must_be_images_under_max_size
   # 🚅 add validations above.
@@ -310,6 +311,17 @@ class Campaign < ApplicationRecord
     return if new_record? || !will_save_change_to_status?
     return unless status_in_database == "sequence" || status == "sequence"
     errors.add(:status, "can't change for a sequence step's email")
+  end
+
+  def send_status_cannot_be_reopened
+    return unless will_save_change_to_status?
+
+    case status_in_database
+    when "sent"
+      errors.add(:status, "can't change after sending; duplicate the campaign to send it again")
+    when "sending"
+      errors.add(:status, "can't reopen a campaign while it's sending") unless status.in?(%w[sent failed])
+    end
   end
 
   # Deleted with its step (SequenceStep belongs_to campaign, dependent:
