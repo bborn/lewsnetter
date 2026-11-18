@@ -318,7 +318,7 @@ class Campaign < ApplicationRecord
 
     case status_in_database
     when "sent"
-      errors.add(:status, "can't change after sending; duplicate the campaign to send it again")
+      errors.add(:status, "can't change after sending; create a new campaign to send it again")
     when "sending"
       errors.add(:status, "can't reopen a campaign while it's sending") unless status.in?(%w[sent failed])
     end
