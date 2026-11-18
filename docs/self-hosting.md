@@ -137,7 +137,7 @@ The shipped config is for the hosted Lewsnetter deployment. You'll want to chang
 - `env.clear.LEWSNETTER_LEGAL_EMAIL` + `LEWSNETTER_ABUSE_EMAIL` → real mailboxes you check
 - `env.clear.DEVELOPER_EMAILS` → your operator's exact account email for instance admin access; do not keep the hosted address
 - `env.clear.BILLING_EXEMPT_EMAILS` → your operator's exact account email if their team should connect its own SES account without a Stripe subscription; do not keep the hosted address
-- `env.clear.LEWSNETTER_PUBLIC_SIGNUPS` → keep `false` except for a controlled window if you need to create the first operator account
+- `env.clear.LEWSNETTER_PUBLIC_SIGNUPS` → the shipped config has `"true"`; set it to `"false"` except for a controlled window if you need to create the first operator account
 - `env.clear.LITESTREAM_REPLICA_*` → **Path A (no R2):** delete this block. **Path B (R2):** point it at your R2 / S3 bucket details
 - `registry.username` → your GHCR (or other) username
 
