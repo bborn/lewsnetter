@@ -133,7 +133,7 @@ The shipped config is for the hosted Lewsnetter deployment. You'll want to chang
 - `servers.web.hosts` and `servers.worker.hosts` → your server's IP
 - `proxy.hosts` → your domain(s)
 - `env.clear.BASE_URL` → your app URL
-- `env.clear.APP_BASE_URL` → same as BASE_URL (unless you split marketing + app onto two subdomains like the hosted version does)
+- `env.clear.APP_BASE_URL` → leave unset for a single host; set it to the app URL only if you split marketing and app across hosts
 - `env.clear.MARKETING_BASE_URL` → drop it unless you split marketing + app onto two hosts; single-host deployments leave it unset
 - `env.clear.BRANDED_HOST_CNAME_TARGET` → drop it unless tenants brand their unsubscribe/tracking subdomains; if you keep it, point it at a DNS-only host that resolves straight to your origin. Unset, it falls back to the `BASE_URL` host
 - `env.clear.LEWSNETTER_LEGAL_EMAIL` + `LEWSNETTER_ABUSE_EMAIL` → real mailboxes you check
@@ -182,7 +182,7 @@ Check `kamal app logs | grep litestream`. Usually one of: R2 credentials wrong, 
 Make sure `volumes:` in `config/deploy.yml` mounts `lewsnetter_storage:/rails/storage`. SQLite files live at `/rails/storage/lewsnetter_production*.sqlite3`.
 
 **The marketing site and app are on the same host but I get a redirect loop.**
-The hosted Lewsnetter splits `lewsnetter.dev` (marketing) and `app.lewsnetter.dev` (app). If you're running a single-host deployment, leave `APP_BASE_URL` env var unset — the marketing helpers will resolve same-host and skip cross-host redirects.
+The hosted Lewsnetter splits `lewsnetter.dev` (marketing) and `app.lewsnetter.dev` (app). For a single-host deployment, set `BASE_URL` to your public HTTPS URL and leave both `APP_BASE_URL` and `MARKETING_BASE_URL` unset. The landing page and sign-in links stay on that host.
 
 ## Backups + restore
 

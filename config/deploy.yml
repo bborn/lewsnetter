@@ -114,7 +114,7 @@ env:
     APP_BASE_URL: "https://app.lewsnetter.dev"
     # The marketing apex. Public::HomeController bounces anonymous visitors
     # who hit the app subdomain back here. Self-hosters on a single host
-    # leave it unset and the bounce resolves same-host via root_url.
+    # leave it unset and the landing renders on that host, with no bounce.
     MARKETING_BASE_URL: "https://lewsnetter.dev"
     # DNS CNAME target tenants point their branded unsubscribe/tracking
     # subdomain at (shown in the Email Sending setup UI). Must be a DNS-only
