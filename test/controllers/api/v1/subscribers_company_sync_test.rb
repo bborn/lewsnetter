@@ -73,4 +73,37 @@ class Api::V1::SubscribersCompanySyncTest < Api::V1::Test
     assert_response :success
     assert_nil @team.subscribers.find_by!(external_id: "u-300").company_id
   end
+
+  test "a failed subscriber create does not leave its inline company behind" do
+    post_bulk(
+      {external_id: "bad", company: {external_id: "orphan", name: "Orphan"}},
+      {external_id: "good", email: "good@example.test", company: {external_id: "good", name: "Good"}}
+    )
+
+    assert_response :success
+    assert_not @team.companies.exists?(external_id: "orphan")
+    assert_not @team.subscribers.exists?(external_id: "bad")
+    assert_equal "good", @team.subscribers.find_by!(external_id: "good").company.external_id
+    assert_equal [2, 1, 0], response.parsed_body.values_at("processed", "created", "updated")
+    assert_equal [1], response.parsed_body.fetch("errors").pluck("line")
+  end
+
+  test "a failed subscriber update rolls back company merges without undoing adjacent rows" do
+    company = @team.companies.create!(external_id: "existing", name: "Original", custom_attributes: {"plan" => "free"})
+    subscriber = @team.subscribers.create!(external_id: "bad", email: "existing@example.test", company: company)
+
+    post_bulk(
+      {external_id: "before", email: "before@example.test"},
+      {external_id: "bad", email: "", company: {external_id: "existing", name: "Changed", attributes: {plan: "pro"}}},
+      {external_id: "after", email: "after@example.test"}
+    )
+
+    assert_response :success
+    assert_equal "Original", company.reload.name
+    assert_equal({"plan" => "free"}, company.custom_attributes)
+    assert_equal "existing@example.test", subscriber.reload.email
+    assert_equal %w[after before], @team.subscribers.where(external_id: %w[before after]).order(:external_id).pluck(:external_id)
+    assert_equal [3, 2, 0], response.parsed_body.values_at("processed", "created", "updated")
+    assert_equal [2], response.parsed_body.fetch("errors").pluck("line")
+  end
 end

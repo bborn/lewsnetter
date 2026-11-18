@@ -61,8 +61,8 @@ if defined?(Api::V1::ApplicationController)
     # POST /api/v1/teams/:team_id/subscribers/bulk
     #
     # NDJSON streaming upsert — one subscriber payload per line. Designed for
-    # backfill from a source app. Returns a per-row summary. Not transactional;
-    # partial success is normal.
+    # backfill from a source app. Each row is atomic; partial batch success
+    # is normal.
     def bulk
       @team = Team.find(params[:team_id])
       authorize! :create, @team.subscribers.new
@@ -80,17 +80,20 @@ if defined?(Api::V1::ApplicationController)
           row[:custom_attributes] = row.delete(:attributes) if row.key?(:attributes)
           row[:custom_attributes] = ::Subscribers::AttributeNormalizer.call(row[:custom_attributes]) if row[:custom_attributes].present?
 
-          company = upsert_company(row.delete(:company))
-          fields = row.slice(:email, :name, :subscribed, :custom_attributes)
-          fields[:company] = company if company
+          outcome = Subscriber.transaction(requires_new: true) do
+            company = upsert_company(row.delete(:company))
+            fields = row.slice(:email, :name, :subscribed, :custom_attributes)
+            fields[:company] = company if company
 
-          if row[:external_id].present? && (existing = @team.subscribers.find_by(external_id: row[:external_id]))
-            existing.update!(fields)
-            summary[:updated] += 1
-          else
-            @team.subscribers.create!(fields.merge(external_id: row[:external_id]))
-            summary[:created] += 1
+            if row[:external_id].present? && (existing = @team.subscribers.find_by(external_id: row[:external_id]))
+              existing.update!(fields)
+              :updated
+            else
+              @team.subscribers.create!(fields.merge(external_id: row[:external_id]))
+              :created
+            end
           end
+          summary[outcome] += 1
         rescue JSON::ParserError => e
           summary[:errors] << {line: line_number, error: "Invalid JSON: #{e.message}"}
         rescue ActiveRecord::RecordInvalid => e
