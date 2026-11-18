@@ -75,6 +75,7 @@ module Mcp
           segment_id: c.segment_id,
           sender_address_id: c.sender_address_id,
           scheduled_for: c.scheduled_for&.iso8601,
+          unscheduled_reason: c.unscheduled_reason,
           sent_at: c.sent_at&.iso8601,
           created_at: c.created_at.iso8601,
           updated_at: c.updated_at.iso8601

@@ -172,6 +172,16 @@ class Account::CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, @campaign.deliveries.where(subscriber: author).where.not(ses_message_id: nil).count
   end
 
+  test "show explains why a scheduled campaign went back to draft" do
+    @campaign.update_columns(unscheduled_reason: ScheduledCampaignDispatchJob::UNCONFIRMED_REASON)
+
+    get account_campaign_url(@campaign)
+
+    assert_response :success
+    assert_match(/Not sent at the scheduled time/, response.body)
+    assert_match(/without a segment/, response.body)
+  end
+
   def fail_partway!
     a = @team.subscribers.create!(email: "a@example.com", external_id: "resume-a", subscribed: true)
     @team.subscribers.create!(email: "b@example.com", external_id: "resume-b", subscribed: true)

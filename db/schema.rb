@@ -136,6 +136,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_18_130100) do
     t.text "body_markdown"
     t.boolean "plain_text_only", default: false, null: false
     t.boolean "all_subscribers_confirmed", default: false, null: false
+    t.text "unscheduled_reason"
     t.index ["email_template_id"], name: "index_campaigns_on_email_template_id"
     t.index ["segment_id"], name: "index_campaigns_on_segment_id"
     t.index ["sender_address_id"], name: "index_campaigns_on_sender_address_id"

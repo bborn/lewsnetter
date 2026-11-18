@@ -70,6 +70,7 @@ class Campaign < ApplicationRecord
   # carries a template. Enforced as a callback (not just in the form) so the
   # MCP/API path can't persist the contradictory state either.
   before_validation :clear_template_when_plain_text
+  before_save :clear_unscheduled_reason
   before_destroy :keep_while_step_exists, prepend: true
   # 🚅 add callbacks above.
 
@@ -361,6 +362,12 @@ class Campaign < ApplicationRecord
     when "sending"
       errors.add(:status, "can't reopen a campaign while it's sending") unless status.in?(%w[sent failed])
     end
+  end
+
+  # The dispatcher's "why this didn't send" note only describes the draft it
+  # left behind; drop it as soon as the campaign moves on.
+  def clear_unscheduled_reason
+    self.unscheduled_reason = nil if will_save_change_to_status? && status != "draft"
   end
 
   # Deleted with its step (SequenceStep belongs_to campaign, dependent:

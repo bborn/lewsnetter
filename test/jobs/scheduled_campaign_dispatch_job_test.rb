@@ -15,9 +15,9 @@ class ScheduledCampaignDispatchJobTest < ActiveJob::TestCase
 
   # Segment-less campaigns are only dispatched when scheduled with the
   # all-subscribers confirmation, so the helper confirms by default.
-  def campaign(team, status:, scheduled_for: nil, all_subscribers_confirmed: true, segment: nil)
+  def campaign(team, status:, scheduled_for: nil, all_subscribers_confirmed: true, segment: nil, unscheduled_reason: nil)
     team.campaigns.create!(subject: "Hi", body_markdown: "Hello", status: status, scheduled_for: scheduled_for,
-      all_subscribers_confirmed: all_subscribers_confirmed, segment: segment)
+      all_subscribers_confirmed: all_subscribers_confirmed, segment: segment, unscheduled_reason: unscheduled_reason)
   end
 
   test "enqueues a send for every due scheduled campaign across teams" do
@@ -68,7 +68,22 @@ class ScheduledCampaignDispatchJobTest < ActiveJob::TestCase
 
     enqueued = enqueued_jobs.select { |j| j[:job] == SendCampaignJob }.map { |j| j[:args].first }
     assert_equal [segmented.id], enqueued
-    assert_equal "scheduled", unconfirmed.reload.status
+
+    unconfirmed.reload
+    assert_equal "draft", unconfirmed.status
+    assert_nil unconfirmed.scheduled_for
+    assert_match(/without a segment/, unconfirmed.unscheduled_reason)
+
+    # Back in draft, so later ticks leave it alone.
+    assert_no_changes -> { unconfirmed.reload.updated_at } do
+      ScheduledCampaignDispatchJob.perform_now
+    end
+  end
+
+  test "the unscheduled reason clears once the campaign is scheduled again" do
+    c = campaign(@team, status: "draft", unscheduled_reason: "old reason")
+    c.update!(status: "scheduled", scheduled_for: 1.hour.from_now, all_subscribers_confirmed: true)
+    assert_nil c.reload.unscheduled_reason
   end
 
   test "is registered as a recurring task in development and production" do
