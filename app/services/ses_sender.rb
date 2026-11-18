@@ -61,7 +61,8 @@ class SesSender
           # this person got nothing. We use a dedicated "suppressed" status
           # rather than "failed" so the postmortem can show it separately
           # (suppressed != something-went-wrong; the system worked).
-          if record_suppressed_delivery(campaign: campaign, subscriber: subscriber) == :already_delivered
+          if subscriber.persisted? &&
+              record_suppressed_delivery(campaign: campaign, subscriber: subscriber) == :already_delivered
             already_delivered << subscriber
           else
             suppressed << subscriber
@@ -79,14 +80,21 @@ class SesSender
         # we just don't get tracking on that one delivery. The exception is
         # a unique-index hit: this subscriber already has a row for this
         # broadcast, so they've been handled and must not be mailed again.
+        #
+        # Test sends and "preview as" pass an unsaved stand-in Subscriber.
+        # They get no Delivery row: creating one would autosave the stand-in
+        # as a real subscribed row, and its Delivery would then count the
+        # author as already sent when the real campaign goes out.
         delivery =
-          begin
-            build_delivery(campaign: campaign, subscriber: subscriber)
-          rescue AlreadyDelivered
-            already_delivered << subscriber
-            next
+          if subscriber.persisted?
+            begin
+              build_delivery(campaign: campaign, subscriber: subscriber)
+            rescue AlreadyDelivered
+              already_delivered << subscriber
+              next
+            end
           end
-        delivery_write_errors += 1 if delivery.nil?
+        delivery_write_errors += 1 if delivery.nil? && subscriber.persisted?
 
         rendered =
           begin

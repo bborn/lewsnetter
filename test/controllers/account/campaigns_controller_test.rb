@@ -149,6 +149,29 @@ class Account::CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Only draft or scheduled/, flash[:alert].to_s)
   end
 
+  # A test send uses an unsaved stand-in subscriber with the author's email.
+  # It must leave no subscriber or Delivery behind, or the real send would
+  # count the author as already sent and skip their real subscriber row.
+  test "a test send doesn't stop the author getting the real send" do
+    author = @team.subscribers.create!(email: @user.email, external_id: "author-real", subscribed: true)
+    original = Rails.application.config.ses_client
+    Rails.application.config.ses_client = :stub
+    begin
+      assert_no_difference -> { @team.subscribers.count } do
+        post test_send_account_campaign_url(@campaign)
+      end
+      assert_match(/Test email sent/, flash[:notice].to_s)
+      assert_equal 0, @campaign.deliveries.count
+
+      SendCampaignJob.perform_now(@campaign.id)
+    ensure
+      Rails.application.config.ses_client = original
+    end
+
+    assert_equal "sent", @campaign.reload.status
+    assert_equal 1, @campaign.deliveries.where(subscriber: author).where.not(ses_message_id: nil).count
+  end
+
   def fail_partway!
     a = @team.subscribers.create!(email: "a@example.com", external_id: "resume-a", subscribed: true)
     @team.subscribers.create!(email: "b@example.com", external_id: "resume-b", subscribed: true)
