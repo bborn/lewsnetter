@@ -63,6 +63,12 @@ if defined?(Api::V1::ApplicationController)
           # 🚅 super scaffolding will insert new arrays above this line.
         )
 
+        # The only status a client may set directly is "draft" (to redraft a
+        # failed campaign). Scheduling goes through campaigns_schedule, which
+        # enforces the all-subscribers confirmation, and sending through
+        # send_now; any other status in the payload is dropped.
+        strong_params.delete(:status) unless strong_params[:status].nil? || strong_params[:status] == "draft"
+
         process_params(strong_params)
 
         strong_params

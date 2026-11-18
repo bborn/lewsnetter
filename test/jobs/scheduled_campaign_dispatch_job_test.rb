@@ -13,8 +13,11 @@ class ScheduledCampaignDispatchJobTest < ActiveJob::TestCase
     @team.subscribers.create!(email: "a@example.com", external_id: "sched-a", subscribed: true)
   end
 
-  def campaign(team, status:, scheduled_for: nil)
-    team.campaigns.create!(subject: "Hi", body_markdown: "Hello", status: status, scheduled_for: scheduled_for)
+  # Segment-less campaigns are only dispatched when scheduled with the
+  # all-subscribers confirmation, so the helper confirms by default.
+  def campaign(team, status:, scheduled_for: nil, all_subscribers_confirmed: true, segment: nil)
+    team.campaigns.create!(subject: "Hi", body_markdown: "Hello", status: status, scheduled_for: scheduled_for,
+      all_subscribers_confirmed: all_subscribers_confirmed, segment: segment)
   end
 
   test "enqueues a send for every due scheduled campaign across teams" do
@@ -54,6 +57,18 @@ class ScheduledCampaignDispatchJobTest < ActiveJob::TestCase
     assert_equal 1, due.deliveries.count
   ensure
     Rails.application.config.ses_client = original
+  end
+
+  test "skips a due campaign with no segment unless all subscribers were confirmed" do
+    unconfirmed = campaign(@team, status: "scheduled", scheduled_for: 1.minute.ago, all_subscribers_confirmed: false)
+    segment = @team.segments.create!(name: "Everyone A", definition: {"predicate" => "email = 'a@example.com'"})
+    segmented = campaign(@team, status: "scheduled", scheduled_for: 1.minute.ago, all_subscribers_confirmed: false, segment: segment)
+
+    ScheduledCampaignDispatchJob.perform_now
+
+    enqueued = enqueued_jobs.select { |j| j[:job] == SendCampaignJob }.map { |j| j[:args].first }
+    assert_equal [segmented.id], enqueued
+    assert_equal "scheduled", unconfirmed.reload.status
   end
 
   test "is registered as a recurring task in development and production" do

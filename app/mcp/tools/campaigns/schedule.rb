@@ -38,7 +38,13 @@ module Mcp
             raise Mcp::Tool::ArgumentError, "scheduled_for must be ISO8601"
           end
 
-          campaign.update!(status: "scheduled", scheduled_for: parsed_time)
+          # Recorded so the dispatcher knows a segment-less schedule was
+          # confirmed for everyone (see ScheduledCampaignDispatchJob).
+          campaign.update!(
+            status: "scheduled",
+            scheduled_for: parsed_time,
+            all_subscribers_confirmed: arguments["all_subscribers"] == true
+          )
 
           {
             scheduled: true,
