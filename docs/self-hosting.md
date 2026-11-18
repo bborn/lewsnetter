@@ -97,9 +97,11 @@ RAILS_MASTER_KEY=$(cat config/master.key)
 LITESTREAM_REPLICA_ACCESS_KEY_ID=
 LITESTREAM_REPLICA_SECRET_ACCESS_KEY=
 
-STRIPE_PUBLISHABLE_KEY=<your-stripe-pk>      # only if you enable billing
-STRIPE_SECRET_KEY=<your-stripe-sk>
-STRIPE_WEBHOOKS_ENDPOINT_SECRET=<your-stripe-whsec>
+# Leave these values empty unless you enable billing or Sentry.
+STRIPE_PUBLISHABLE_KEY=
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOKS_ENDPOINT_SECRET=
+SENTRY_DSN=
 
 ORIGIN_CERT='-----BEGIN CERTIFICATE-----
 ... (Cloudflare Origin CA cert, multi-line, in quotes)
@@ -161,6 +163,7 @@ There's a workflow at [`.github/workflows/deploy.yml`](../.github/workflows/depl
 - `ORIGIN_CERT` + `ORIGIN_KEY`
 - `LITESTREAM_REPLICA_ACCESS_KEY_ID` + `_SECRET_ACCESS_KEY` — **optional** (Path B only); leave unset for a volume-only deploy and the workflow writes empty values
 - `STRIPE_PUBLISHABLE_KEY` + `_SECRET_KEY` + `_WEBHOOKS_ENDPOINT_SECRET` (only if you enable billing)
+- `SENTRY_DSN` (optional; leave unset if you do not use Sentry)
 
 Add those, push to master, and CI redeploys on every commit.
 
