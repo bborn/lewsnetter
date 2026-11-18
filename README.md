@@ -65,7 +65,7 @@ bin/setup     # installs deps + creates dev DB
 bin/dev       # boots Puma, Solid Queue, esbuild --watch, Tailwind --watch
 ```
 
-Visit http://localhost:3000. First user is auto-admin.
+Visit http://localhost:3000. To reach `/admin/avo`, set `DEVELOPER_EMAILS` to your account email.
 
 ## Connect an MCP client
 
