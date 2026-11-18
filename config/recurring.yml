@@ -18,11 +18,17 @@ sequences: &sequences
     class: SegmentEnrollmentSweepJob
     schedule: every hour at minute 7
 
+# Sends scheduled campaigns once their scheduled_for time has passed.
+campaigns: &campaigns
+  scheduled_campaign_dispatch:
+    class: ScheduledCampaignDispatchJob
+    schedule: every minute
+
 development:
-  <<: *sequences
+  <<: [*sequences, *campaigns]
 
 production:
-  <<: *sequences
+  <<: [*sequences, *campaigns]
   clear_solid_queue_finished_jobs:
     command: "SolidQueue::Job.clear_finished_in_batches(sleep_between_batches: 0.3)"
     schedule: every hour at minute 12

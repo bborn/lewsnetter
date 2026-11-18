@@ -35,6 +35,8 @@ You're helping the user ship an email campaign on Lewsnetter. The team you're wo
 - **Unverified sender** — `campaigns_send_now` will succeed but messages will fail at SES. Confirm `sender_addresses_get` returns `verified: true` first.
 - **Segment with bad predicate** — `segments_count_matching` returns `predicate_error: "..."` — fix the predicate before sending.
 - **No segment set** — the campaign would go to every subscribed contact, so `campaigns_send_now` refuses unless you pass `all_subscribers: true`. Only do that when the user asked for everyone.
+- **Send failed or stalled partway** — status `failed`, or `sending` with no progress for 15 minutes. Use `campaigns_resume_send`; it only mails subscribers who don't already have a delivery for the campaign. Never duplicate the campaign to "resend" it, because the copy goes to everyone again.
+- **Scheduled sends** — `campaigns_schedule` sets `scheduled_for`; a job checks every minute and sends once that time has passed (including after downtime, on the first check back).
 
 ## What "done" looks like
 
