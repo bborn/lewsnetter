@@ -205,6 +205,26 @@ module Mcp
       assert_equal [9], sse_results(own_stream).map { |message| message["id"] }
     end
 
+    test "a read-only token's stream on the same user and team does not receive a full token's results" do
+      read_token = Doorkeeper::AccessToken.create!(resource_owner_id: @user.id, application: @platform_application,
+        scopes: "mcp:read", token: SecureRandom.hex)
+      read_stream = open_sse(read_token)
+
+      post_mcp(jsonrpc: "2.0", id: 12, method: "tools/call", params: {name: "team_get_current", arguments: {}})
+
+      assert_empty sse_results(read_stream)
+    end
+
+    test "another token reusing a client_id does not close the owner's stream" do
+      owner_stream = open_sse(@token, client_id: "kept-client")
+      open_sse(other_team_token, client_id: "kept-client")
+
+      post_mcp(jsonrpc: "2.0", id: 13, method: "tools/call", params: {name: "team_get_current", arguments: {}})
+
+      refute owner_stream.closed?
+      assert_equal [13], sse_results(owner_stream).map { |message| message["id"] }
+    end
+
     test "a dropped SSE stream does not break the caller's response" do
       dropped = open_sse(@token)
       def dropped.write(data) = data.start_with?("data: ") ? raise(Errno::EPIPE) : super

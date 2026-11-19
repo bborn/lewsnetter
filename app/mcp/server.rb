@@ -46,13 +46,13 @@ module Mcp
     # contract and make the HTTP response body non-empty.
     #
     # FastMcp's own send_message writes every response to every open SSE
-    # stream, whoever opened it (yjacquin/fast-mcp#40), and any valid token
-    # can open one. So each stream records the user and team that opened
-    # it, and a response is written only to that caller's streams.
+    # stream, whoever opened it (yjacquin/fast-mcp#40). Here each stream
+    # records the token that opened it, and a response goes only to that
+    # token's streams.
     class SyncTransport < FastMcp::Transports::RackTransport
       def register_sse_client(client_id, stream, mutex = nil)
-        super
         owner = sse_owner
+        super
         @sse_clients_mutex.synchronize { @sse_clients[client_id]&.store(:owner, owner) }
       end
 
@@ -67,26 +67,41 @@ module Mcp
 
       private
 
+      # A stream belongs to the access token that opened it, so it only ever
+      # carries results for requests made with that same token: not another
+      # token's scopes, and nothing once the token stops authenticating.
       def sse_owner
-        context = Thread.current[:mcp_context]
-        [context.user.id, context.team.id] if context
+        Thread.current[:mcp_token_id]
       end
 
+      # FastMcp treats a known client_id as a reconnect and closes the old
+      # stream. Only the stream's own token may do that; anyone else gets a
+      # fresh id instead of knocking the owner off.
+      def extract_client_id(env)
+        request = Rack::Request.new(env)
+        requested = request.params["client_id"] || env["HTTP_LAST_EVENT_ID"] || env["HTTP_X_CLIENT_ID"]
+        existing = requested && @sse_clients_mutex.synchronize { @sse_clients[requested] }
+        return SecureRandom.uuid if existing && existing[:owner] != sse_owner
+
+        super
+      end
+
+      # Writes happen outside the registry lock so one slow stream can't
+      # hold up every other request.
       def write_to_own_streams(json_message)
         owner = sse_owner
-        disconnected = []
-        @sse_clients_mutex.synchronize do
-          @sse_clients.each do |client_id, client|
-            next unless client[:owner] == owner
+        return if owner.nil?
 
-            client[:mutex].synchronize do
-              client[:stream].write("data: #{json_message}\n\n")
-              client[:stream].flush if client[:stream].respond_to?(:flush)
-            end
-          rescue IOError, SystemCallError => e
-            @logger.info("Client #{client_id} disconnected: #{e.message}")
-            disconnected << client_id
+        clients = @sse_clients_mutex.synchronize { @sse_clients.select { |_, client| client[:owner] == owner }.to_a }
+        disconnected = clients.filter_map do |client_id, client|
+          client[:mutex].synchronize do
+            client[:stream].write("data: #{json_message}\n\n")
+            client[:stream].flush if client[:stream].respond_to?(:flush)
           end
+          nil
+        rescue IOError, SystemCallError => e
+          @logger.info("Client #{client_id} disconnected: #{e.message}")
+          client_id
         end
         disconnected.each { |client_id| unregister_sse_client(client_id) }
       end
@@ -119,9 +134,11 @@ module Mcp
             team: env.fetch("mcp.team"),
             scopes: env.fetch("mcp.scopes")
           )
+          Thread.current[:mcp_token_id] = env.fetch("mcp.token_id")
           transport.call(env)
         ensure
           Thread.current[:mcp_context] = nil
+          Thread.current[:mcp_token_id] = nil
           Thread.current[:mcp_last_response] = nil
         end
       end

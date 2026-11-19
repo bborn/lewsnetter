@@ -57,6 +57,7 @@ module Mcp
       env["mcp.user"] = user
       env["mcp.team"] = team
       env["mcp.scopes"] = token.scopes.to_a
+      env["mcp.token_id"] = token.id
       @app.call(env)
     end
 
