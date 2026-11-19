@@ -49,7 +49,9 @@ class Sequence < ApplicationRecord
   validates :trigger_segment, scope: true
   validates :exit_segment, scope: true
   validates :goal_segment, scope: true
-  validates :finish_after_minutes, numericality: {only_integer: true, greater_than_or_equal_to: 0}
+  # The largest integer SQLite stores; a bigger wait raised on save.
+  validates :finish_after_minutes, numericality: {only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 2**63 - 1}
+  validate { errors.add(:finish_after_days, :not_a_number) if @finish_after_days_invalid }
   validate :excluded_sequences_belong_to_team
   validates :sender_address, scope: true
   validate :sender_address_required_to_activate
@@ -75,8 +77,12 @@ class Sequence < ApplicationRecord
     (finish_after_minutes.to_i / 1440.0).then { |d| (d % 1).zero? ? d.to_i : d }
   end
 
+  # Blank means no wait. Text that isn't a finite number keeps the saved
+  # wait and fails validation instead of becoming zero or raising.
   def finish_after_days=(days)
-    self.finish_after_minutes = (Float(days.to_s.presence || 0, exception: false).to_f * 1440).round
+    minutes = Float(days.to_s.presence || 0, exception: false)&.*(1440)
+    @finish_after_days_invalid = !minutes&.finite?
+    self.finish_after_minutes = minutes.round unless @finish_after_days_invalid
   end
 
   def excluded_sequences

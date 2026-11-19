@@ -150,4 +150,29 @@ class Account::SequencesControllerTest < ActionDispatch::IntegrationTest
     assert_equal [], sequence.reload.excluded_sequence_ids
     assert_nil sequence.goal_segment
   end
+
+  {
+    "1e309" => "is infinite as a float",
+    "1e300" => "is more minutes than the column holds",
+    "three" => "is not a number"
+  }.each do |days, why|
+    test "a finish wait of #{days.inspect}, which #{why}, re-renders the form and keeps the saved wait" do
+      sequence = FactoryBot.create(:sequence, team: @team, finish_after_minutes: 3 * 1440)
+
+      patch account_sequence_url(sequence), params: {sequence: {finish_after_days: days}}
+
+      assert_response :unprocessable_entity
+      assert_equal 3 * 1440, sequence.reload.finish_after_minutes
+    end
+  end
+
+  test "blank, fractional and long finish waits still save" do
+    sequence = FactoryBot.create(:sequence, team: @team, finish_after_minutes: 3 * 1440)
+
+    {"" => 0, "1.5" => 2160, "1500000" => 2_160_000_000}.each do |days, minutes|
+      patch account_sequence_url(sequence), params: {sequence: {finish_after_days: days}}
+      assert_redirected_to account_sequence_url(sequence)
+      assert_equal minutes, sequence.reload.finish_after_minutes, days
+    end
+  end
 end
