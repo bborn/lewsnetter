@@ -30,6 +30,15 @@ class Account::SequenceStepsControllerTest < ActionDispatch::IntegrationTest
     assert step.campaign.plain_text_only?
   end
 
+  test "a delay past 100 years re-renders the form instead of raising" do
+    assert_no_difference -> { @sequence.steps.count } do
+      post account_sequence_sequence_steps_url(@sequence), params: {sequence_step: {
+        subject: "Welcome", body_markdown: "Hello", delay_amount: "99999999999999999999", delay_unit: "days"
+      }}
+    end
+    assert_response :unprocessable_entity
+  end
+
   test "edit shows the delay in its largest even unit" do
     step = FactoryBot.create(:sequence_step, sequence: @sequence, delay_minutes: 120)
     get edit_account_sequence_step_url(step)

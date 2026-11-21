@@ -7,6 +7,10 @@
 # Gated per team by `teams.sequences_enabled`. With the flag off nothing
 # enrolls and nothing sends, whatever the sequence's own status.
 class Sequence < ApplicationRecord
+  # Longest wait a step or the finish can have. Past year 9999 SQLite compares
+  # send times as text and treats the step as due now, and a big enough
+  # number won't fit the column at all.
+  MAX_WAIT_MINUTES = 100 * 365 * 1440
   # 🚅 add concerns above.
 
   STATUSES = %w[draft active paused].freeze
@@ -50,6 +54,7 @@ class Sequence < ApplicationRecord
   validates :exit_segment, scope: true
   validates :goal_segment, scope: true
   validates :finish_after_minutes, numericality: {only_integer: true, greater_than_or_equal_to: 0}
+  validate :finish_wait_in_range
   validate :excluded_sequences_belong_to_team
   validates :sender_address, scope: true
   validate :sender_address_required_to_activate
@@ -75,8 +80,12 @@ class Sequence < ApplicationRecord
     (finish_after_minutes.to_i / 1440.0).then { |d| (d % 1).zero? ? d.to_i : d }
   end
 
+  # Blank means no wait. Text that isn't a finite number keeps the saved
+  # wait and fails validation instead of becoming zero or raising.
   def finish_after_days=(days)
-    self.finish_after_minutes = (Float(days.to_s.presence || 0, exception: false).to_f * 1440).round
+    minutes = Float(days.to_s.presence || 0, exception: false)&.*(1440)
+    @finish_after_days_invalid = !minutes&.finite?
+    self.finish_after_minutes = minutes.round unless @finish_after_days_invalid
   end
 
   def excluded_sequences
@@ -189,6 +198,14 @@ class Sequence < ApplicationRecord
   # 🚅 add methods above.
 
   private
+
+  def finish_wait_in_range
+    if @finish_after_days_invalid
+      errors.add(:finish_after_days, :not_a_number)
+    elsif finish_after_minutes.to_i > MAX_WAIT_MINUTES
+      errors.add(:finish_after_days, "can't be more than 100 years")
+    end
+  end
 
   def sync_step_senders
     steps.includes(:campaign).each { |step| step.campaign&.update!(sender_address: sender_address) }

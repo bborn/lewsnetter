@@ -36,6 +36,7 @@ class SequenceStep < ApplicationRecord
   validates :subject, presence: true
   validates :body_markdown, presence: true
   validates :delay_minutes, numericality: {only_integer: true, greater_than_or_equal_to: 0}
+  validates :delay_minutes, numericality: {less_than_or_equal_to: Sequence::MAX_WAIT_MINUTES, message: "can't be more than 100 years"}, if: -> { delay_minutes.is_a?(Integer) }
   validates :email_template, scope: true
   validates :skip_segment, scope: true
   validates :action_trigger, inclusion: {in: ACTION_TRIGGERS}, allow_nil: true
