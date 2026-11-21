@@ -1,10 +1,9 @@
-# Dependency and static security checks. Runs on every PR and on master, and
-# weekly so a newly published advisory fails loudly even when nobody pushes.
+# Weekly dependency and static security checks, so a newly published advisory
+# fails loudly even when nobody pushes. PRs run the same brakeman and
+# bundler-audit steps inside ci-cd-pipeline.yml, which already has the gems
+# installed; running them here too cost two extra bundle installs per push.
 name: "Security"
 on:
-  pull_request:
-  push:
-    branches: [master]
   schedule:
     - cron: "17 13 * * 1"
   workflow_dispatch:
