@@ -1,68 +1,122 @@
-# This workflow will run whenever a PR is opened or changed.
+# Runs on every PR: lint, schema check, security scans and the test suite, all
+# in ONE job.
 #
-# It will run tests and a few safety checks.
-#
-# If everything passes it can be set to auto-deploy to your staging app on Heroku.
-#
-# This workflow is primarily meant to be triggered automatically, but it can be run manually.
+# This used to be the Bullet Train template: a fake matrix job, a matrix
+# calculator, four parallel test nodes, separate standardrb and schema jobs,
+# then three "combine" jobs. That's ~10 jobs per push, each doing its own
+# checkout + bundle install and each billed rounded up to a whole minute, for
+# a small sqlite app whose suite runs in a few minutes. One runner with
+# parallel_tests across its 4 vCPUs does the same work for a fraction of it.
 name: " 💻 PR CI (staging)"
 on:
   workflow_dispatch:
   pull_request:
     types: [opened, synchronize, reopened]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "marketing/**"
+
+# A new push to the same PR makes the old run worthless; cancel it.
+concurrency:
+  group: pr-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
-  # NOTE: This is here just to make the workflow visualization layout better.
-  # Without it the layout is really bad and confusing.
-  calculate_matrix:
-    name: 🤷 Fake Matrix
+  ci:
+    name: Lint, security & test
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      RAILS_ENV: test
+      BUNDLE_JOBS: 4
+      BUNDLE_RETRY: 3
+      TEST_PROCESSES: 4
     steps:
-      - name: Do Nothing
-        run: echo "This is a useless step that just helps things look nicer..."
-        shell: bash
-  minitest:
-    name: 🧪 Minitest
-    uses: ./.github/workflows/_run_tests.yml
-    secrets: inherit
-  standardrb:
-    name: 🔬 Standardrb
-    uses: ./.github/workflows/_standardrb.yml
-    secrets: inherit
-    needs: calculate_matrix
-    permissions:
-      checks: write
-      contents: read
-  db_schema:
-    name: 🔎 DB Schema
-    uses: ./.github/workflows/_database_schema_check.yml
-    secrets: inherit
-    needs: calculate_matrix
-  combine_runtime_logs:
-    name: 🪵 Combine Runtime Logs
-    uses: ./.github/workflows/_combine_runtime_logs.yml
-    secrets: inherit
-    needs: [minitest]
-    if: ${{ always() }}
-  combine_coverage_data:
-    name: ♻️  SimpleCov
-    uses: ./.github/workflows/_combine_coverage_data.yml
-    secrets: inherit
-    needs: [minitest]
-    if: ${{ always() }}
-  combine_summary_logs:
-    name: 📊 Test Results
-    uses: ./.github/workflows/_combine_summary_logs.yml
-    secrets: inherit
-    needs: [minitest]
-    if: ${{ always() }}
-  # If you'd like to auto-deploy to your staging environment you can uncomment this next block.
-  # You'll need to set HEROKU_EMAIL and HEROKU_API_KEY in your repo secrets.
-  # Be sure to set the app name correctly below.
-  # deploy:
-  #   name: 🚢 Deploy to Heroku
-  #   uses: ./.github/workflows/_deploy_heroku.yml
-  #   needs: [minitest, standardrb, db_schema]
-  #   secrets: inherit
-  #   with:
-  #     heroku-app-name: ""
+      - uses: actions/checkout@v4
+
+      # ruby-vips dlopens libvips at app boot; without it even db:migrate
+      # crashes. Same retry/mirror fallback as deploy.yml (see the 2026-11-11
+      # azure.archive.ubuntu.com outage note there).
+      - name: Install system deps (libvips)
+        timeout-minutes: 10
+        run: |
+          for attempt in 1 2 3 4; do
+            if sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=20 update \
+              && sudo apt-get install -y --no-install-recommends libvips42; then
+              exit 0
+            fi
+            echo "apt attempt $attempt failed"
+            if [ "$attempt" -eq 2 ]; then
+              sudo sed -i 's#http://azure.archive.ubuntu.com#http://archive.ubuntu.com#g' \
+                /etc/apt/sources.list /etc/apt/sources.list.d/*.sources 2>/dev/null || true
+            fi
+            sleep 15
+          done
+          exit 1
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version-file: .ruby-version
+          bundler-cache: true
+
+      # Cheap checks first so a lint or audit failure doesn't wait on assets.
+      - name: Standard Ruby
+        run: bundle exec standardrb --format github
+
+      # Ignored advisories live in .bundler-audit.yml.
+      - name: bundler-audit
+        run: bundle exec bundle-audit check --update
+
+      # Reviewed false positives live in config/brakeman.ignore.
+      - name: Brakeman
+        run: bundle exec brakeman --no-pager --quiet -w1
+
+      # `cache: yarn` would run before corepack and choke on yarn 4, so no cache.
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Enable corepack + install yarn deps
+        run: |
+          corepack enable
+          yarn install --immutable
+
+      - name: Precompile assets
+        env:
+          SECRET_KEY_BASE: dummy-secret-key-base-for-tests-only
+        run: bundle exec rails assets:precompile
+
+      - name: Install MJML CLI
+        run: npm install -g mjml@5.2.1
+
+      # Migrates the test DB and fails if db/schema.rb drifts from migrations.
+      - name: Database schema check
+        run: ./bin/db_schema_check
+
+      - name: Set up parallel test databases
+        run: bin/rake "parallel:setup[$TEST_PROCESSES]"
+
+      - name: Run tests
+        env:
+          AUTH_ENDPOINT: https://no-site.nowhere
+          AWS_REGION: us-east-1
+          # parallel_tests requires test_helper (which starts SimpleCov) before
+          # config/boot sets up bootsnap, and on Ruby 4 bootsnap's ISeq cache
+          # raises "should not compile with coverage". `rails test` boots in
+          # the other order, which is why deploy.yml doesn't need this.
+          DISABLE_BOOTSNAP_COMPILE_CACHE: 1
+        run: bundle exec parallel_test test -n "$TEST_PROCESSES" --verbose
+
+      - name: Upload failure screenshots
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: error-screenshots
+          path: tmp/screenshots/*.png
+          if-no-files-found: ignore
