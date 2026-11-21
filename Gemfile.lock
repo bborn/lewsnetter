@@ -341,7 +341,7 @@ GEM
       railties (>= 7.2, < 8.2)
       rotp (~> 6.0)
     docile (1.4.1)
-    doorkeeper (5.9.0)
+    doorkeeper (5.9.9)
       railties (>= 5)
     dotenv (3.2.0)
     drb (2.2.3)
