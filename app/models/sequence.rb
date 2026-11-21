@@ -7,6 +7,10 @@
 # Gated per team by `teams.sequences_enabled`. With the flag off nothing
 # enrolls and nothing sends, whatever the sequence's own status.
 class Sequence < ApplicationRecord
+  # Longest wait a step or the finish can have. Past year 9999 SQLite compares
+  # send times as text and treats the step as due now, and a big enough
+  # number won't fit the column at all.
+  MAX_WAIT_MINUTES = 100 * 365 * 1440
   # 🚅 add concerns above.
 
   STATUSES = %w[draft active paused].freeze
@@ -49,9 +53,8 @@ class Sequence < ApplicationRecord
   validates :trigger_segment, scope: true
   validates :exit_segment, scope: true
   validates :goal_segment, scope: true
-  # The largest integer SQLite stores; a bigger wait raised on save.
-  validates :finish_after_minutes, numericality: {only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 2**63 - 1}
-  validate { errors.add(:finish_after_days, :not_a_number) if @finish_after_days_invalid }
+  validates :finish_after_minutes, numericality: {only_integer: true, greater_than_or_equal_to: 0}
+  validate :finish_wait_in_range
   validate :excluded_sequences_belong_to_team
   validates :sender_address, scope: true
   validate :sender_address_required_to_activate
@@ -195,6 +198,14 @@ class Sequence < ApplicationRecord
   # 🚅 add methods above.
 
   private
+
+  def finish_wait_in_range
+    if @finish_after_days_invalid
+      errors.add(:finish_after_days, :not_a_number)
+    elsif finish_after_minutes.to_i > MAX_WAIT_MINUTES
+      errors.add(:finish_after_days, "can't be more than 100 years")
+    end
+  end
 
   def sync_step_senders
     steps.includes(:campaign).each { |step| step.campaign&.update!(sender_address: sender_address) }
