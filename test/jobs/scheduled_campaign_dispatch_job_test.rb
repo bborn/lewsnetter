@@ -100,6 +100,27 @@ class ScheduledCampaignDispatchJobTest < ActiveJob::TestCase
     assert_equal "scheduled", due.reload.status
   end
 
+  test "a stale scheduler job skips a campaign whose segment was removed, and the next tick unschedules it" do
+    @team.subscribers.create!(email: "b@example.com", external_id: "sched-b", subscribed: true)
+    segment = @team.segments.create!(name: "Only A", definition: {"predicate" => "external_id = 'sched-a'"})
+    due = campaign(@team, status: "scheduled", scheduled_for: 1.minute.ago, all_subscribers_confirmed: false, segment: segment)
+    original = Rails.application.config.ses_client
+    Rails.application.config.ses_client = :stub
+
+    ScheduledCampaignDispatchJob.perform_now
+    due.update!(segment: nil)
+    assert_no_difference -> { Delivery.count } do
+      perform_enqueued_jobs
+    end
+
+    ScheduledCampaignDispatchJob.perform_now
+    due.reload
+    assert_equal "draft", due.status
+    assert_match(/without a segment/, due.unscheduled_reason)
+  ensure
+    Rails.application.config.ses_client = original
+  end
+
   test "the unscheduled reason clears once the campaign is scheduled again" do
     c = campaign(@team, status: "draft", unscheduled_reason: "old reason")
     c.update!(status: "scheduled", scheduled_for: 1.hour.from_now, all_subscribers_confirmed: true)
