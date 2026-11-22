@@ -314,4 +314,79 @@ class SendCampaignJobTest < ActiveJob::TestCase
     end
     assert_equal "draft", @campaign.reload.status
   end
+
+  # --- Scheduled dispatch revalidation --------------------------------------
+
+  test "a scheduler-enqueued job skips when scheduled_for was moved to the future" do
+    @campaign.update!(
+      status: "scheduled",
+      scheduled_for: 5.minutes.ago,
+      all_subscribers_confirmed: true
+    )
+
+    assert_no_difference -> { Delivery.count } do
+      with_stub_ses do
+        @campaign.update!(scheduled_for: 1.day.from_now)
+        SendCampaignJob.perform_now(@campaign.id, from_scheduler: true)
+      end
+    end
+
+    @campaign.reload
+    assert_equal "scheduled", @campaign.status
+    assert @campaign.scheduled_for > Time.current
+  end
+
+  test "a scheduler-enqueued job skips when the campaign was cancelled back to draft" do
+    @campaign.update!(
+      status: "scheduled",
+      scheduled_for: 5.minutes.ago,
+      all_subscribers_confirmed: true
+    )
+
+    assert_no_difference -> { Delivery.count } do
+      with_stub_ses do
+        @campaign.update!(status: "draft", scheduled_for: nil)
+        SendCampaignJob.perform_now(@campaign.id, from_scheduler: true)
+      end
+    end
+
+    assert_equal "draft", @campaign.reload.status
+  end
+
+  test "a scheduler-enqueued job skips when the segment was removed without all-subscribers confirmation" do
+    segment = @team.segments.create!(
+      name: "Only B",
+      definition: {"predicate" => "email = 'b@example.com'"}
+    )
+    @campaign.update!(
+      status: "scheduled",
+      scheduled_for: 5.minutes.ago,
+      segment: segment,
+      all_subscribers_confirmed: false
+    )
+
+    assert_no_difference -> { Delivery.count } do
+      with_stub_ses do
+        @campaign.update!(segment: nil)
+        SendCampaignJob.perform_now(@campaign.id, from_scheduler: true)
+      end
+    end
+
+    @campaign.reload
+    assert_equal "scheduled", @campaign.status
+    assert_nil @campaign.segment_id
+  end
+
+  test "a manual send still works for a due scheduled campaign" do
+    @campaign.update!(
+      status: "scheduled",
+      scheduled_for: 5.minutes.ago,
+      all_subscribers_confirmed: true
+    )
+
+    with_stub_ses { SendCampaignJob.perform_now(@campaign.id) }
+
+    assert_equal "sent", @campaign.reload.status
+    assert_equal 2, @campaign.stats["sent"]
+  end
 end
