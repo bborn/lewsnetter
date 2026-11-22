@@ -314,4 +314,33 @@ class SendCampaignJobTest < ActiveJob::TestCase
     end
     assert_equal "draft", @campaign.reload.status
   end
+
+  test "does not bump contact counters for a recipient another run delivered mid-send" do
+    a = subscriber("a@example.com")
+    b = subscriber("b@example.com")
+    contacted_at = 2.hours.ago.change(usec: 0)
+    a.update!(last_contacted_at: contacted_at, times_contacted: 5)
+
+    # Another run inserts a's Delivery after this run read its audience, so
+    # SesSender hits the unique index and reports a as already_delivered.
+    campaign = @campaign
+    original = SesSender.singleton_class.instance_method(:send_bulk)
+    SesSender.singleton_class.define_method(:send_bulk) do |**kwargs|
+      unless campaign.deliveries.exists?(subscriber: a)
+        campaign.deliveries.create!(subscriber: a, status: "sent", ses_message_id: "other-run", sent_at: Time.current)
+      end
+      original.bind_call(self, **kwargs)
+    end
+    begin
+      with_stub_ses { SendCampaignJob.perform_now(@campaign.id) }
+    ensure
+      SesSender.singleton_class.define_method(:send_bulk, original)
+    end
+
+    assert_equal 1, @campaign.reload.stats["duplicates"]
+    a.reload
+    assert_equal 5, a.times_contacted, "already-delivered should not increment contact count"
+    assert_equal contacted_at, a.last_contacted_at
+    assert_equal 1, b.reload.times_contacted
+  end
 end
