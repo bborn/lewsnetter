@@ -155,7 +155,8 @@ class SendCampaignJob < ApplicationJob
     # contact recency, otherwise "never contacted" segments stop matching
     # someone who's been on the blocklist the whole time.
     suppressed_ids = result.suppressed.map(&:id).to_set
-    skip_ids = failed_ids | suppressed_ids
+    already_delivered_ids = Array(result.already_delivered).map(&:id).to_set
+    skip_ids = failed_ids | suppressed_ids | already_delivered_ids
     succeeded_ids = batch.map(&:id).reject { |id| skip_ids.include?(id) }
     return if succeeded_ids.empty?
 
