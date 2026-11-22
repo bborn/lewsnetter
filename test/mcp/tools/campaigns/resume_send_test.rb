@@ -16,7 +16,7 @@ module Mcp
           @user = create(:onboarded_user)
           @team = @user.current_team
           @ctx = Mcp::Tool::Context.new(user: @user, team: @team)
-          @campaign = @team.campaigns.create!(subject: "Resume Me", status: "draft", body_markdown: "Hello")
+          @campaign = @team.campaigns.create!(subject: "Resume Me", status: "draft", body_markdown: "Hello", all_subscribers_confirmed: true)
           a = @team.subscribers.create!(email: "a@example.com", external_id: "r-a", subscribed: true)
           @team.subscribers.create!(email: "b@example.com", external_id: "r-b", subscribed: true)
           @campaign.update!(status: "sending")
@@ -45,6 +45,34 @@ module Mcp
           assert_raises(ActiveRecord::RecordNotFound) do
             ResumeSend.new.invoke(arguments: {"id" => other.id}, context: @ctx)
           end
+        end
+
+        test "resumes a confirmed all-subscribers send and mails who is left" do
+          original = Rails.application.config.ses_client
+          Rails.application.config.ses_client = :stub
+          begin
+            assert ResumeSend.new.invoke(arguments: {"id" => @campaign.id}, context: @ctx)[:enqueued]
+            perform_enqueued_jobs
+          ensure
+            Rails.application.config.ses_client = original
+          end
+
+          assert_equal "sent", @campaign.reload.status
+          assert_equal 2, @campaign.deliveries.count
+        end
+
+        test "a segment-less send that was never confirmed needs all_subscribers to resume" do
+          @campaign.update_columns(all_subscribers_confirmed: false)
+          tool = ResumeSend.new
+
+          error = assert_raises(Mcp::Tool::ArgumentError) do
+            tool.invoke(arguments: {"id" => @campaign.id}, context: @ctx)
+          end
+          assert_match(/no segment/, error.message)
+          assert_no_enqueued_jobs(only: SendCampaignJob)
+
+          assert tool.invoke(arguments: {"id" => @campaign.id, "all_subscribers" => true}, context: @ctx)[:enqueued]
+          assert @campaign.reload.all_subscribers_confirmed?
         end
       end
     end

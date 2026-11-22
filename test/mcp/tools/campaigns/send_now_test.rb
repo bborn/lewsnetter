@@ -74,6 +74,40 @@ module Mcp
             assert SendNow.new.invoke(arguments: {"id" => @campaign.id}, context: @ctx)[:enqueued]
           end
         end
+
+        def with_stub_ses
+          original = Rails.application.config.ses_client
+          Rails.application.config.ses_client = :stub
+          yield
+        ensure
+          Rails.application.config.ses_client = original
+        end
+
+        test "a queued send skips when the segment is removed before the job runs" do
+          @team.subscribers.create!(email: "a@example.com", external_id: "sn-a", subscribed: true)
+          @team.subscribers.create!(email: "b@example.com", external_id: "sn-b", subscribed: true)
+          segment = @team.segments.create!(name: "Only A", definition: {"predicate" => "external_id = 'sn-a'"})
+          @campaign.update!(segment: segment)
+
+          assert SendNow.new.invoke(arguments: {"id" => @campaign.id}, context: @ctx)[:enqueued]
+          @campaign.update!(segment: nil)
+          with_stub_ses { perform_enqueued_jobs }
+
+          assert_equal 0, @campaign.deliveries.count
+          assert_equal "draft", @campaign.reload.status
+        end
+
+        test "an all_subscribers send is recorded, so the queued job sends to everyone" do
+          @team.subscribers.create!(email: "a@example.com", external_id: "sn-a", subscribed: true)
+          @team.subscribers.create!(email: "b@example.com", external_id: "sn-b", subscribed: true)
+
+          SendNow.new.invoke(arguments: {"id" => @campaign.id, "all_subscribers" => true}, context: @ctx)
+          assert @campaign.reload.all_subscribers_confirmed?
+          with_stub_ses { perform_enqueued_jobs }
+
+          assert_equal "sent", @campaign.reload.status
+          assert_equal 2, @campaign.deliveries.count
+        end
       end
     end
   end

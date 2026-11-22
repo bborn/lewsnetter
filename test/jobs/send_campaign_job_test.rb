@@ -14,7 +14,8 @@ class SendCampaignJobTest < ActiveJob::TestCase
       sender_address: @sender,
       subject: "Hello",
       body_mjml: @template.mjml_body,
-      status: "draft"
+      status: "draft",
+      all_subscribers_confirmed: true
     )
     @team.subscribers.create!(email: "a@example.com", external_id: "job-a", subscribed: true)
     @team.subscribers.create!(email: "b@example.com", external_id: "job-b", subscribed: true)
@@ -185,6 +186,21 @@ class SendCampaignJobTest < ActiveJob::TestCase
     @campaign.reload
     assert_equal "sent", @campaign.status
     assert_equal 2, @campaign.stats["sent"]
+  end
+
+  test "skips a segment-less campaign nobody confirmed for all subscribers" do
+    @campaign.update!(all_subscribers_confirmed: false)
+
+    assert_no_difference -> { Delivery.count } do
+      with_stub_ses { SendCampaignJob.perform_now(@campaign.id) }
+    end
+    assert_equal "draft", @campaign.reload.status
+
+    @campaign.update!(status: "failed")
+    assert_no_difference -> { Delivery.count } do
+      with_stub_ses { SendCampaignJob.perform_now(@campaign.id, resume: true) }
+    end
+    assert_equal "failed", @campaign.reload.status
   end
 
   test "sends to all subscribed when no segment is attached" do

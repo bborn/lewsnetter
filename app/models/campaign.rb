@@ -88,6 +88,14 @@ class Campaign < ApplicationRecord
     draft? || scheduled?
   end
 
+  # A campaign with no segment goes to every subscribed contact, so it only
+  # goes out once someone confirmed that: the all-subscribers flag on
+  # campaigns_schedule / campaigns_send_now, or the count confirm on the
+  # Send and Resume buttons. SendCampaignJob re-checks this when it claims.
+  def audience_confirmed?
+    segment_id.present? || all_subscribers_confirmed?
+  end
+
   # A "sending" campaign with no new Delivery rows (and no claim) for this
   # long is treated as stuck: its worker died mid-send.
   STUCK_SENDING_AFTER = 15.minutes

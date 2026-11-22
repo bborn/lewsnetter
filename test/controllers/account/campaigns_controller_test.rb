@@ -163,13 +163,31 @@ class Account::CampaignsControllerTest < ActionDispatch::IntegrationTest
       assert_match(/Test email sent/, flash[:notice].to_s)
       assert_equal 0, @campaign.deliveries.count
 
-      SendCampaignJob.perform_now(@campaign.id)
+      post send_now_account_campaign_url(@campaign)
     ensure
       Rails.application.config.ses_client = original
     end
 
     assert_equal "sent", @campaign.reload.status
     assert_equal 1, @campaign.deliveries.where(subscriber: author).where.not(ses_message_id: nil).count
+  end
+
+  test "send now records the confirmed audience the job re-checks" do
+    segment = @team.segments.create!(name: "Some", definition: {"predicate" => "external_id = 'x'"})
+    segmented = @team.campaigns.create!(subject: "Seg", body_markdown: "Hi", status: "draft", segment: segment, all_subscribers_confirmed: true)
+    @campaign.update_columns(all_subscribers_confirmed: false)
+    original = Rails.application.config.ses_client
+    Rails.application.config.ses_client = :stub
+    begin
+      post send_now_account_campaign_url(@campaign)
+      post send_now_account_campaign_url(segmented)
+    ensure
+      Rails.application.config.ses_client = original
+    end
+
+    assert @campaign.reload.all_subscribers_confirmed?
+    assert_equal "sent", @campaign.status
+    refute segmented.reload.all_subscribers_confirmed?
   end
 
   test "show explains why a scheduled campaign went back to draft" do

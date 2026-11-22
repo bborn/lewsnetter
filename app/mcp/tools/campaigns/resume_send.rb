@@ -5,6 +5,7 @@ module Mcp
     module Campaigns
       class ResumeSend < Mcp::Tool::Base
         include Mcp::Tools::Serializers
+        include Mcp::Tool::AudienceGuard
 
         tool_name "campaigns_resume_send"
 
@@ -16,14 +17,16 @@ module Mcp
           in "sending" with no progress for #{::Campaign::STUCK_SENDING_AFTER.inspect}. Only
           subscribers who don't already have a delivery for this campaign are mailed, so
           nobody gets it twice. Any other status returns an error. Returns the number of
-          subscribers still to be sent.
+          subscribers still to be sent. A campaign with no segment that wasn't sent with
+          all_subscribers: true needs all_subscribers: true here too.
         DESC
         arguments_schema(
           type: "object",
           additionalProperties: false,
           required: ["id"],
           properties: {
-            id: {type: "integer"}
+            id: {type: "integer"},
+            all_subscribers: Mcp::Tool::AudienceGuard::ALL_SUBSCRIBERS_PROPERTY
           }
         )
 
@@ -37,6 +40,11 @@ module Mcp
               status_after: campaign.status,
               error: "Only a failed send, or one stuck in sending, can be resumed (current status: #{campaign.status})"
             }
+          end
+
+          unless campaign.audience_confirmed?
+            require_audience!(campaign, arguments)
+            campaign.update_column(:all_subscribers_confirmed, true)
           end
 
           remaining = campaign.remaining_recipient_count || 0

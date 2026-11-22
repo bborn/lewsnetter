@@ -21,30 +21,26 @@ class ScheduledCampaignDispatchJob < ApplicationJob
     "every subscribed contact, so it wasn't sent. Add a segment, or schedule it again for all subscribers."
 
   def perform(now: Time.current)
-    Campaign.due_for_sending(now)
-      .order(:scheduled_for)
-      .pluck(:id, :segment_id, :all_subscribers_confirmed)
-      .each do |id, segment_id, all_subscribers_confirmed|
-        if segment_id.nil? && !all_subscribers_confirmed
-          unschedule(id)
-        else
-          SendCampaignJob.perform_later(id, from_scheduler: true)
-        end
+    Campaign.due_for_sending(now).order(:scheduled_for).each do |campaign|
+      if campaign.audience_confirmed?
+        SendCampaignJob.perform_later(campaign.id, from_scheduler: true)
+      else
+        unschedule(campaign)
       end
+    end
   end
 
   private
 
   # Under the row lock so a manual Send that already claimed it wins.
-  def unschedule(id)
-    campaign = Campaign.find(id)
+  def unschedule(campaign)
     campaign.with_lock do
-      next unless campaign.scheduled? && campaign.segment_id.nil? && !campaign.all_subscribers_confirmed?
+      next unless campaign.scheduled? && !campaign.audience_confirmed?
 
       campaign.update!(status: "draft", scheduled_for: nil, unscheduled_reason: UNCONFIRMED_REASON)
     end
-    Rails.logger.warn("[ScheduledCampaignDispatchJob] Campaign #{id} had no segment and no all-subscribers confirmation; moved back to draft.")
+    Rails.logger.warn("[ScheduledCampaignDispatchJob] Campaign #{campaign.id} had no segment and no all-subscribers confirmation; moved back to draft.")
   rescue ActiveRecord::RecordInvalid => e
-    Rails.logger.error("[ScheduledCampaignDispatchJob] Couldn't move campaign #{id} back to draft: #{e.message}")
+    Rails.logger.error("[ScheduledCampaignDispatchJob] Couldn't move campaign #{campaign.id} back to draft: #{e.message}")
   end
 end

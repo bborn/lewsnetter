@@ -143,6 +143,7 @@ class Account::CampaignsController < Account::ApplicationController
   # `sent_at` + `status = 'sent'` on success.
   def send_now
     if @campaign.sendable?
+      confirm_audience!
       SendCampaignJob.perform_later(@campaign.id)
       redirect_to [:account, @campaign], notice: "Campaign queued for sending."
     else
@@ -157,6 +158,7 @@ class Account::CampaignsController < Account::ApplicationController
   # campaign, so nobody already sent to gets it twice.
   def resume_send
     if @campaign.resumable?
+      confirm_audience!
       SendCampaignJob.perform_later(@campaign.id, resume: true)
       redirect_to [:account, @campaign], notice: "Resuming the send. Only subscribers who haven't received this campaign will get it."
     else
@@ -293,6 +295,13 @@ class Account::CampaignsController < Account::ApplicationController
   end
 
   private
+
+  # The Send and Resume buttons confirm the recipient count before posting,
+  # so the click is the all-subscribers confirmation for a segment-less
+  # campaign. Recorded for SendCampaignJob, which re-checks it at claim.
+  def confirm_audience!
+    @campaign.update_column(:all_subscribers_confirmed, @campaign.segment_id.nil?)
+  end
 
   if defined?(Api::V1::ApplicationController)
     include strong_parameters_from_api

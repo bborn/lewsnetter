@@ -41,6 +41,7 @@ module Mcp
           end
 
           require_audience!(campaign, arguments)
+          campaign.update_column(:all_subscribers_confirmed, campaign.segment_id.nil?)
           subscriber_count = campaign.recipient_count || 0
           SendCampaignJob.perform_later(campaign.id)
 

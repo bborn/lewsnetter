@@ -34,6 +34,7 @@ class CampaignTest < ActiveSupport::TestCase
 
   test "send_now transitions to sent and sets sent_at" do
     @team.subscribers.create!(email: "ann@example.com", external_id: "campaign-test-a", subscribed: true)
+    @campaign.update!(all_subscribers_confirmed: true)
 
     original = Rails.application.config.ses_client
     Rails.application.config.ses_client = :stub
