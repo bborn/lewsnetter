@@ -101,6 +101,43 @@ class SequenceActionsFlowTest < Api::V1::Test
     assert_equal "goal", @sequence.enrollments.find_by!(subscriber: subscriber).exit_reason
   end
 
+  test "a click from a previous enrollment does not fire on re-entry" do
+    @sequence.update!(reentry_days: 1)
+    @step1.update!(action_trigger: "click", action_tag: "Reentry click", action_exit: true)
+    subscriber = enroll!
+    tick!
+    travel 1.hour do
+      ClickEvent.record!(delivery: subscriber.deliveries.last, url: "https://example.com/connect",
+        user_agent: BROWSER_UA, ip: "203.0.113.9", http_method: "GET")
+    end
+    travel 3.days + 1.minute do
+      tick!
+    end
+    enrollment = @sequence.enrollments.find_by!(subscriber: subscriber)
+    assert_includes subscriber.reload.tags, "Reentry click"
+    assert_equal "clicked", enrollment.exit_reason
+
+    # travel offsets are from the real now, not cumulative: re-enter after
+    # the first exit, then tick once the new enrollment's step 2 is due so
+    # its pending click action is actually resolved.
+    travel 4.days do
+      track!("signed_up", external_id: "user-1")
+      tick!
+    end
+    assert_equal 2, @sequence.enrollments.where(subscriber: subscriber).count
+    active = @sequence.enrollments.active.find_by!(subscriber: subscriber)
+    assert_equal 0, active.pending_action_step
+
+    travel 7.days + 2.minutes do
+      tick!
+    end
+    active.reload
+    assert_not_equal "exited", active.state, "the old click must not exit the new enrollment"
+    assert_equal [@step1.id, @step1.id, @step2.id], sent_step_ids(subscriber), "the new enrollment gets step 2"
+    assert_equal 1, subscriber.reload.tags.count { |t| t == "Reentry click" }, "the first enrollment tag must not duplicate"
+    assert_equal "clicked", @sequence.enrollments.find_by!(subscriber: subscriber, state: "exited").exit_reason
+  end
+
   test "a click action tags without exiting when exit is off" do
     @step1.update!(action_trigger: "click", action_tag: "Clicked email 1", action_exit: false)
     subscriber = enroll!
