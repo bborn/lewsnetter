@@ -39,7 +39,7 @@ class ScheduledCampaignDispatchJobTest < ActiveJob::TestCase
 
     ScheduledCampaignDispatchJob.perform_now
 
-    assert_enqueued_with(job: SendCampaignJob, args: [overdue.id])
+    assert_enqueued_with(job: SendCampaignJob, args: [overdue.id, {from_scheduler: true}])
   end
 
   test "overlapping ticks send a scheduled campaign exactly once" do
@@ -78,6 +78,26 @@ class ScheduledCampaignDispatchJobTest < ActiveJob::TestCase
     assert_no_changes -> { unconfirmed.reload.updated_at } do
       ScheduledCampaignDispatchJob.perform_now
     end
+  end
+
+  test "a stale scheduler job does not send after the user postpones" do
+    due = campaign(@team, status: "scheduled", scheduled_for: 1.minute.ago)
+
+    ScheduledCampaignDispatchJob.perform_now
+    assert_enqueued_with(job: SendCampaignJob, args: [due.id, {from_scheduler: true}])
+
+    due.update!(scheduled_for: 1.day.from_now)
+    original = Rails.application.config.ses_client
+    Rails.application.config.ses_client = :stub
+    begin
+      assert_no_difference -> { Delivery.count } do
+        perform_enqueued_jobs
+      end
+    ensure
+      Rails.application.config.ses_client = original
+    end
+
+    assert_equal "scheduled", due.reload.status
   end
 
   test "the unscheduled reason clears once the campaign is scheduled again" do

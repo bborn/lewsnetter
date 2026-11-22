@@ -15,10 +15,10 @@ class SendCampaignJob < ApplicationJob
 
   queue_as :default
 
-  def perform(campaign_id, resume: false)
+  def perform(campaign_id, resume: false, from_scheduler: false)
     campaign = Campaign.find(campaign_id)
 
-    unless claim_campaign(campaign, resume: resume)
+    unless claim_campaign(campaign, resume: resume, from_scheduler: from_scheduler)
       Rails.logger.warn("[SendCampaignJob] Campaign #{campaign.id} is in status=#{campaign.status}; skipping.")
       return
     end
@@ -106,12 +106,16 @@ class SendCampaignJob < ApplicationJob
   # Row lock so overlapping scheduler ticks, a manual Send and a Resume
   # can't all start the same campaign. A resume also stamps updated_at,
   # which keeps a second resume out until this run goes quiet again.
-  def claim_campaign(campaign, resume:)
+  def claim_campaign(campaign, resume:, from_scheduler:)
     campaign.with_lock do
       if resume
         next false unless campaign.resumable?
 
         campaign.update!(status: "sending", updated_at: Time.current)
+      elsif from_scheduler
+        next false unless scheduler_sendable?(campaign)
+
+        campaign.update!(status: "sending", stats: campaign.stats.merge("sent" => 0, "failed" => 0, "suppressed" => 0, "duplicates" => 0, "errors" => []))
       else
         next false unless campaign.sendable?
 
@@ -119,6 +123,17 @@ class SendCampaignJob < ApplicationJob
       end
       true
     end
+  end
+
+  # Jobs enqueued by ScheduledCampaignDispatchJob carry scheduling intent;
+  # re-check it under the claim lock so a stale queue entry can't send early
+  # or after the user cancelled, postponed or narrowed the audience.
+  def scheduler_sendable?(campaign)
+    return false unless campaign.scheduled?
+    return false if campaign.scheduled_for.blank? || campaign.scheduled_for > Time.current
+    return false if campaign.segment_id.nil? && !campaign.all_subscribers_confirmed?
+
+    true
   end
 
   # The campaign's audience minus anyone who already has a Delivery for it.

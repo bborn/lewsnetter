@@ -28,7 +28,7 @@ class ScheduledCampaignDispatchJob < ApplicationJob
         if segment_id.nil? && !all_subscribers_confirmed
           unschedule(id)
         else
-          SendCampaignJob.perform_later(id)
+          SendCampaignJob.perform_later(id, from_scheduler: true)
         end
       end
   end
