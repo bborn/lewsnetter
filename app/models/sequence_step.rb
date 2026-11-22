@@ -91,7 +91,9 @@ class SequenceStep < ApplicationRecord
     when "click"
       return false if campaign_id.nil?
       ClickEvent.human.links.joins(:delivery)
-        .where(deliveries: {campaign_id: campaign_id, subscriber_id: subscriber.id}).exists?
+        .where(deliveries: {campaign_id: campaign_id, subscriber_id: subscriber.id})
+        .where("deliveries.created_at >= ?", since)
+        .exists?
     else
       false
     end
