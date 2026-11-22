@@ -112,12 +112,8 @@ class SendCampaignJob < ApplicationJob
         next false unless campaign.resumable?
 
         campaign.update!(status: "sending", updated_at: Time.current)
-      elsif from_scheduler
-        next false unless scheduler_sendable?(campaign)
-
-        campaign.update!(status: "sending", stats: campaign.stats.merge("sent" => 0, "failed" => 0, "suppressed" => 0, "duplicates" => 0, "errors" => []))
       else
-        next false unless campaign.sendable?
+        next false unless from_scheduler ? scheduler_sendable?(campaign) : campaign.sendable?
 
         campaign.update!(status: "sending", stats: campaign.stats.merge("sent" => 0, "failed" => 0, "suppressed" => 0, "duplicates" => 0, "errors" => []))
       end
