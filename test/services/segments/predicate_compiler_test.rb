@@ -65,7 +65,7 @@ module Segments
         ]
       })
       assert_includes sql, "subscribers.subscribed = 1"
-      assert_includes sql, "subscribers.external_id LIKE '%@a.com%' OR subscribers.external_id LIKE '%@b.com%'"
+      assert_includes sql, "subscribers.external_id LIKE '%@a.com%' ESCAPE '\\' OR subscribers.external_id LIKE '%@b.com%' ESCAPE '\\'"
       assert_match(/\(subscribers\.subscribed.*AND.*\(.*OR.*\)\)/m, sql)
     end
 
@@ -203,6 +203,35 @@ module Segments
       emails = @team.subscribers.where(sql).pluck(:email)
       refute_includes emails, "brand-only@example.com"
       assert_includes emails, "real-brand@example.com"
+    end
+
+    test "csv_list end-to-end: values with an underscore match themselves" do
+      @team.subscribers.create!(email: "brand-account@example.com", external_id: "ba",
+        subscribed: true, custom_attributes: {"tabs_enabled" => "brand_account,reports"})
+      @team.subscribers.create!(email: "reports-only@example.com", external_id: "ro",
+        subscribed: true, custom_attributes: {"tabs_enabled" => "reports"})
+
+      contains = typed_rule("custom_attributes.tabs_enabled", :csv_list, "contains", "brand_account")
+      assert_empty Segment.validate_predicate(contains), "the send path re-validates stored predicates"
+      assert_equal ["brand-account@example.com"], @team.subscribers.where(contains).pluck(:email)
+
+      not_contains = typed_rule("custom_attributes.tabs_enabled", :csv_list, "not_contains", "brand_account")
+      assert_equal ["reports-only@example.com"], @team.subscribers.where(not_contains).pluck(:email)
+    end
+
+    test "string LIKE operators end-to-end: _, % and \\ match literally" do
+      @team.subscribers.create!(email: "annual@example.com", external_id: "pro_annual")
+      @team.subscribers.create!(email: "lookalike@example.com", external_id: "proXannual")
+      @team.subscribers.create!(email: "percent@example.com", external_id: "50%off")
+      @team.subscribers.create!(email: "backslash@example.com", external_id: "dom\\user")
+
+      matching = ->(op, value) { @team.subscribers.where(rule("subscribers.external_id", op, value)).order(:id).pluck(:email) }
+      assert_equal ["annual@example.com"], matching.call("contains", "pro_")
+      assert_equal ["annual@example.com"], matching.call("starts_with", "pro_")
+      assert_equal ["annual@example.com"], matching.call("ends_with", "_annual")
+      assert_equal ["percent@example.com"], matching.call("contains", "%off")
+      assert_equal ["backslash@example.com"], matching.call("contains", "dom\\user")
+      refute_includes matching.call("not_contains", "pro_"), "annual@example.com"
     end
 
     # ── custom attributes ──────────────────────────────────────────────────
