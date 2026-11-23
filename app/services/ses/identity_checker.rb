@@ -57,7 +57,9 @@ module Ses
 
     def domain_verified?(client, domain)
       result = client.get_email_identity(email_identity: domain)
-      result.verified_for_sending_status.to_s == "SUCCESS"
+      # Same enum as the address check in #call (verified_for_sending_status
+      # is a Boolean, so comparing it to "SUCCESS" never matched).
+      result.verification_status.to_s == "SUCCESS"
     rescue Aws::SESV2::Errors::NotFoundException
       false
     rescue Aws::Errors::ServiceError, Aws::SESV2::Errors::ServiceError => e

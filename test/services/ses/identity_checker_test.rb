@@ -63,6 +63,30 @@ class Ses::IdentityCheckerTest < ActiveSupport::TestCase
     assert_equal "not_in_ses", @sender_address.ses_status
   end
 
+  test "falls back to a verified parent domain when the address has no identity" do
+    stub_ses_identities(
+      "example.com" => Struct.new(:verification_status, :verified_for_sending_status).new("SUCCESS", true)
+    )
+
+    Ses::IdentityChecker.new(sender_address: @sender_address).call
+    @sender_address.reload
+
+    assert_equal true, @sender_address.verified
+    assert_equal "domain_verified", @sender_address.ses_status
+  end
+
+  test "does not count a parent domain that is still pending" do
+    stub_ses_identities(
+      "example.com" => Struct.new(:verification_status, :verified_for_sending_status).new("PENDING", false)
+    )
+
+    Ses::IdentityChecker.new(sender_address: @sender_address).call
+    @sender_address.reload
+
+    assert_equal false, @sender_address.verified
+    assert_equal "not_in_ses", @sender_address.ses_status
+  end
+
   test "sets verified=false and ses_status=error on generic AWS service error" do
     stub_ses_client_raising(Aws::SESV2::Errors::ServiceError.new(nil, "boom"))
 
@@ -97,6 +121,16 @@ class Ses::IdentityCheckerTest < ActiveSupport::TestCase
   def stub_ses_client_raising(error)
     fake = Object.new
     fake.define_singleton_method(:get_email_identity) { |_| raise error }
+    install_client_stub(fake)
+  end
+
+  # Answers get_email_identity per identity; any identity not listed raises
+  # NotFoundException, the way SES does for an address with no identity.
+  def stub_ses_identities(responses)
+    fake = Object.new
+    fake.define_singleton_method(:get_email_identity) do |email_identity:|
+      responses.fetch(email_identity) { raise Aws::SESV2::Errors::NotFoundException.new(nil, "Identity not found") }
+    end
     install_client_stub(fake)
   end
 
