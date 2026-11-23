@@ -37,7 +37,7 @@ class Segment < ApplicationRecord
     coalesce ifnull nullif lower upper trim ltrim rtrim length substr instr
     replace abs round min max count typeof
     datetime date time julianday strftime unixepoch
-    json_extract json_each json_array_length json_type json_valid
+    json_extract json_each json_array json_array_length json_type json_valid
     key value type atom fullkey path
   ].freeze
 

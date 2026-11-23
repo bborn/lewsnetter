@@ -162,7 +162,9 @@ module Segments
 
     test "array contains uses json_each for element matching" do
       sql = typed_rule("custom_attributes.tabs_enabled", :array, "contains", "brand")
-      assert_includes sql, "EXISTS (SELECT 1 FROM json_each(json_extract(subscribers.custom_attributes, '$.tabs_enabled')) WHERE value = 'brand')"
+      assert_includes sql, "EXISTS (SELECT 1 FROM json_each("
+      assert_includes sql, "json_extract(subscribers.custom_attributes, '$.tabs_enabled')"
+      assert_includes sql, "WHERE value = 'brand')"
     end
 
     test "array not_contains is NULL-permissive + uses NOT EXISTS" do
@@ -374,6 +376,26 @@ module Segments
       refute_includes emails, "all-tabs@example.com"
       assert_includes emails, "manager-only@example.com"
       assert_includes emails, "no-attrs@example.com"
+    end
+
+    # AttributeNormalizer splits "brand,manager" into an array but leaves a
+    # single value like "brand" as a string, so one key holds both shapes.
+    test "array rules treat a single string value as a one-item list" do
+      @team.subscribers.create!(email: "list@example.com", custom_attributes: {"tabs_enabled" => ["brand", "manager"]})
+      @team.subscribers.create!(email: "single@example.com", custom_attributes: {"tabs_enabled" => "brand"})
+      @team.subscribers.create!(email: "other@example.com", custom_attributes: {"tabs_enabled" => "reports"})
+      @team.subscribers.create!(email: "empty@example.com", custom_attributes: {"tabs_enabled" => []})
+      @team.subscribers.create!(email: "none@example.com", custom_attributes: {})
+
+      matching = ->(op, value = nil) {
+        sql = typed_rule("custom_attributes.tabs_enabled", :array, op, value)
+        assert_empty Segment.validate_predicate(sql), "the send path re-validates stored predicates"
+        @team.subscribers.where(sql).order(:id).pluck(:email)
+      }
+      assert_equal %w[list@example.com single@example.com], matching.call("contains", "brand")
+      assert_equal %w[other@example.com empty@example.com none@example.com], matching.call("not_contains", "brand")
+      assert_equal %w[list@example.com single@example.com other@example.com], matching.call("is_set")
+      assert_equal %w[empty@example.com none@example.com], matching.call("is_not_set")
     end
 
     private

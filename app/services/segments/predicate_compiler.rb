@@ -250,26 +250,36 @@ module Segments
       # ── array (element-wise via json_each) ───────────────────────────────
       when [:array, "contains"]
         sanitize(
-          "EXISTS (SELECT 1 FROM json_each(#{field}) WHERE value = ?)",
+          "EXISTS (SELECT 1 FROM json_each(#{as_json_array(field)}) WHERE value = ?)",
           raw_value.to_s
         )
       when [:array, "not_contains"]
         # NULL-permissive — a missing array trivially doesn't contain X.
         sanitize(
-          "(#{field} IS NULL OR NOT EXISTS (SELECT 1 FROM json_each(#{field}) WHERE value = ?))",
+          "(#{field} IS NULL OR NOT EXISTS (SELECT 1 FROM json_each(#{as_json_array(field)}) WHERE value = ?))",
           raw_value.to_s
         )
       when [:array, "is_set"]
         # An "empty array" counts as not set, consistent with Intercom.
-        "(#{field} IS NOT NULL AND json_array_length(#{field}) > 0)"
+        "(#{field} IS NOT NULL AND json_array_length(#{as_json_array(field)}) > 0)"
       when [:array, "is_not_set"]
-        "(#{field} IS NULL OR json_array_length(#{field}) = 0)"
+        "(#{field} IS NULL OR json_array_length(#{as_json_array(field)}) = 0)"
 
       else
         raise InvalidTree, "unhandled (#{type}, #{op}) combo"
       end
     end
     # rubocop:enable Metrics/CyclomaticComplexity, Metrics/MethodLength
+
+    # json_extract returns a stored array as JSON text but a stored string
+    # as bare text, which json_each and json_array_length reject as
+    # malformed JSON. AttributeNormalizer leaves a single list value
+    # ("brand", no comma) as a string, so treat any non-array value as a
+    # one-item list.
+    def as_json_array(field)
+      "(CASE WHEN json_valid(#{field}) AND json_type(#{field}) = 'array' " \
+        "THEN #{field} ELSE json_array(#{field}) END)"
+    end
 
     def sql_days_ago(raw_value)
       "datetime('now', '-#{Integer(raw_value)} days')"
