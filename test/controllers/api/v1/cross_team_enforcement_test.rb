@@ -63,4 +63,141 @@ class Api::V1::CrossTeamEnforcementTest < Api::V1::Test
     end
     assert_response :success
   end
+
+  # Shallow member routes (/api/v1/subscribers/:id, /api/v1/campaigns/:id, …)
+  # carry no :team_id, so the record itself must belong to the token's team.
+  test "shallow member routes refuse another team's records" do
+    foreign = @other_team.subscribers.create!(email: "foreign@example.com", name: "Foreign")
+    campaign = @other_team.campaigns.create!(subject: "Theirs", status: "draft", body_mjml: "<mjml><mj-body></mj-body></mjml>")
+    auth = {"Authorization" => "Bearer #{access_token}"}
+
+    get "/api/v1/subscribers/#{foreign.to_param}", headers: auth
+    assert_response :not_found
+    refute_includes response.body, "foreign@example.com"
+
+    get "/api/v1/campaigns/#{campaign.to_param}", headers: auth
+    assert_response :not_found
+
+    get "/api/v1/teams/#{@other_team.to_param}", headers: auth
+    assert_response :not_found
+  end
+
+  test "nested shallow routes refuse a parent from another team" do
+    foreign = @other_team.subscribers.create!(email: "foreign@example.com")
+    foreign.events.create!(team: @other_team, name: "secret_event", occurred_at: Time.current)
+    auth = {"Authorization" => "Bearer #{access_token}"}
+
+    get "/api/v1/subscribers/#{foreign.to_param}/events", headers: auth
+    assert_response :not_found
+    refute_includes response.body, "secret_event"
+
+    assert_no_difference -> { Event.count } do
+      post "/api/v1/subscribers/#{foreign.to_param}/events",
+        params: {event: {name: "planted", occurred_at: Time.current}}.to_json,
+        headers: auth.merge("CONTENT_TYPE" => "application/json")
+    end
+    assert_response :not_found
+  end
+
+  # A plain membership only grants read, which is why writes to the other
+  # team looked safe. As an admin of that team the same token could write.
+  test "shallow member routes refuse writes to a team where the user is admin" do
+    @other_team.memberships.find_by!(user: @user).update!(role_ids: ["admin"])
+    foreign = @other_team.subscribers.create!(email: "foreign@example.com", name: "Foreign")
+    auth = {"Authorization" => "Bearer #{access_token}"}
+
+    patch "/api/v1/subscribers/#{foreign.to_param}", params: {subscriber: {name: "Changed"}}.to_json,
+      headers: auth.merge("CONTENT_TYPE" => "application/json")
+    assert_response :not_found
+    assert_equal "Foreign", foreign.reload.name
+
+    delete "/api/v1/subscribers/#{foreign.to_param}", headers: auth
+    assert_response :not_found
+    assert Subscriber.exists?(foreign.id)
+
+    patch "/api/v1/teams/#{@other_team.to_param}", params: {team: {name: "Renamed"}}.to_json,
+      headers: auth.merge("CONTENT_TYPE" => "application/json")
+    assert_response :not_found
+    refute_equal "Renamed", @other_team.reload.name
+  end
+
+  test "another team's access tokens can't be read or minted" do
+    other_app = create(:platform_application, team: @other_team)
+    other_token = Doorkeeper::AccessToken.create!(resource_owner_id: @user.id, application: other_app,
+      token: SecureRandom.hex, scopes: "read write delete", provisioned: true)
+    auth = {"Authorization" => "Bearer #{access_token}"}
+
+    get "/api/v1/platform/access_tokens/#{other_token.id}", headers: auth
+    assert_response :not_found
+    refute_includes response.body, other_token.token
+
+    assert_no_difference -> { other_app.access_tokens.count } do
+      post "/api/v1/platform/applications/#{other_app.id}/access_tokens",
+        params: {access_token: access_token, platform_access_token: {description: "stolen"}}
+    end
+    assert_response :not_found
+  end
+
+  test "unnested indexes only list the token's team" do
+    stranger = create(:onboarded_user)
+    create(:membership, user: stranger, team: @other_team, user_email: stranger.email)
+    auth = {"Authorization" => "Bearer #{access_token}"}
+
+    get "/api/v1/teams", headers: auth
+    assert_response :success
+    assert_equal [@team.id], response.parsed_body.map { it["id"] }
+
+    get "/api/v1/users", headers: auth
+    assert_response :success
+    ids = response.parsed_body.map { it["id"] }
+    assert_includes ids, @user.id
+    refute_includes ids, stranger.id
+
+    get "/api/v1/users/#{stranger.id}", headers: auth
+    assert_response :not_found
+  end
+
+  test "a token without a team can't reach team records on shallow routes" do
+    unbound_app = create(:platform_application, team: nil)
+    token = Doorkeeper::AccessToken.create!(resource_owner_id: @user.id, application: unbound_app,
+      token: SecureRandom.hex, scopes: "read write delete").token
+    own = @team.subscribers.create!(email: "own@example.com")
+    auth = {"Authorization" => "Bearer #{token}"}
+
+    get "/api/v1/subscribers/#{own.to_param}", headers: auth
+    assert_response :not_found
+    refute_includes response.body, "own@example.com"
+
+    get "/api/v1/teams/#{@team.to_param}", headers: auth
+    assert_response :not_found
+
+    get "/api/v1/users/me", headers: auth
+    assert_response :success
+  end
+
+  test "shallow member routes still serve the token's own team" do
+    own = @team.subscribers.create!(email: "own@example.com", name: "Own")
+    own.events.create!(team: @team, name: "own_event", occurred_at: Time.current)
+    auth = {"Authorization" => "Bearer #{access_token}"}
+
+    get "/api/v1/subscribers/#{own.to_param}", headers: auth
+    assert_response :success
+    assert_equal "own@example.com", response.parsed_body["email"]
+
+    get "/api/v1/subscribers/#{own.to_param}/events", headers: auth
+    assert_response :success
+    assert_includes response.body, "own_event"
+
+    patch "/api/v1/subscribers/#{own.to_param}", params: {subscriber: {name: "Renamed"}}.to_json,
+      headers: auth.merge("CONTENT_TYPE" => "application/json")
+    assert_response :success
+    assert_equal "Renamed", own.reload.name
+
+    get "/api/v1/teams/#{@team.to_param}", headers: auth
+    assert_response :success
+
+    get "/api/v1/users/me", headers: auth
+    assert_response :success
+    assert_equal @user.id, response.parsed_body["id"]
+  end
 end
