@@ -271,11 +271,14 @@ class CampaignRenderer
   # template doesn't include the placeholder, appends the section just before
   # `</mj-body>` so the body still renders (and the user notices the missing
   # placeholder and can add it).
+  #
+  # Block form of `sub`: a replacement string would read \\, \0, \& and \'
+  # in the body (e.g. inside a code span) as backreferences.
   def inject_body(template_mjml, body_mj_section)
     if template_mjml.include?(BODY_PLACEHOLDER)
-      template_mjml.sub(BODY_PLACEHOLDER, body_mj_section)
+      template_mjml.sub(BODY_PLACEHOLDER) { body_mj_section }
     elsif template_mjml.include?("</mj-body>")
-      template_mjml.sub("</mj-body>", "#{body_mj_section}\n</mj-body>")
+      template_mjml.sub("</mj-body>") { "#{body_mj_section}\n</mj-body>" }
     else
       # Template has no </mj-body> — fall back to concatenating. This is
       # almost certainly broken MJML but we'd rather render something and
