@@ -25,6 +25,8 @@ class EmailImagesController < ApplicationController
   # their own host), so it's safe to always include.
   include ActiveStorage::SetCurrent
 
+  REDIRECT_CACHE_TTL = 1.day
+
   def show
     # find_by_token returns nil for a missing record OR a bad/forged token —
     # both collapse to a plain 404, so no rescue is needed here.
@@ -35,10 +37,11 @@ class EmailImagesController < ApplicationController
     end
 
     # Let the image client + caching proxies hold the redirect for a day so
-    # repeat opens don't re-hit the app. The redirect TARGET (the signed R2
-    # URL) is regenerated fresh every time this action runs, so a cached
-    # 302 never points at a stale signature.
-    response.set_header("Cache-Control", "public, max-age=86400")
-    redirect_to image.file.blob.url, allow_other_host: true, status: :found
+    # repeat opens don't re-hit the app. A cached 302 keeps its original
+    # target, so sign that URL to outlive the cache (Active Storage signs for
+    # five minutes by default).
+    response.set_header("Cache-Control", "public, max-age=#{REDIRECT_CACHE_TTL.to_i}")
+    redirect_to image.file.blob.url(expires_in: REDIRECT_CACHE_TTL + 1.hour),
+      allow_other_host: true, status: :found
   end
 end

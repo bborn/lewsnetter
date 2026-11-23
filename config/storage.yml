@@ -25,9 +25,9 @@ amazon:
 #
 # This service is PRIVATE (no `public: true`). Email images reach inboxes
 # via a Rails redirect: GET /e/:id → EmailImagesController#show → 302 to a
-# freshly-signed R2 URL. That signed URL only needs to outlive the few ms
-# it takes the image client to follow the redirect, so the bucket never
-# needs public access or a custom domain. The permanent, branded URL is
+# freshly-signed R2 URL. Caches may keep that 302 for a day, so the
+# controller signs the URL to outlive that, and the bucket never needs
+# public access or a custom domain. The permanent, branded URL is
 # the Rails route, served on the team's own email host — see
 # EmailImage#public_url.
 #

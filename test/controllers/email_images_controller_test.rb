@@ -30,6 +30,17 @@ class EmailImagesControllerTest < ActionDispatch::IntegrationTest
     assert_match(/max-age=86400/, response.headers["Cache-Control"])
   end
 
+  test "a cached redirect still points at a working URL until the cache expires" do
+    get "/e/#{token_for(@image)}"
+    cached_location = response.location
+    max_age = response.headers["Cache-Control"][/max-age=(\d+)/, 1].to_i
+
+    travel(max_age.seconds - 1.minute) do
+      get cached_location
+      assert_response :success
+    end
+  end
+
   test "garbage token returns 404 (no leak, no error)" do
     get "/e/this-is-not-a-real-signed-id"
     assert_response :not_found
