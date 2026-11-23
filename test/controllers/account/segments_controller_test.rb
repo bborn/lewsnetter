@@ -103,6 +103,19 @@ class Account::SegmentsControllerTest < ActionDispatch::IntegrationTest
     assert_nil @team.segments.find_by(name: "Bad")
   end
 
+  test "update refuses a builder rule with no value and keeps the old rules" do
+    segment = @team.segments.create!(name: "Plan", rules: plan_rule("vip"))
+    empty = {"type" => "group", "combinator" => "and", "rules" => [
+      {"type" => "rule", "field" => "custom_attributes.plan", "value_type" => "string", "operator" => "in", "value" => []}
+    ]}
+
+    patch account_segment_url(segment), params: {segment: {rules: empty.to_json}}
+
+    assert_response :unprocessable_entity
+    assert_includes response.body, "Finish or remove the empty rule."
+    assert_includes segment.reload.predicate, "'vip'"
+  end
+
   test "update can change the predicate" do
     segment = @team.segments.create!(
       name: "S", natural_language_source: "x",

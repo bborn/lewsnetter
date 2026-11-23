@@ -101,6 +101,20 @@ class Segment < ApplicationRecord
     @rules_changed = true
   end
 
+  # A rule left without a value compiles to nothing, or to a match on the
+  # empty string, and a tree with no rules compiles to no predicate at all,
+  # which matches every subscriber. Refuse both when the builder submits rules.
+  RULE_OPERATORS_WITHOUT_VALUE = %w[is_set is_not_set].freeze
+  validate :rules_are_complete, if: -> { @rules_changed && rules.is_a?(Hash) && rules.present? }
+  def rules_are_complete
+    groups, leaves = rule_nodes(rules).partition { |node| node["type"] == "group" }
+    if groups.any? { |group| Array(group["rules"]).empty? }
+      errors.add(:base, "Add at least one rule.")
+    elsif leaves.any? { |rule| rule_missing_value?(rule) }
+      errors.add(:base, "Finish or remove the empty rule.")
+    end
+  end
+
   # Compile the rule tree to a SQL predicate whenever it changes. Keeps
   # the legacy predicate column in sync so Segment#applies_to (used by
   # SendCampaignJob and the MCP segment tools) keeps working unchanged.
@@ -113,6 +127,19 @@ class Segment < ApplicationRecord
     errors.add(:base, "Segment rules are invalid: #{e.message}")
     throw :abort
   end
+
+  def rule_nodes(node)
+    return [] unless node.is_a?(Hash)
+    return [node] unless node["type"] == "group"
+    [node] + Array(node["rules"]).flat_map { |child| rule_nodes(child) }
+  end
+  private :rule_nodes
+
+  def rule_missing_value?(rule)
+    return false if RULE_OPERATORS_WITHOUT_VALUE.include?(rule["operator"].to_s)
+    Array(rule["value"]).all? { |value| value.to_s.strip.empty? }
+  end
+  private :rule_missing_value?
 
   # Apply this segment's predicate to an existing ActiveRecord scope and return
   # the narrowed scope. If there's no predicate the scope is returned as-is.
