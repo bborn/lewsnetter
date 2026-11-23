@@ -19,6 +19,11 @@ class Event < ApplicationRecord
   validates :occurred_at, presence: true
   # 🚅 add validations above.
 
+  # Events built under a subscriber (POST /api/v1/subscribers/:id/events,
+  # the account events form) arrive without a team; it is the subscriber's.
+  # Set on build, not before validation: the controllers authorize the new
+  # record against its team before saving it.
+  after_initialize(if: :new_record?) { self.team ||= subscriber&.team }
   after_create_commit :enqueue_sequence_enrollment
   # 🚅 add callbacks above.
 
