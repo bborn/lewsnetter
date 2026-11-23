@@ -148,6 +148,25 @@ class SegmentTest < ActiveSupport::TestCase
     assert_equal "subscribed = 1", segment.reload.predicate
   end
 
+  test "validate_predicate rejects parentheses that close the caller's WHERE group" do
+    assert Segment.validate_predicate("1=0) OR (subscribers.team_id = 1").any? { |e| e.include?("parentheses") }
+    assert Segment.validate_predicate("subscribed = 1)").any? { |e| e.include?("parentheses") }
+    assert Segment.validate_predicate("(subscribed = 1").any? { |e| e.include?("parentheses") }
+    assert Segment.validate_predicate("subscribed = 'x").any? { |e| e.include?("quote") }
+    # Parentheses inside string literals are data.
+    assert_empty Segment.validate_predicate("(subscribers.external_id = ')(' AND (subscribed = 1))")
+  end
+
+  test "a predicate cannot escape the team or subscribed scope it is applied to" do
+    other_team = create(:team)
+    outsider = other_team.subscribers.create!(email: "outsider@other.test", subscribed: true)
+    unsubscribed = @team.subscribers.create!(email: "left@x.com", subscribed: false)
+    segment = @team.segments.create!(name: "Breakout",
+      definition: {"predicate" => "1=0) OR (subscribers.id IN (#{outsider.id}, #{unsubscribed.id})"})
+
+    assert_raises(Segment::InvalidPredicate) { segment.applies_to(@team.subscribers.subscribed).to_a }
+  end
+
   test "a builder rule on signup date compiles and filters subscribers" do
     recent = @team.subscribers.create!(email: "recent@example.com", created_at: 2.hours.ago)
     old = @team.subscribers.create!(email: "old@example.com", created_at: 10.days.ago)

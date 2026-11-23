@@ -55,6 +55,18 @@ class SesSender
       delivery_write_errors = 0
 
       subscribers.each do |subscriber|
+        # A campaign only ever mails its own team's subscribers. The audience
+        # query already scopes by team; this is the last check before SES, so
+        # a scoping bug upstream can't mail another tenant's list.
+        if subscriber.persisted? && subscriber.team_id != team.id
+          Rails.logger.error(
+            "[SesSender] refused subscriber=#{subscriber.id} team=#{subscriber.team_id} " \
+            "for campaign=#{campaign.id} team=#{team.id}"
+          )
+          failed << {subscriber: subscriber, error: "subscriber belongs to another team"}
+          next
+        end
+
         email_key = subscriber.email.to_s.downcase
         if suppressed_set.include?(email_key)
           # Record a Delivery row so per-campaign analytics can explain why

@@ -210,6 +210,20 @@ class Segment < ApplicationRecord
     # quotes ('') inside the literal. (The forbidden-token check above still
     # scans the full predicate.)
     scannable = predicate.gsub(/'(?:[^']|'')*'/, "''")
+
+    # applies_to hands the predicate to `where`, which wraps it in one pair of
+    # parentheses next to the caller's own conditions (team, subscribed). A
+    # stray `)` closes that group, so `1=0) OR (...` would select rows from
+    # every team. Literals are already blanked out, so count what is left.
+    errors << "Predicate has an unterminated string quote" if scannable.gsub("''", "").include?("'")
+    depth = 0
+    balanced = scannable.each_char.all? do |char|
+      depth += 1 if char == "("
+      depth -= 1 if char == ")"
+      depth >= 0
+    end
+    errors << "Predicate has unbalanced parentheses" unless balanced && depth.zero?
+
     scannable.scan(/\b([a-zA-Z_][a-zA-Z0-9_]*)\.([a-zA-Z_][a-zA-Z0-9_]*)/) do |left, _right|
       next if QUALIFIABLE_TABLES.include?(left.downcase)
       errors << "Predicate references disallowed table: #{left}"

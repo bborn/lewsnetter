@@ -78,6 +78,9 @@ class Account::SegmentsController < Account::ApplicationController
       rescue Segments::PredicateCompiler::InvalidTree => e
         return render json: {error: e.message}, status: :unprocessable_entity
       end
+      # Same checks a saved segment gets in Segment#applies_to.
+      errors = sql.present? ? Segment.validate_predicate(sql) : []
+      return render json: {error: errors.join(", ")}, status: :unprocessable_entity if errors.any?
     end
 
     scope = current_team.subscribers

@@ -26,6 +26,20 @@ class SesSenderTest < ActiveSupport::TestCase
     assert_equal [], result.failed
   end
 
+  test "refuses subscribers from another team" do
+    original = Rails.application.config.ses_client
+    Rails.application.config.ses_client = :stub
+    outsider = create(:team).subscribers.create!(email: "outsider@other.test", subscribed: true)
+    begin
+      result = SesSender.send_bulk(campaign: @campaign, subscribers: [@s1, outsider])
+      assert_equal 1, result.message_ids.size
+      assert_equal [outsider], result.failed.map { |f| f[:subscriber] }
+      refute Delivery.exists?(subscriber_id: outsider.id)
+    ensure
+      Rails.application.config.ses_client = original
+    end
+  end
+
   test "stub mode returns one message id per subscriber" do
     original = Rails.application.config.ses_client
     Rails.application.config.ses_client = :stub
