@@ -170,6 +170,35 @@ class CampaignRendererTest < ActiveSupport::TestCase
     assert result.html.index("TEMPLATE TOP") < result.html.index("Markdown heading")
   end
 
+  test "markdown body keeps backslash sequences in code verbatim" do
+    # String#sub reads \\, \0, \& and \' in a replacement string as
+    # backreferences; a code span keeps them through markdown rendering.
+    body = <<~'MD'
+      Paths: `C:\\temp`, `\0` and `a\&b`.
+
+      Quote: `sed 's/\'//'`
+    MD
+    with_placeholder = <<~MJML
+      <mjml><mj-body>{{body}}<mj-section><mj-column><mj-text>FOOTER</mj-text></mj-column></mj-section></mj-body></mjml>
+    MJML
+    without_placeholder = <<~MJML
+      <mjml><mj-body><mj-section><mj-column><mj-text>TOP</mj-text></mj-column></mj-section></mj-body></mjml>
+    MJML
+
+    [with_placeholder, without_placeholder].each do |mjml|
+      @template.update!(mjml_body: mjml)
+      @campaign.update!(body_markdown: body, body_mjml: nil)
+
+      html = CampaignRenderer.new(campaign: @campaign, subscriber: @subscriber).call.html
+
+      assert_includes html, "C:\\\\temp"
+      assert_includes html, '\0'
+      assert_includes html, 'a\&amp;b'
+      assert_includes html, %q(sed 's/\'//')
+      assert_equal 1, html.scan(/FOOTER|TOP/).size, "template chrome duplicated or lost"
+    end
+  end
+
   test "markdown body strips unsafe HTML (no raw script tags)" do
     @template.update!(mjml_body: "<mjml><mj-body>{{body}}</mj-body></mjml>")
     @campaign.update!(
