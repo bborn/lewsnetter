@@ -12,6 +12,12 @@ module Segments
       assert_nil PredicateCompiler.new({"type" => "group", "rules" => []}, team: @team).to_sql
     end
 
+    test "a node that is not an object raises InvalidTree" do
+      [[1], 1, {"type" => "group", "combinator" => "and", "rules" => [1]}].each do |tree|
+        assert_raises(PredicateCompiler::InvalidTree) { PredicateCompiler.new(tree, team: @team).to_sql }
+      end
+    end
+
     test "single rule wraps in a group with one element" do
       sql = compile({
         "type" => "group", "combinator" => "and",

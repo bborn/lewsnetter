@@ -96,6 +96,13 @@ class Account::SegmentsControllerTest < ActionDispatch::IntegrationTest
     assert_includes segment.predicate, "'free'"
   end
 
+  test "create with rules that are not a rule tree re-renders the form" do
+    post account_team_segments_url(@team), params: {segment: {name: "Bad", rules: "[1]"}}
+
+    assert_response :unprocessable_entity
+    assert_nil @team.segments.find_by(name: "Bad")
+  end
+
   test "update can change the predicate" do
     segment = @team.segments.create!(
       name: "S", natural_language_source: "x",
