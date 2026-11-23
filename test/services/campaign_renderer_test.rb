@@ -199,6 +199,26 @@ class CampaignRendererTest < ActiveSupport::TestCase
     end
   end
 
+  test "raises when MJML compiles to an empty document" do
+    # mjml-rails returns "" on a compile error outside development. Tracking
+    # injection would wrap that in a non-empty <html>, and SesSender would
+    # send a blank email with no unsubscribe link.
+    Mjml::Parser.class_eval do
+      alias_method :__orig_render_for_test__, :render
+      define_method(:render) { "" }
+    end
+
+    error = assert_raises(RuntimeError) do
+      CampaignRenderer.new(campaign: @campaign, subscriber: @subscriber).call
+    end
+    assert_match "empty HTML", error.message
+  ensure
+    Mjml::Parser.class_eval do
+      alias_method :render, :__orig_render_for_test__
+      remove_method :__orig_render_for_test__
+    end
+  end
+
   test "markdown body strips unsafe HTML (no raw script tags)" do
     @template.update!(mjml_body: "<mjml><mj-body>{{body}}</mj-body></mjml>")
     @campaign.update!(

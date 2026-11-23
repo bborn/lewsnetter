@@ -78,6 +78,8 @@ class CampaignRenderer
     @render_html ||= begin
       mjml_source = substitute(resolved_mjml)
       raw_html = Mjml::Parser.new(nil, mjml_source).render
+      # mjml-rails swallows compile errors outside development and returns "".
+      raise "Campaign #{@campaign.id} MJML compiled to empty HTML" if raw_html.blank?
       Premailer.new(
         raw_html,
         with_html_string: true,
