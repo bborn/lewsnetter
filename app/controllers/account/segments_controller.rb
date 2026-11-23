@@ -85,7 +85,7 @@ class Account::SegmentsController < Account::ApplicationController
 
     scope = current_team.subscribers
     needs_company_join = sql&.include?("companies.") || referenced_fields(tree).any? { |k| k.start_with?("companies.", "company_attributes.") }
-    scope = scope.joins(:company) if needs_company_join
+    scope = scope.left_outer_joins(:company) if needs_company_join
     scope = scope.where(sql) if sql.present?
 
     count = scope.count
