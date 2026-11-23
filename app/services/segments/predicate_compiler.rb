@@ -94,6 +94,7 @@ module Segments
 
     def compile_node(node)
       return nil if node.nil?
+      raise InvalidTree, "expected a rule or group object, got #{node.class}" unless node.is_a?(Hash)
       case node["type"]
       when "group" then compile_group(node)
       when "rule" then compile_rule(node)

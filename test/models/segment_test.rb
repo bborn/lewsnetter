@@ -107,6 +107,47 @@ class SegmentTest < ActiveSupport::TestCase
     assert Segment.validate_predicate("subscribed = 1--").any? { |e| e.include?("forbidden token: --") }
   end
 
+  def rule_tree(*rules)
+    {"type" => "group", "combinator" => "and", "rules" => rules}
+  end
+
+  def plan_rule(operator, value)
+    {"type" => "rule", "field" => "custom_attributes.plan", "value_type" => "string", "operator" => operator, "value" => value}
+  end
+
+  test "rules with an unfinished rule are invalid" do
+    [plan_rule("in", []), plan_rule("equals", ""), plan_rule("contains", nil)].each do |empty|
+      segment = @team.segments.build(name: "Unfinished", rules: rule_tree(plan_rule("equals", "vip"), empty))
+
+      refute segment.save, "expected #{empty.inspect} to be refused"
+      assert_includes segment.errors[:base], "Finish or remove the empty rule."
+    end
+  end
+
+  test "rules with no rule at all are invalid" do
+    segment = @team.segments.build(name: "Nothing", rules: rule_tree)
+
+    refute segment.save
+    assert_includes segment.errors[:base], "Add at least one rule."
+  end
+
+  test "rules that need no value and a false boolean stay valid" do
+    segment = @team.segments.create!(name: "Set", rules: rule_tree(
+      plan_rule("is_set", nil),
+      {"type" => "rule", "field" => "subscribers.subscribed", "operator" => "equals", "value" => false}
+    ))
+
+    assert_equal "((json_extract(subscribers.custom_attributes, '$.plan') IS NOT NULL AND json_extract(subscribers.custom_attributes, '$.plan') != '') AND subscribers.subscribed = 0)", segment.predicate
+  end
+
+  test "a predicate-only segment stays valid when saved without rules" do
+    segment = @team.segments.create!(name: "Agent made", predicate: "subscribed = 1")
+
+    assert segment.update(name: "Renamed")
+    assert segment.update(rules: "{}")
+    assert_equal "subscribed = 1", segment.reload.predicate
+  end
+
   test "a builder rule on signup date compiles and filters subscribers" do
     recent = @team.subscribers.create!(email: "recent@example.com", created_at: 2.hours.ago)
     old = @team.subscribers.create!(email: "old@example.com", created_at: 10.days.ago)

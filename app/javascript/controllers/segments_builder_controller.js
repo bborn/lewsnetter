@@ -28,7 +28,8 @@ export default class extends Controller {
     fields: Object,
     operators: Object,
     previewUrl: String,
-    csrf: String
+    csrf: String,
+    keepPredicate: Boolean
   }
 
   connect() {
@@ -40,6 +41,11 @@ export default class extends Controller {
     const initial = this.treeValue && Object.keys(this.treeValue).length ? this.treeValue : this.emptyGroup()
     this._tree = JSON.parse(JSON.stringify(initial))  // deep clone so we own the references
     this._tomSelects = []
+    // A saved segment with a predicate but no rules (made by the agent or
+    // MCP) shows a starter rule here. Leave segment[rules] as posted by the
+    // server until the user edits the tree, so saving the form keeps the
+    // predicate instead of replacing it with the starter rule.
+    this._syncHidden = !this.keepPredicateValue
     this.render()
     this.schedulePreview()
   }
@@ -162,6 +168,7 @@ export default class extends Controller {
   }
 
   commit({skipRender = false} = {}) {
+    this._syncHidden = true
     this.treeValue = this._tree   // sync the Stimulus value (for inspection)
     if (this.hasHiddenInputTarget) {
       this.hiddenInputTarget.value = JSON.stringify(this._tree)
@@ -268,7 +275,7 @@ export default class extends Controller {
     this.destroyTomSelects()
     this.treeTarget.innerHTML = this.renderNode(this._tree, [])
     this.enhanceSelects()
-    if (this.hasHiddenInputTarget) {
+    if (this.hasHiddenInputTarget && this._syncHidden) {
       this.hiddenInputTarget.value = JSON.stringify(this._tree)
     }
   }
