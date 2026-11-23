@@ -1,0 +1,29 @@
+name: Feature request
+description: Something you couldn't do. Features and UI changes need a maintainer's sign-off here before anyone opens a pull request.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: workflow
+    attributes:
+      label: What you were trying to do
+      description: The workflow you couldn't complete, and why the current behaviour falls short.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you'd expect
+      description: How it should work from a user's point of view. Prototype links from your fork are welcome.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Workarounds you tried
+      description: Including whether the in-app agent or an MCP tool can already do it.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched open and closed issues for the same request.
+          required: true
+        - label: If an agent wrote this, the body ends with `> AGENT GENERATED`.

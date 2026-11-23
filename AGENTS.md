@@ -8,6 +8,10 @@ Lewsnetter is an open-source email marketing platform on Rails 8 + BulletTrain, 
 
 The fastest way to grok the architecture: read the design spec at [`docs/superpowers/specs/2026-05-15-mcp-and-in-app-agent-design.md`](docs/superpowers/specs/2026-05-15-mcp-and-in-app-agent-design.md). It's the source-of-truth for "why is it built this way."
 
+## Contributing from outside (humans and agents)
+
+Read [`CONTRIBUTING.md`](CONTRIBUTING.md) before opening an issue or pull request. Short version: a PR must close an open issue (`Fixes #N`), come from a fork with "Allow edits by maintainers" on, and its author must be on [`.github/APPROVED_CONTRIBUTORS`](.github/APPROVED_CONTRIBUTORS) or the PR gate closes it. Reproduce bugs with a failing test before fixing them, follow [`docs/filing-issues.md`](docs/filing-issues.md) for issues, use the PR template, and end agent-written issue and PR bodies with `> AGENT GENERATED`. Security problems go to private reporting ([`SECURITY.md`](SECURITY.md)), never a public issue.
+
 ## Codebase map
 
 | Path | What's there |

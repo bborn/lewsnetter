@@ -1,0 +1,60 @@
+name: Bug report
+description: Something doesn't work the way it should. A stranger should be able to reproduce it from this issue alone.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please read [docs/filing-issues.md](https://github.com/bborn/lewsnetter/blob/master/docs/filing-issues.md) first. Short and precise beats long and vague. Security problems go through the Security tab, not here.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What you did, what happened, what you expected. Two or three sentences for someone who doesn't know the codebase.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Version and environment
+      description: The commit you ran (or "app.lewsnetter.dev"), how you run it (bin/dev, Docker, Kamal), and anything unusual (SES region, LLM provider, a custom gateway).
+      placeholder: |
+        - master at 77d6a97, bin/dev on macOS
+        - SES us-east-1, LLM provider anthropic
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered, copy-pasteable, minimal. Exact clicks, commands, MCP calls or agent prompts. A failing test is the best repro. Note anything you tried that did NOT reproduce it.
+    validations:
+      required: true
+  - type: textarea
+    id: expected-actual
+    attributes:
+      label: Expected vs actual
+      description: Paste actual output verbatim (logs, HTTP responses, MCP results). Attach a screenshot for visual bugs and say what to look at.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Trimmed logs and code permalinks with a commit SHA (`blob/<sha>/path#L…`).
+  - type: textarea
+    id: ruled-out
+    attributes:
+      label: What you ruled out
+      description: One line each, like "Not #N because …" or "still happens on master at <sha>".
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I reproduced this on current `master` (or on app.lewsnetter.dev), or I say above that I couldn't.
+          required: true
+        - label: I searched open and closed issues for the same problem.
+          required: true
+        - label: If an agent wrote this, the body ends with `> AGENT GENERATED`.

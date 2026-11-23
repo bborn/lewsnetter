@@ -1,0 +1,24 @@
+name: Task
+description: A refactor, docs change, dependency update or chore with clear acceptance criteria.
+labels: []
+body:
+  - type: textarea
+    id: work
+    attributes:
+      label: The work
+      description: What should change and why.
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Acceptance criteria
+      description: How we'll know it's done.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: If an agent wrote this, the body ends with `> AGENT GENERATED`.

@@ -1,0 +1,147 @@
+name: PR Gate
+on:
+  pull_request_target:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - edited
+      - labeled
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+jobs:
+  gate:
+    name: Check contributor approval
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout base branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.base_ref }}
+          sparse-checkout: .github/APPROVED_CONTRIBUTORS
+          sparse-checkout-cone-mode: false
+      - name: Check approval, maintainer edits, and linked issue, and close failing PRs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          EVENT_ACTION: ${{ github.event.action }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_AUTHOR_TYPE: ${{ github.event.pull_request.user.type }}
+          PR_ASSOCIATION: ${{ github.event.pull_request.author_association }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_STATE: ${{ github.event.pull_request.state }}
+          PR_NEEDS_ISSUE: ${{ contains(github.event.pull_request.labels.*.name, 'needs-issue') }}
+          PR_NEEDS_EDITS: ${{ contains(github.event.pull_request.labels.*.name, 'needs-maintainer-edits') }}
+          PR_SKIP_ISSUE: ${{ contains(github.event.pull_request.labels.*.name, 'skip-issue-check') }}
+          LABEL_NAME: ${{ github.event.label.name }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          HEAD_OWNER_TYPE: ${{ github.event.pull_request.head.repo.owner.type }}
+          MAINTAINER_CAN_MODIFY: ${{ github.event.pull_request.maintainer_can_modify }}
+          CONTRIBUTING_URL: ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.base_ref }}/CONTRIBUTING.md
+        run: |
+          recheck=""
+          if [ "$EVENT_ACTION" = "edited" ] || [ "$EVENT_ACTION" = "labeled" ]; then
+            recheck="yes"
+          fi
+          if [ "$EVENT_ACTION" = "labeled" ] && [ "$LABEL_NAME" != "skip-issue-check" ]; then
+            exit 0
+          fi
+          if [ -n "$recheck" ] && { [ "$PR_STATE" != "closed" ] || [ "$PR_NEEDS_ISSUE" != "true" ]; }; then
+            exit 0
+          fi
+          trusted=""
+          if [ "$PR_ASSOCIATION" = "OWNER" ] || [ "$PR_ASSOCIATION" = "MEMBER" ] || [ "$PR_ASSOCIATION" = "COLLABORATOR" ]; then
+            trusted="yes"
+          fi
+          if [ -z "$trusted" ] && [ -f ".github/APPROVED_CONTRIBUTORS" ]; then
+            lowered_author="$(printf '%s' "$PR_AUTHOR" | tr '[:upper:]' '[:lower:]')"
+            while IFS= read -r entry || [ -n "$entry" ]; do
+              trimmed="$(printf '%s' "$entry" | tr -d '[:space:]')"
+              if [ -z "$trimmed" ]; then
+                continue
+              fi
+              lowered_entry="$(printf '%s' "$trimmed" | tr '[:upper:]' '[:lower:]')"
+              if [ "$lowered_entry" = "$lowered_author" ]; then
+                trusted="yes"
+                break
+              fi
+            done < ".github/APPROVED_CONTRIBUTORS"
+          fi
+          edits_off=""
+          if [ -n "$recheck" ]; then
+            if [ "$PR_NEEDS_EDITS" = "true" ]; then
+              edits_off="yes"
+            fi
+          elif [ "$HEAD_REPO" != "$GITHUB_REPOSITORY" ] && [ "$HEAD_OWNER_TYPE" = "User" ] && [ "$MAINTAINER_CAN_MODIFY" != "true" ]; then
+            edits_off="yes"
+          fi
+          issue_missing=""
+          if [ "$EVENT_ACTION" != "synchronize" ] && [ "$PR_AUTHOR_TYPE" != "Bot" ] && [ "$PR_ASSOCIATION" != "OWNER" ] && [ "$PR_ASSOCIATION" != "MEMBER" ] && [ "$HEAD_REPO" != "$GITHUB_REPOSITORY" ] && [ "$PR_SKIP_ISSUE" != "true" ]; then
+            issue_missing="yes"
+            attempts=1
+            if [ "$EVENT_ACTION" = "edited" ]; then
+              attempts=4
+            fi
+            for attempt in $(seq "$attempts"); do
+              linked="$(gh api graphql \
+                -f query='query($owner: String!, $name: String!, $number: Int!) { repository(owner: $owner, name: $name) { pullRequest(number: $number) { closingIssuesReferences(first: 50) { nodes { state repository { nameWithOwner } } } } } }' \
+                -f owner="${GITHUB_REPOSITORY%/*}" -f name="${GITHUB_REPOSITORY#*/}" -F number="$PR_NUMBER" \
+                --jq "[.data.repository.pullRequest.closingIssuesReferences.nodes[] | select(.state == \"OPEN\" and .repository.nameWithOwner == \"$GITHUB_REPOSITORY\")] | length")"
+              if [ "$linked" -gt 0 ]; then
+                issue_missing=""
+                break
+              fi
+              if [ "$attempt" -lt "$attempts" ]; then
+                sleep 5
+              fi
+            done
+          fi
+          add_label() {
+            gh label create "$1" --description "$2" --color "$3" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || true
+            gh pr edit "$PR_NUMBER" --add-label "$1" --repo "$GITHUB_REPOSITORY" || true
+          }
+          remove_label() {
+            gh pr edit "$PR_NUMBER" --remove-label "$1" --repo "$GITHUB_REPOSITORY" || true
+          }
+          if [ -n "$recheck" ]; then
+            if [ -n "$trusted" ] && [ -z "$edits_off" ] && [ -z "$issue_missing" ]; then
+              remove_label "needs-issue"
+              gh pr reopen "$PR_NUMBER" --repo "$GITHUB_REPOSITORY"
+            fi
+            exit 0
+          fi
+          if [ -n "$trusted" ]; then
+            remove_label "needs-approval"
+          fi
+          if [ -z "$issue_missing" ]; then
+            remove_label "needs-issue"
+          fi
+          if [ -n "$trusted" ] && [ -z "$edits_off" ] && [ -z "$issue_missing" ]; then
+            exit 0
+          fi
+          body="Thanks for the pull request, @$PR_AUTHOR. It was closed automatically because it does not meet the requirements below yet. This is an automated check, not a review of the change."
+          if [ -z "$trusted" ]; then
+            body="$body"$'\n\n'"**Contributor approval.** Lewsnetter reviews pull requests only from approved contributors, and you are not on the list yet. Comment on the linked issue with a link to this pull request and a short note on what it changes and why. A maintainer then approves you with /approve and reopens the pull request."
+            add_label "needs-approval" "PR author is not on the approved contributor list" "d93f0b"
+          fi
+          if [ -n "$issue_missing" ]; then
+            item="**Linked issue.** Every pull request must close an open issue in this repository. The issue keeps the problem tracked even if this pull request closes or we take a different approach. Open an issue for the change, or find an existing one, and add \`Fixes #<number>\` to the pull request description. Feature requests and UI changes need a maintainer's sign-off on the issue first."
+            if [ -n "$edits_off" ]; then
+              item="$item Include it in the new pull request."
+            elif [ -n "$trusted" ]; then
+              item="$item This pull request reopens on its own once you save the description."
+            else
+              item="$item Link the issue before you ask for approval."
+            fi
+            body="$body"$'\n\n'"$item"
+            add_label "needs-issue" "PR does not close an open issue" "d93f0b"
+          fi
+          if [ -n "$edits_off" ]; then
+            add_label "needs-maintainer-edits" "PR was opened with maintainer edits turned off" "d93f0b"
+            body="$body"$'\n\n'"**Maintainer edits.** \"Allow edits by maintainers\" is turned off for this pull request. Open a new pull request from your fork with it turned on. This one stays closed."
+          fi
+          body="$body"$'\n\n'"See [CONTRIBUTING.md]($CONTRIBUTING_URL) for details."
+          gh pr comment "$PR_NUMBER" --body "$body" --repo "$GITHUB_REPOSITORY"
+          gh pr close "$PR_NUMBER" --repo "$GITHUB_REPOSITORY"
