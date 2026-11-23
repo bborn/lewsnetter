@@ -72,6 +72,30 @@ class Account::SegmentsControllerTest < ActionDispatch::IntegrationTest
     assert_equal({"predicate" => "subscribed = 1"}, segment.definition)
   end
 
+  test "create from the visual builder saves the rules and narrows the audience" do
+    @team.subscribers.create!(email: "vip@example.com", custom_attributes: {"plan" => "vip"})
+    @team.subscribers.create!(email: "free@example.com", custom_attributes: {"plan" => "free"})
+    rules = plan_rule("vip")
+
+    post account_team_segments_url(@team), params: {segment: {name: "VIPs", rules: rules.to_json}}
+
+    assert_response :redirect
+    segment = @team.segments.find_by!(name: "VIPs")
+    assert_equal rules, segment.rules
+    assert_equal ["vip@example.com"], segment.applies_to(@team.subscribers).pluck(:email)
+  end
+
+  test "update from the visual builder replaces the rules" do
+    segment = @team.segments.create!(name: "Plan", rules: plan_rule("vip"))
+
+    patch account_segment_url(segment), params: {segment: {rules: plan_rule("free").to_json}}
+
+    assert_response :redirect
+    segment.reload
+    assert_equal plan_rule("free"), segment.rules
+    assert_includes segment.predicate, "'free'"
+  end
+
   test "update can change the predicate" do
     segment = @team.segments.create!(
       name: "S", natural_language_source: "x",
@@ -83,5 +107,13 @@ class Account::SegmentsControllerTest < ActionDispatch::IntegrationTest
     assert_response :redirect
     segment.reload
     assert_equal "subscribed = 0", segment.predicate
+  end
+
+  private
+
+  def plan_rule(plan)
+    {"type" => "group", "combinator" => "and", "rules" => [
+      {"type" => "rule", "field" => "custom_attributes.plan", "value_type" => "string", "operator" => "equals", "value" => plan}
+    ]}
   end
 end

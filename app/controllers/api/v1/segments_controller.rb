@@ -49,6 +49,10 @@ if defined?(Api::V1::ApplicationController)
           # `predicate` is a virtual attribute on Segment — writes into the
           # `definition` JSON column. Surfaced via the AI-translator panel.
           :predicate,
+          # `rules` is the visual builder's rule tree as a JSON string (the
+          # form's hidden segment[rules] field). Segment#rules= parses it and
+          # compiles it into the predicate on save.
+          :rules,
           # 🚅 super scaffolding will insert new fields above this line.
           *permitted_arrays,
           # 🚅 super scaffolding will insert new arrays above this line.
