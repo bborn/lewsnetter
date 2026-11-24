@@ -140,11 +140,10 @@ module Account
     # Returns at most PER_GROUP_LIMIT ids, ordered email-then-id for stability.
     def subscriber_match_ids
       scope = team.subscribers
-      needle = "%#{query.downcase}%"
 
       email_ids = scope.where(email: query).limit(PER_GROUP_LIMIT).pluck(:id)
-      name_ids = scope.where("LOWER(name) LIKE :n", n: needle).limit(PER_GROUP_LIMIT).pluck(:id)
-      ext_ids = scope.where("LOWER(external_id) LIKE :n", n: needle).limit(PER_GROUP_LIMIT).pluck(:id)
+      name_ids = scope.where("LOWER(name) LIKE :n ESCAPE '\\'", n: like_needle).limit(PER_GROUP_LIMIT).pluck(:id)
+      ext_ids = scope.where("LOWER(external_id) LIKE :n ESCAPE '\\'", n: like_needle).limit(PER_GROUP_LIMIT).pluck(:id)
 
       (email_ids + name_ids + ext_ids).uniq.first(PER_GROUP_LIMIT)
     end
@@ -161,8 +160,7 @@ module Account
         if query.blank?
           scope.order(updated_at: :desc).limit(PER_GROUP_RECENT_LIMIT)
         else
-          needle = "%#{query.downcase}%"
-          scope.where("LOWER(name) LIKE :n OR LOWER(external_id) LIKE :n", n: needle)
+          scope.where("LOWER(name) LIKE :n ESCAPE '\\' OR LOWER(external_id) LIKE :n ESCAPE '\\'", n: like_needle)
             .order(:name)
             .limit(PER_GROUP_LIMIT)
         end
@@ -184,11 +182,10 @@ module Account
         if query.blank?
           scope.order(updated_at: :desc).limit(PER_GROUP_RECENT_LIMIT)
         else
-          needle = "%#{query.downcase}%"
           # natural_language_source holds the plain-English segment
           # description. Search both so
           # users can find segments by name OR by the prompt they typed.
-          scope.where("LOWER(name) LIKE :n OR LOWER(natural_language_source) LIKE :n", n: needle)
+          scope.where("LOWER(name) LIKE :n ESCAPE '\\' OR LOWER(natural_language_source) LIKE :n ESCAPE '\\'", n: like_needle)
             .order(:name)
             .limit(PER_GROUP_LIMIT)
         end
@@ -210,8 +207,7 @@ module Account
         if query.blank?
           scope.order(updated_at: :desc).limit(PER_GROUP_RECENT_LIMIT)
         else
-          needle = "%#{query.downcase}%"
-          scope.where("LOWER(subject) LIKE :n OR LOWER(preheader) LIKE :n", n: needle)
+          scope.where("LOWER(subject) LIKE :n ESCAPE '\\' OR LOWER(preheader) LIKE :n ESCAPE '\\'", n: like_needle)
             .order(updated_at: :desc)
             .limit(PER_GROUP_LIMIT)
         end
@@ -224,6 +220,12 @@ module Account
           type: "campaign"
         }
       end
+    end
+
+    # Substring pattern for `LIKE :n ESCAPE '\'`. sanitize_sql_like
+    # backslash-escapes _ and %, and SQLite has no default escape character.
+    def like_needle
+      "%#{ActiveRecord::Base.sanitize_sql_like(query.downcase)}%"
     end
 
     def campaign_subtitle(campaign)
@@ -240,8 +242,7 @@ module Account
         if query.blank?
           scope.order(updated_at: :desc).limit(PER_GROUP_RECENT_LIMIT)
         else
-          needle = "%#{query.downcase}%"
-          scope.where("LOWER(name) LIKE :n", n: needle)
+          scope.where("LOWER(name) LIKE :n ESCAPE '\\'", n: like_needle)
             .order(:name)
             .limit(PER_GROUP_LIMIT)
         end
@@ -266,8 +267,7 @@ module Account
         if query.blank?
           scope.order(updated_at: :desc).limit(PER_GROUP_RECENT_LIMIT)
         else
-          needle = "%#{query.downcase}%"
-          scope.where("LOWER(name) LIKE :n OR LOWER(email) LIKE :n", n: needle)
+          scope.where("LOWER(name) LIKE :n ESCAPE '\\' OR LOWER(email) LIKE :n ESCAPE '\\'", n: like_needle)
             .order(:email)
             .limit(PER_GROUP_LIMIT)
         end

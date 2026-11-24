@@ -189,4 +189,20 @@ class Account::SearchControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal "Actions", JSON.parse(response.body)["groups"].first["label"]
   end
+
+  test "matches _ in the query literally" do
+    @team.subscribers.create!(email: "annual@example.com", external_id: "pro_annual")
+    @team.subscribers.create!(email: "lookalike@example.com", external_id: "proXannual")
+    @team.companies.create!(name: "pro_co")
+    @team.companies.create!(name: "proXco")
+    @team.segments.create!(name: "pro_list")
+    @team.segments.create!(name: "proXlist")
+
+    get account_team_search_url(@team, q: "pro_", format: :json)
+    groups = JSON.parse(response.body)["groups"].index_by { |g| g["type"] }
+
+    assert_equal ["pro_annual"], groups["subscriber"]["items"].map { |i| i["subtitle"] }
+    assert_equal ["pro_co"], groups["company"]["items"].map { |i| i["title"] }
+    assert_equal ["pro_list"], groups["segment"]["items"].map { |i| i["title"] }
+  end
 end

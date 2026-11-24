@@ -58,4 +58,16 @@ class Account::SubscribersControllerTest < ActionDispatch::IntegrationTest
     assert_match @team.name, string
     refute_match(/%\{/, string, "locale string still has unresolved interpolation")
   end
+
+  test "search matches _ and % in the query literally" do
+    @team.subscribers.create!(email: "annual@example.com", external_id: "pro_annual")
+    @team.subscribers.create!(email: "lookalike@example.com", external_id: "proXannual")
+    @team.subscribers.create!(email: "percent@example.com", name: "50% off")
+
+    get search_account_team_subscribers_url(@team, q: "pro_", format: :json)
+    assert_equal ["annual@example.com"], JSON.parse(response.body).map { |s| s["email"] }
+
+    get search_account_team_subscribers_url(@team, q: "50%", format: :json)
+    assert_equal ["percent@example.com"], JSON.parse(response.body).map { |s| s["email"] }
+  end
 end

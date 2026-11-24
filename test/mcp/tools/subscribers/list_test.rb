@@ -61,6 +61,13 @@ module Mcp
           ids = result[:subscribers].map { |h| h[:id] }
           refute_includes ids, @other.id
         end
+
+        test "query matches _ literally" do
+          match = @team.subscribers.create!(email: "annual@ex.com", external_id: "pro_annual")
+          @team.subscribers.create!(email: "lookalike@ex.com", external_id: "proXannual")
+          result = List.new.invoke(arguments: {"query" => "pro_"}, context: @ctx)
+          assert_equal [match.id], result[:subscribers].map { |h| h[:id] }
+        end
       end
     end
   end

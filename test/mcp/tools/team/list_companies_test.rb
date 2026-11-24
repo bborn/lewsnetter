@@ -81,6 +81,16 @@ module Mcp
           assert_equal "team_list_companies", ListCompanies.tool_name
           assert_match(/compan/i, ListCompanies.description)
         end
+
+        test "query matches _ and % literally" do
+          match = @team.companies.create!(name: "pro_co")
+          @team.companies.create!(name: "proXco")
+          discount = @team.companies.create!(name: "50% Club")
+          result = ListCompanies.new.invoke(arguments: {"query" => "pro_"}, context: @ctx)
+          assert_equal [match.id], result[:companies].map { |h| h[:id] }
+          result = ListCompanies.new.invoke(arguments: {"query" => "50%"}, context: @ctx)
+          assert_equal [discount.id], result[:companies].map { |h| h[:id] }
+        end
       end
     end
   end

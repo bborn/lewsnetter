@@ -21,8 +21,8 @@ module Mcp
         def call(arguments:, context:)
           scope = context.team.companies
           if (q = arguments["query"]).present?
-            like = "%#{q}%"
-            scope = scope.where("name LIKE ? OR external_id LIKE ?", like, like)
+            like = "%#{ActiveRecord::Base.sanitize_sql_like(q)}%"
+            scope = scope.where("name LIKE ? ESCAPE '\\' OR external_id LIKE ? ESCAPE '\\'", like, like)
           end
           total = scope.count
           limit = arguments["limit"] || 50
