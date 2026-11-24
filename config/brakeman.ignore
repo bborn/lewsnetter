@@ -26,20 +26,20 @@
     {
       "warning_type": "Redirect",
       "warning_code": 18,
-      "fingerprint": "f559f627c502b1ff451c2d7cd05c12f2ffe10a28709406a2238c26f1f95177ad",
+      "fingerprint": "a2a8407c90f6257afcc07fb339464c7c796f74ee5b07dc715ecac668ebf21df0",
       "check_name": "Redirect",
       "message": "Possible unprotected redirect",
       "file": "app/controllers/email_images_controller.rb",
-      "line": 42,
+      "line": 44,
       "link": "https://brakemanscanner.org/docs/warning_types/redirect/",
-      "code": "redirect_to(EmailImage.find_by_token(params[:id]).file.blob.url, :allow_other_host => true, :status => :found)",
+      "code": "redirect_to(EmailImage.find_by_token(params[:id]).file.blob.url(:expires_in => (1.day + 1.hour)), :allow_other_host => true, :status => :found)",
       "render_path": null,
       "location": {
         "type": "method",
         "class": "EmailImagesController",
         "method": "show"
       },
-      "user_input": "EmailImage.find_by_token(params[:id]).file.blob.url",
+      "user_input": "EmailImage.find_by_token(params[:id]).file.blob.url(:expires_in => (1.day + 1.hour))",
       "confidence": "Weak",
       "cwe_id": [
         601
