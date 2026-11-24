@@ -30,7 +30,7 @@
       "check_name": "Redirect",
       "message": "Possible unprotected redirect",
       "file": "app/controllers/email_images_controller.rb",
-      "line": 44,
+      "line": 45,
       "link": "https://brakemanscanner.org/docs/warning_types/redirect/",
       "code": "redirect_to(EmailImage.find_by_token(params[:id]).file.blob.url(:expires_in => (1.day + 1.hour)), :allow_other_host => true, :status => :found)",
       "render_path": null,

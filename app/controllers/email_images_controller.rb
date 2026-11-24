@@ -4,11 +4,12 @@
 # freshly-signed R2 URL.
 #
 # Why a redirect instead of streaming the bytes: the redirect target is
-# generated per-request, so it can be a short-lived signed URL — the
-# email_media bucket never needs public access or a custom domain. And a
-# 302 is far cheaper for the app than proxying image bytes; mail-provider
-# image proxies (Gmail especially) fetch each image once and cache, so the
-# app sees only a handful of hits per campaign.
+# generated per-request, so it can be a signed URL that expires soon after
+# the redirect's cache lifetime — the email_media bucket never needs public
+# access or a custom domain. And a 302 is far cheaper for the app than
+# proxying image bytes; mail-provider image proxies (Gmail especially) fetch
+# each image once and cache, so the app sees only a handful of hits per
+# campaign.
 #
 # Mounted outside the Account:: namespace + skips CSRF and Devise auth —
 # email clients are not logged-in browsers. The signed-id token IS the
