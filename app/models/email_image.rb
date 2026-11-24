@@ -64,7 +64,8 @@ class EmailImage < ApplicationRecord
   # never see app.lewsnetter.dev.
   #
   # The route is permanent because the signed id is permanent. Each request
-  # to it 302-redirects to a freshly-signed (short-lived, fine) R2 URL — see
+  # to it 302-redirects to a freshly-signed R2 URL (valid a little longer
+  # than the redirect may be cached) — see
   # EmailImagesController. That's why the bucket can stay private.
   def public_url
     return nil unless file.attached?
