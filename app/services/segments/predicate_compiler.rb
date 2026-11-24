@@ -157,14 +157,14 @@ module Segments
         # NULL-permissive: rows where the column is NULL also "don't equal" X.
         sanitize("(#{field} IS NULL OR #{field} != ?)", raw_value.to_s)
       when [:string, "contains"]
-        sanitize("#{field} LIKE ?", "%#{escape_like(raw_value.to_s)}%")
+        sanitize("#{field} LIKE ? ESCAPE '\\'", "%#{escape_like(raw_value.to_s)}%")
       when [:string, "not_contains"]
         # NULL-permissive — a missing JSON key trivially doesn't contain X.
-        sanitize("(#{field} IS NULL OR #{field} NOT LIKE ?)", "%#{escape_like(raw_value.to_s)}%")
+        sanitize("(#{field} IS NULL OR #{field} NOT LIKE ? ESCAPE '\\')", "%#{escape_like(raw_value.to_s)}%")
       when [:string, "starts_with"]
-        sanitize("#{field} LIKE ?", "#{escape_like(raw_value.to_s)}%")
+        sanitize("#{field} LIKE ? ESCAPE '\\'", "#{escape_like(raw_value.to_s)}%")
       when [:string, "ends_with"]
-        sanitize("#{field} LIKE ?", "%#{escape_like(raw_value.to_s)}")
+        sanitize("#{field} LIKE ? ESCAPE '\\'", "%#{escape_like(raw_value.to_s)}")
       when [:string, "is_set"]
         "(#{field} IS NOT NULL AND #{field} != '')"
       when [:string, "is_not_set"]
@@ -234,12 +234,12 @@ module Segments
       # "brand_account". NULL-permissive on not_contains.
       when [:csv_list, "contains"]
         sanitize(
-          "(',' || COALESCE(#{field}, '') || ',') LIKE ?",
+          "(',' || COALESCE(#{field}, '') || ',') LIKE ? ESCAPE '\\'",
           "%,#{escape_like(raw_value.to_s)},%"
         )
       when [:csv_list, "not_contains"]
         sanitize(
-          "(#{field} IS NULL OR (',' || #{field} || ',') NOT LIKE ?)",
+          "(#{field} IS NULL OR (',' || #{field} || ',') NOT LIKE ? ESCAPE '\\')",
           "%,#{escape_like(raw_value.to_s)},%"
         )
       when [:csv_list, "is_set"]
@@ -283,6 +283,8 @@ module Segments
       ActiveRecord::Base.sanitize_sql_array([template, *args])
     end
 
+    # Backslash-escapes LIKE wildcards. SQLite has no default LIKE escape
+    # character, so every LIKE built from this must say ESCAPE '\'.
     def escape_like(str)
       str.gsub("\\", "\\\\\\\\").gsub("%", '\\%').gsub("_", '\\_')
     end
