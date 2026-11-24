@@ -54,8 +54,9 @@ module LewsnetterRails
     # `subscriber` is an external_id or any object responding to the
     # configured `external_id_method` (default :id). Enqueues TrackJob so
     # the request never waits on Lewsnetter; pass `async: false` to send
-    # inline. A no-op when the gem is disabled.
-    def track(subscriber, name, properties = {}, occurred_at: Time.now, async: true)
+    # inline. A no-op when the gem is disabled. Properties may be a hash or
+    # bare keywords (`plan: "pro"`); `occurred_at` and `async` are options.
+    def track(subscriber, name, properties = {}, occurred_at: Time.now, async: true, **keyword_properties)
       return unless configuration.enabled
 
       external_id = external_id_for(subscriber)
@@ -66,7 +67,7 @@ module LewsnetterRails
         external_id: external_id,
         name: name.to_s,
         occurred_at: occurred_at&.iso8601,
-        properties: properties.to_h.transform_keys(&:to_s)
+        properties: properties.to_h.merge(keyword_properties).transform_keys(&:to_s)
       }
       if async
         TrackJob.perform_later(**args)

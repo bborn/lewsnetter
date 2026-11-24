@@ -17,6 +17,17 @@ class TrackTest < LewsnetterTest
     }])
   end
 
+  def test_track_accepts_properties_as_keywords_as_the_readme_shows
+    LewsnetterRails.track(User.new(42), "trial_started", plan: "pro", occurred_at: Time.utc(2026, 11, 3))
+
+    assert_enqueued_with(job: LewsnetterRails::TrackJob, args: [{
+      external_id: "42",
+      name: "trial_started",
+      occurred_at: "2026-11-03T00:00:00Z",
+      properties: {"plan" => "pro"}
+    }])
+  end
+
   def test_the_job_posts_the_event_with_the_original_occurred_at
     stub = stub_request(:post, "#{BASE}/api/v1/teams/#{SLUG}/events/track")
       .with(body: hash_including(
