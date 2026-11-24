@@ -158,8 +158,10 @@ class Segment < ApplicationRecord
     # Auto-join companies when the predicate references the companies table
     # (or its JSON custom_attributes). We can't reach company-level columns
     # without a JOIN, and asking an agent (or a hand author) to spell
-    # out joins is fragile, so the segment layer handles it.
-    scope = scope.joins(:company) if pred.match?(/\bcompanies\./i)
+    # out joins is fragile, so the segment layer handles it. A LEFT JOIN, so
+    # subscribers without a company still match NULL-permissive negatives
+    # (companies.name != 'Acme') and OR branches that don't need a company.
+    scope = scope.left_outer_joins(:company) if pred.match?(/\bcompanies\./i)
     scope.where(self.class.scope_subqueries(pred, team_id))
   end
 

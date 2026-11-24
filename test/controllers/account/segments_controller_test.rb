@@ -44,6 +44,21 @@ class Account::SegmentsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/No predicate set yet/, response.body)
   end
 
+  test "preview counts subscribers without a company for a company not_equals rule" do
+    acme = @team.companies.create!(name: "Acme", intercom_id: "co-acme")
+    @team.subscribers.create!(email: "acme@example.com", company: acme)
+    @team.subscribers.create!(email: "lone@example.com")
+    rules = {"type" => "group", "combinator" => "and", "rules" => [
+      {"type" => "rule", "field" => "companies.name", "operator" => "not_equals", "value" => "Acme"}
+    ]}
+
+    post preview_account_team_segments_url(@team), params: {rules: rules.to_json}, as: :json
+
+    assert_response :success
+    assert_equal 1, response.parsed_body["count"]
+    assert_equal ["lone@example.com"], response.parsed_body["sample"].map { it["email"] }
+  end
+
   test "edit lists an attribute the segment uses even when no subscriber has it yet" do
     segment = @team.segments.create!(name: "Never connected", rules: {
       "type" => "group", "combinator" => "and",

@@ -64,6 +64,25 @@ class SegmentTest < ActiveSupport::TestCase
     assert_equal ["active@x.com"], matched
   end
 
+  test "applies_to keeps subscribers without a company for company rules they satisfy" do
+    acme = @team.companies.create!(name: "Acme", intercom_id: "co-acme")
+    @team.subscribers.create!(email: "acme@x.com", company: acme, custom_attributes: {"plan" => "free"})
+    @team.subscribers.create!(email: "lone-vip@x.com", custom_attributes: {"plan" => "vip"})
+    @team.subscribers.create!(email: "lone-free@x.com", custom_attributes: {"plan" => "free"})
+
+    matching = ->(rules) {
+      segment = @team.segments.create!(name: "s#{rules.hash}", rules: {"type" => "group", **rules})
+      segment.applies_to(@team.subscribers).order(:id).pluck(:email)
+    }
+    not_acme = {"type" => "rule", "field" => "companies.name", "operator" => "not_equals", "value" => "Acme"}
+    vip = {"type" => "rule", "field" => "custom_attributes.plan", "operator" => "equals", "value" => "vip"}
+    at_acme = {"type" => "rule", "field" => "companies.name", "operator" => "equals", "value" => "Acme"}
+
+    assert_equal %w[lone-vip@x.com lone-free@x.com], matching.call("combinator" => "and", "rules" => [not_acme])
+    assert_equal %w[acme@x.com lone-vip@x.com], matching.call("combinator" => "or", "rules" => [vip, at_acme])
+    assert_equal %w[acme@x.com], matching.call("combinator" => "and", "rules" => [at_acme])
+  end
+
   test "validate_predicate accepts companies.<col> references" do
     errs = Segment.validate_predicate("companies.name = 'Acme'")
     assert_equal [], errs
