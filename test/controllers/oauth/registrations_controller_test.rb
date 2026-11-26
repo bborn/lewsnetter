@@ -45,5 +45,33 @@ module Oauth
       assert_response :bad_request
       assert_match(/Invalid JSON/i, JSON.parse(response.body)["error"])
     end
+
+    def register(redirect_uri)
+      post "/oauth/register",
+        params: {redirect_uris: [redirect_uri], token_endpoint_auth_method: "none"}.to_json,
+        headers: {"Content-Type" => "application/json"}
+    end
+
+    test "script redirect URIs are refused" do
+      ["javascript://example.com/%0Aalert(1)", "data:text/html,hi", "vbscript://example.com/x"].each do |uri|
+        assert_no_difference -> { Platform::Application.count }, uri do
+          register(uri)
+        end
+        assert_response :unprocessable_entity, uri
+      end
+    end
+
+    test "plain http redirect URIs are refused off loopback" do
+      register("http://client.example/callback")
+      assert_response :unprocessable_entity
+    end
+
+    test "native MCP client redirect URIs are accepted" do
+      ["http://localhost:33418/callback", "http://127.0.0.1:6274/oauth/callback",
+        "https://claude.ai/api/mcp/auth_callback", "cursor://anysphere.cursor-mcp/oauth/callback"].each do |uri|
+        register(uri)
+        assert_response :created, uri
+      end
+    end
   end
 end

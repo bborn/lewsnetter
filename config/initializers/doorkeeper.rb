@@ -251,6 +251,15 @@ Doorkeeper.configure do
   # invalidates the prior refresh token — revoked-on-use, concurrency-safe.
   use_refresh_token
 
+  # Public clients (registered at /oauth/register with
+  # token_endpoint_auth_method "none") have no secret, so the PKCE
+  # code_verifier is the only proof that the token request comes from the
+  # client that started the flow. The MCP authorization spec requires
+  # clients to use PKCE with S256, which is all the server metadata
+  # advertises, so refuse public clients that skip it and refuse "plain".
+  force_pkce
+  pkce_code_challenge_methods %w[S256]
+
   # Provide support for an owner to be assigned to each registered application (disabled by default)
   # Optional parameter confirmation: true (default: false) if you want to enforce ownership of
   # a registered application
