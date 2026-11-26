@@ -611,4 +611,83 @@ class CampaignRendererTest < ActiveSupport::TestCase
     refute_includes result.text, "{{unsubscribe_url}}"
     assert_match %r{/unsubscribe/}, result.text
   end
+
+  test "subscriber data is printed as text, not run as Liquid" do
+    template = @team.email_templates.create!(
+      name: "Body",
+      mjml_body: "<mjml><mj-body>{{body}}<mj-section><mj-column><mj-text>Unsubscribe: {{unsubscribe_url}}</mj-text></mj-column></mj-section></mj-body></mjml>"
+    )
+    campaign = @team.campaigns.create!(
+      email_template: template, sender_address: @sender, subject: "Hi",
+      body_markdown: "Hi {{nickname}}", status: "draft"
+    )
+    @subscriber.update!(custom_attributes: {"nickname" => "{% for i in (1..3) %}LOOP{% endfor %}"})
+
+    html = CampaignRenderer.new(campaign: campaign, subscriber: @subscriber).call.html
+
+    assert html.include?("{% for i in (1..3) %}LOOP{% endfor %}"), "subscriber value was not printed as text"
+    refute html.include?("LOOPLOOPLOOP"), "subscriber value ran as a Liquid loop"
+  end
+
+  test "a Liquid fragment in subscriber data does not stop the template rendering" do
+    template = @team.email_templates.create!(
+      name: "Body",
+      mjml_body: "<mjml><mj-body>{{body}}<mj-section><mj-column><mj-text>Unsubscribe: {{unsubscribe_url}}</mj-text></mj-column></mj-section></mj-body></mjml>"
+    )
+    campaign = @team.campaigns.create!(
+      email_template: template, sender_address: @sender, subject: "Hi",
+      body_markdown: "Hi {{nickname}}", status: "draft"
+    )
+    @subscriber.update!(custom_attributes: {"nickname" => "{% if"})
+
+    html = CampaignRenderer.new(campaign: campaign, subscriber: @subscriber).call.html
+
+    refute html.include?("{{unsubscribe_url}}"), "template {{unsubscribe_url}} was left unrendered"
+    assert html.include?("/unsubscribe/"), "no unsubscribe link in the email"
+  end
+
+  test "a subscriber attribute named body does not replace the body placeholder" do
+    template = @team.email_templates.create!(
+      name: "Body",
+      mjml_body: "<mjml><mj-body>" \
+        "<mj-section><mj-column><mj-text>BEFORE</mj-text></mj-column></mj-section>" \
+        "{{body}}" \
+        "<mj-section><mj-column><mj-text>AFTER</mj-text></mj-column></mj-section>" \
+        "</mj-body></mjml>"
+    )
+    campaign = @team.campaigns.create!(
+      email_template: template, sender_address: @sender, subject: "Hi",
+      body_markdown: "The real body", status: "draft"
+    )
+    @subscriber.update!(custom_attributes: {"body" => "ATTRIBUTE VALUE"})
+
+    html = CampaignRenderer.new(campaign: campaign, subscriber: @subscriber).call.html
+
+    refute html.include?("ATTRIBUTE VALUE"), "attribute rendered into the email"
+    positions = ["BEFORE", "The real body", "AFTER"].map { |text| html.index(text) }
+    assert positions.all? && positions == positions.sort,
+      "campaign body is not where the template's {{body}} is: #{positions.inspect}"
+  end
+
+  test "a subscriber value of {{body}} in the template does not move the body" do
+    template = @team.email_templates.create!(
+      name: "Body",
+      mjml_body: "<mjml><mj-body>" \
+        "<mj-section><mj-column><mj-text>Hi {{nickname}}</mj-text></mj-column></mj-section>" \
+        "{{body}}" \
+        "<mj-section><mj-column><mj-text>AFTER</mj-text></mj-column></mj-section>" \
+        "</mj-body></mjml>"
+    )
+    campaign = @team.campaigns.create!(
+      email_template: template, sender_address: @sender, subject: "Hi",
+      body_markdown: "The real body", status: "draft"
+    )
+    @subscriber.update!(custom_attributes: {"nickname" => "{{body}}"})
+
+    html = CampaignRenderer.new(campaign: campaign, subscriber: @subscriber).call.html
+
+    assert_match(/Hi\s+\{\{body\}\}/, html, "subscriber value was not printed as text")
+    assert html.index("The real body") < html.index("AFTER"), "campaign body moved"
+    assert_equal 1, html.scan("{{body}}").size
+  end
 end

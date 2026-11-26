@@ -76,8 +76,7 @@ class CampaignRenderer
 
   def render_html
     @render_html ||= begin
-      mjml_source = substitute(resolved_mjml)
-      raw_html = Mjml::Parser.new(nil, mjml_source).render
+      raw_html = Mjml::Parser.new(nil, resolved_mjml).render
       # mjml-rails swallows compile errors outside development and returns "".
       raise "Campaign #{@campaign.id} MJML compiled to empty HTML" if raw_html.blank?
       Premailer.new(
@@ -225,19 +224,25 @@ class CampaignRenderer
       # Substitute variables in the markdown source BEFORE compiling to HTML.
       # Commonmarker URL-encodes any `{` and `}` it finds in an href, so a link
       # like `[Open](https://{{subdomain}}.example.com)` would become
-      # `https://%7B%7Bsubdomain%7D%7D.example.com` and the later substitute
-      # pass couldn't match the encoded form. Substituting first lets URL
+      # `https://%7B%7Bsubdomain%7D%7D.example.com`, which a substitute pass
+      # after rendering couldn't match. Substituting first lets URL
       # placeholders survive markdown rendering as real values.
-      # Plain-text `{{var}}` in body copy still works either way (Commonmarker
-      # passes braces through outside of URL contexts), and the later
-      # substitute on the full MJML is a safe no-op on already-replaced vars.
+      #
+      # The template is substituted on its own, with {{body}} rendered as a
+      # random marker, and the body goes in afterwards. Running Liquid again
+      # over the joined MJML would evaluate subscriber values that the first
+      # pass put into the body, and a stray `{% if` in one would make the
+      # whole pass fail and leave the template's {{unsubscribe_url}} raw.
+      # The marker is random so a subscriber value printed by the template
+      # (say a name of "{{body}}") can't stand in for the real placeholder.
       substituted_markdown = substitute(@campaign.body_markdown)
       body_mj_section = markdown_to_mj_section(substituted_markdown)
-      inject_body(template_mjml, body_mj_section)
+      marker = "lewsnetter-body-#{SecureRandom.hex(16)}"
+      inject_body(substitute(template_mjml, "body" => marker), body_mj_section, marker: marker)
     else
       source = @campaign.body_mjml.presence || @campaign.email_template&.mjml_body
       raise "Campaign #{@campaign.id} has no body_markdown, no body_mjml and no email_template body" if source.blank?
-      source
+      substitute(source)
     end
   end
 
@@ -269,18 +274,19 @@ class CampaignRenderer
     })
   end
 
-  # Substitutes the body MJML section into the template at `{{body}}`. If the
-  # template doesn't include the placeholder, appends the section just before
-  # `</mj-body>` so the body still renders (and the user notices the missing
-  # placeholder and can add it).
+  # Substitutes the body MJML section into the template at `marker` (what
+  # the template's `{{body}}` rendered to). If the template doesn't include
+  # the placeholder, inserts the section before the last `</mj-body>` (the
+  # template's own, not one printed from subscriber data) so the body still
+  # renders and the user notices the missing placeholder and can add it.
   #
   # Block form of `sub`: a replacement string would read \\, \0, \& and \'
   # in the body (e.g. inside a code span) as backreferences.
-  def inject_body(template_mjml, body_mj_section)
-    if template_mjml.include?(BODY_PLACEHOLDER)
-      template_mjml.sub(BODY_PLACEHOLDER) { body_mj_section }
-    elsif template_mjml.include?("</mj-body>")
-      template_mjml.sub("</mj-body>") { "#{body_mj_section}\n</mj-body>" }
+  def inject_body(template_mjml, body_mj_section, marker: BODY_PLACEHOLDER)
+    if template_mjml.include?(marker)
+      template_mjml.sub(marker) { body_mj_section }
+    elsif (close = template_mjml.rindex("</mj-body>"))
+      template_mjml.dup.insert(close, "#{body_mj_section}\n")
     else
       # Template has no </mj-body> — fall back to concatenating. This is
       # almost certainly broken MJML but we'd rather render something and
@@ -305,12 +311,12 @@ class CampaignRenderer
   # so the user notices the broken template. Liquid's default is to
   # render unknowns as empty — we pre-fill missing vars with their own
   # `{{name}}` literal so the output round-trips.
-  def substitute(string)
+  def substitute(string, overrides = {})
     return string if string.blank?
 
     source = rewrite_legacy_fallback_syntax(rewrite_intercom_syntax(string))
     template = Liquid::Template.parse(source, error_mode: :lax)
-    vars = string_keyed_variables
+    vars = string_keyed_variables.merge(overrides)
     fill_unknown_vars_with_literals!(vars, template)
     template.render(vars)
   rescue Liquid::SyntaxError => e
