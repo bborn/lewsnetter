@@ -405,6 +405,22 @@ class CampaignTest < ActiveSupport::TestCase
     assert_not_nil destroy_version, "expected a :destroy version row to be persisted"
   end
 
+  test "a campaign cannot use another team's sender address" do
+    other_sender = create(:team).sender_addresses.create!(
+      email: "ceo@other.example", name: "Other", verified: true, ses_status: "verified"
+    )
+    @campaign.sender_address_id = other_sender.id
+
+    refute @campaign.valid?
+    assert @campaign.errors.added?(:sender_address_id, :invalid)
+  end
+
+  test "a campaign can use its own team's sender address before it is verified" do
+    @campaign.sender_address = @team.sender_addresses.create!(email: "new@example.com", name: "New")
+
+    assert @campaign.valid?, @campaign.errors.full_messages.to_sentence
+  end
+
   private
 
   # PaperTrail stores object_changes as YAML by default; round-trip it the

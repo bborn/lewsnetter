@@ -40,6 +40,23 @@ class SesSenderTest < ActiveSupport::TestCase
     end
   end
 
+  test "refuses to send from another team's sender address" do
+    original = Rails.application.config.ses_client
+    Rails.application.config.ses_client = :stub
+    other_sender = create(:team).sender_addresses.create!(
+      email: "ceo@other.example", name: "Other", verified: true, ses_status: "verified"
+    )
+    @campaign.update_column(:sender_address_id, other_sender.id)
+    begin
+      result = SesSender.send_bulk(campaign: @campaign.reload, subscribers: [@s1, @s2])
+      assert_equal [], result.message_ids
+      assert_equal [@s1, @s2], result.failed.map { |f| f[:subscriber] }
+      refute Delivery.exists?(campaign_id: @campaign.id)
+    ensure
+      Rails.application.config.ses_client = original
+    end
+  end
+
   test "stub mode returns one message id per subscriber" do
     original = Rails.application.config.ses_client
     Rails.application.config.ses_client = :stub

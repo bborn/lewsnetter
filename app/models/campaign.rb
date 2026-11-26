@@ -59,6 +59,9 @@ class Campaign < ApplicationRecord
   validates :status, inclusion: {in: STATUSES}
   validates :email_template, scope: true
   validates :segment, scope: true
+  # Not `scope: true`: valid_sender_addresses lists only verified senders for
+  # the form, and a draft may use one of the team's senders before it is.
+  validate :sender_address_belongs_to_team
   validate :body_present_in_some_form
   validate :sequence_status_is_permanent
   validate :send_status_cannot_be_reopened, on: :update
@@ -351,6 +354,11 @@ class Campaign < ApplicationRecord
   # 🚅 add methods above.
 
   private
+
+  def sender_address_belongs_to_team
+    return if sender_address_id.blank?
+    errors.add(:sender_address_id, :invalid) unless team.sender_addresses.exists?(id: sender_address_id)
+  end
 
   # A step's backing campaign stays a backing campaign: scheduling or
   # sending it as a broadcast would mail its whole (nil = every subscriber)

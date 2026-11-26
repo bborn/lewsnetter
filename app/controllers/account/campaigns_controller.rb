@@ -343,6 +343,11 @@ class Account::CampaignsController < Account::ApplicationController
         # before save. Bust the belongs_to cache so the new FK is re-loaded.
         @campaign.delivery_format = overrides[:delivery_format]
         @campaign.association(:email_template).reset
+        # The id comes straight from the request, and nothing here saves, so
+        # the model's scope validation never runs: check the team ourselves.
+        if @campaign.email_template_id && !@campaign.valid_email_templates.exists?(id: @campaign.email_template_id)
+          raise ActiveRecord::RecordNotFound
+        end
       end
 
       @campaign.preview_html

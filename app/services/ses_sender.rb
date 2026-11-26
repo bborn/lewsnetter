@@ -37,6 +37,22 @@ class SesSender
       end
 
       team = campaign.team
+
+      # The campaign model keeps the sender within the team; this is the last
+      # check before SES, so a row that slipped past it can't send as
+      # another tenant's address.
+      if campaign.sender_address && campaign.sender_address.team_id != team.id
+        Rails.logger.error(
+          "[SesSender] refused sender_address=#{campaign.sender_address_id} " \
+          "team=#{campaign.sender_address.team_id} for campaign=#{campaign.id} team=#{team.id}"
+        )
+        return Result.new(
+          message_ids: [],
+          failed: subscribers.map { |s| {subscriber: s, error: "sender address belongs to another team"} },
+          suppressed: [], delivery_write_errors: 0, already_delivered: []
+        )
+      end
+
       client, stub_mode = resolve_client(team)
       from_address = build_from_address(campaign)
       configuration_set_name = resolve_configuration_set_name(team)

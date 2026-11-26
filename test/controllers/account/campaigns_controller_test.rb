@@ -316,6 +316,21 @@ class Account::CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_equal original_body, @campaign.body_markdown
   end
 
+  test "preview_frame POST refuses another team's template as the delivery format" do
+    other_template = create(:team).email_templates.create!(
+      name: "Other",
+      mjml_body: "<mjml><mj-body><mj-section><mj-column><mj-text>OTHER TEAM TEMPLATE</mj-text></mj-column></mj-section>{{body}}</mj-body></mjml>"
+    )
+    @campaign.update!(body_markdown: "Hello", body_mjml: nil)
+
+    post preview_frame_account_campaign_url(@campaign),
+      params: {delivery_format: other_template.id.to_s}, as: :json
+
+    assert_response :not_found
+    refute_includes response.body, "OTHER TEAM TEMPLATE"
+    assert_equal @template.id, @campaign.reload.email_template_id
+  end
+
   test "update attaches an image asset to the campaign" do
     file = fixture_file_upload("test-logo.png", "image/png")
 
