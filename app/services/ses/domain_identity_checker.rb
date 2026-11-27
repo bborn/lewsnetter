@@ -47,7 +47,7 @@ module Ses
 
       @ses_domain.update!(attrs)
 
-      provision_default_sender if !previously_verified && @ses_domain.verified?
+      self.class.provision_default_sender(@ses_domain) if !previously_verified && @ses_domain.verified?
 
       Result.new(ok: true, state: new_status, ses_domain: @ses_domain)
     rescue Aws::SESV2::Errors::NotFoundException
@@ -67,23 +67,17 @@ module Ses
       Result.new(ok: false, state: "error", ses_domain: @ses_domain, error: e.message)
     end
 
-    private
-
-    def domain_status_from(verification_status, dkim_status)
-      return "verified" if verification_status == "SUCCESS"
-      return "failed" if verification_status == "FAILED" || dkim_status == "FAILED"
-      "pending"
-    end
-
     # Auto-create a `noreply@<domain>` SenderAddress so the wizard's test
-    # step can send without asking the user another question. Idempotent —
+    # step can send without asking the user another question. Idempotent:
     # if the team already has any sender on this domain we leave it alone.
-    def provision_default_sender
-      team = @ses_domain.team
-      existing = team.sender_addresses.where("LOWER(email) LIKE ?", "%@#{@ses_domain.domain}")
+    # Also called by Ses::DomainIdentityCreator when SES reports the domain
+    # is already verified.
+    def self.provision_default_sender(ses_domain)
+      team = ses_domain.team
+      existing = team.sender_addresses.where("LOWER(email) LIKE ?", "%@#{ses_domain.domain}")
       return if existing.exists?
 
-      email = "#{DEFAULT_SENDER_LOCAL_PART}@#{@ses_domain.domain}"
+      email = "#{DEFAULT_SENDER_LOCAL_PART}@#{ses_domain.domain}"
       team.sender_addresses.create!(
         email: email,
         name: nil,
@@ -92,9 +86,17 @@ module Ses
       )
     rescue ActiveRecord::RecordInvalid => e
       # Don't fail verification because we couldn't provision a default
-      # sender — the user can add one manually from the sender addresses
+      # sender. The user can add one manually from the sender addresses
       # page. Log and move on.
       Rails.logger.warn("[Ses::DomainIdentityChecker] couldn't provision default sender for team #{team.id}: #{e.message}")
+    end
+
+    private
+
+    def domain_status_from(verification_status, dkim_status)
+      return "verified" if verification_status == "SUCCESS"
+      return "failed" if verification_status == "FAILED" || dkim_status == "FAILED"
+      "pending"
     end
   end
 end
