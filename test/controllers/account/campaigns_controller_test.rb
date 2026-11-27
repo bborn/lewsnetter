@@ -59,6 +59,30 @@ class Account::CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_equal original_subject, @campaign.reload.subject
   end
 
+  test "preview_as renders company variables from the target subscriber's company" do
+    company = @team.companies.create!(name: "Acme Corp", custom_attributes: {"plan" => "enterprise"})
+    target = @team.subscribers.create!(email: "target@example.com", name: "Target", subscribed: true, company: company)
+    @campaign.update!(plain_text_only: true, body_markdown: "Company: {{company.name}} Plan: {{company.custom_data.plan}}")
+
+    sent_to = nil
+    fake_result = SesSender::Result.new(message_ids: ["stub-id"], failed: [])
+    SesSender.singleton_class.alias_method :_orig_send_bulk, :send_bulk
+    SesSender.singleton_class.define_method(:send_bulk) do |campaign:, subscribers:, **|
+      sent_to = subscribers.first
+      fake_result
+    end
+    begin
+      post preview_as_account_campaign_url(@campaign), params: {preview_as: target.email}
+    ensure
+      SesSender.singleton_class.alias_method :send_bulk, :_orig_send_bulk
+      SesSender.singleton_class.remove_method :_orig_send_bulk
+    end
+
+    assert_equal company, sent_to.company
+    rendered = CampaignRenderer.new(campaign: @campaign, subscriber: sent_to).call
+    assert_includes rendered.text, "Company: Acme Corp Plan: enterprise"
+  end
+
   test "update persists body_markdown through campaign_params" do
     new_markdown = "## My new heading\n\nBody copy with a [link](https://example.com)."
 
