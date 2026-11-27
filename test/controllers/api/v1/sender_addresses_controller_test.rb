@@ -145,4 +145,21 @@ class Api::V1::SenderAddressesControllerTest < Api::Test
 
     assert_nil campaign.reload.sender_address_id
   end
+
+  test "destroy keeps the sender on an active sequence and its steps until it is replaced" do
+    sequence = create(:sequence, team: @team, sender_address: @sender_address, status: "active")
+    step = create(:sequence_step, sequence: sequence)
+
+    delete "/api/v1/sender_addresses/#{@sender_address.id}", params: {access_token: access_token}
+    assert_response :unprocessable_entity
+    assert_match(/sequence/i, response.parsed_body.fetch("base").join)
+    assert_equal @sender_address.id, sequence.reload.sender_address_id
+    assert_equal @sender_address.id, step.campaign.reload.sender_address_id
+
+    replacement = create(:sender_address, team: @team)
+    sequence.update!(sender_address: replacement)
+    delete "/api/v1/sender_addresses/#{@sender_address.id}", params: {access_token: access_token}
+    assert_response :success
+    assert_equal replacement.id, step.campaign.reload.sender_address_id
+  end
 end

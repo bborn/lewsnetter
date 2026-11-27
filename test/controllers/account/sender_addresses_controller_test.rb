@@ -183,6 +183,18 @@ class Account::SenderAddressesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "destroy explains that a scheduled campaign still needs its sender" do
+    sender = create(:sender_address, team: @team)
+    campaign = create(:campaign, team: @team, sender_address: sender, status: "scheduled",
+      scheduled_for: 1.minute.ago, all_subscribers_confirmed: true)
+
+    delete account_sender_address_url(sender)
+
+    assert_redirected_to account_sender_address_url(sender)
+    assert_match(/campaign/i, flash[:alert])
+    assert_equal sender.id, campaign.reload.sender_address_id
+  end
+
   private
 
   def install_ses_stub_returning(status)
