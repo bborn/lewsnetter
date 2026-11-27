@@ -34,7 +34,11 @@ if defined?(Api::V1::ApplicationController)
 
     # DELETE /api/v1/sender_addresses/:id
     def destroy
-      @sender_address.destroy
+      if @sender_address.destroy
+        head :no_content
+      else
+        render json: @sender_address.errors, status: :unprocessable_entity
+      end
     end
 
     private

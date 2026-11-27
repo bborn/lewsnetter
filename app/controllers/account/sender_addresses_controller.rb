@@ -86,10 +86,14 @@ class Account::SenderAddressesController < Account::ApplicationController
   # DELETE /account/sender_addresses/:id
   # DELETE /account/sender_addresses/:id.json
   def destroy
-    @sender_address.destroy
     respond_to do |format|
-      format.html { redirect_to [:account, @team, :sender_addresses], notice: I18n.t("sender_addresses.notifications.destroyed") }
-      format.json { head :no_content }
+      if @sender_address.destroy
+        format.html { redirect_to [:account, @team, :sender_addresses], notice: I18n.t("sender_addresses.notifications.destroyed") }
+        format.json { head :no_content }
+      else
+        format.html { redirect_to [:account, @sender_address], alert: @sender_address.errors.full_messages.to_sentence }
+        format.json { render json: @sender_address.errors, status: :unprocessable_entity }
+      end
     end
   end
 
