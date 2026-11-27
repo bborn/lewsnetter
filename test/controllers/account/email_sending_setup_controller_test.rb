@@ -174,6 +174,50 @@ class Account::EmailSendingSetupControllerTest < ActionDispatch::IntegrationTest
     assert_match(/You're set up to send/i, @response.body)
   end
 
+  test "submitting an already-verified SES domain provisions a sender so send_test succeeds" do
+    @team.create_ses_configuration!(region: "us-east-1",
+      encrypted_access_key_id: "AKIA", encrypted_secret_access_key: "s",
+      status: "verified")
+
+    dkim = Struct.new(:tokens, :status).new(%w[a b c], "SUCCESS")
+    existing = Struct.new(:verification_status, :dkim_attributes).new("SUCCESS", dkim)
+    sent = []
+    fake_client = Object.new
+    fake_client.define_singleton_method(:create_email_identity) do |_args|
+      raise Aws::SESV2::Errors::AlreadyExistsException.new(nil, "already")
+    end
+    fake_client.define_singleton_method(:get_email_identity) { |_args| existing }
+    fake_client.define_singleton_method(:send_email) do |**args|
+      sent << args
+      Struct.new(:message_id).new("msg-test-1")
+    end
+
+    Ses::ClientFor.singleton_class.class_eval do
+      alias_method :_setup_test_orig_call, :call unless method_defined?(:_setup_test_orig_call)
+      define_method(:call) { |_team| fake_client }
+    end
+
+    begin
+      post account_team_setup_domain_email_sending_path(@team), params: {
+        team_ses_domain: {domain: "hey.example.com"},
+        team_ses_configuration: {physical_postal_address: ""}
+      }
+      assert_redirected_to account_team_setup_email_sending_path(@team)
+
+      post account_team_setup_test_email_sending_path(@team)
+      assert_redirected_to account_team_setup_email_sending_path(@team)
+      assert_nil flash[:alert]
+      assert_equal 1, sent.size
+      assert_equal "noreply@hey.example.com", sent.first[:from_email_address]
+      assert_not_nil @team.ses_configuration.reload.last_test_sent_at
+    ensure
+      Ses::ClientFor.singleton_class.class_eval do
+        alias_method :call, :_setup_test_orig_call
+        remove_method :_setup_test_orig_call
+      end
+    end
+  end
+
   private
 
   def stub_domain_identity_creator_ok!

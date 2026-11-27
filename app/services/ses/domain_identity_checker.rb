@@ -17,7 +17,7 @@ module Ses
       def ok? = !!ok
     end
 
-    DEFAULT_SENDER_LOCAL_PART = "noreply"
+    DEFAULT_SENDER_LOCAL_PART = Team::SesDomain::DEFAULT_SENDER_LOCAL_PART
 
     def initialize(ses_domain:)
       @ses_domain = ses_domain
@@ -47,7 +47,7 @@ module Ses
 
       @ses_domain.update!(attrs)
 
-      provision_default_sender if !previously_verified && @ses_domain.verified?
+      @ses_domain.provision_default_sender if !previously_verified && @ses_domain.verified?
 
       Result.new(ok: true, state: new_status, ses_domain: @ses_domain)
     rescue Aws::SESV2::Errors::NotFoundException
@@ -73,28 +73,6 @@ module Ses
       return "verified" if verification_status == "SUCCESS"
       return "failed" if verification_status == "FAILED" || dkim_status == "FAILED"
       "pending"
-    end
-
-    # Auto-create a `noreply@<domain>` SenderAddress so the wizard's test
-    # step can send without asking the user another question. Idempotent —
-    # if the team already has any sender on this domain we leave it alone.
-    def provision_default_sender
-      team = @ses_domain.team
-      existing = team.sender_addresses.where("LOWER(email) LIKE ?", "%@#{@ses_domain.domain}")
-      return if existing.exists?
-
-      email = "#{DEFAULT_SENDER_LOCAL_PART}@#{@ses_domain.domain}"
-      team.sender_addresses.create!(
-        email: email,
-        name: nil,
-        verified: true,
-        ses_status: "domain_verified"
-      )
-    rescue ActiveRecord::RecordInvalid => e
-      # Don't fail verification because we couldn't provision a default
-      # sender — the user can add one manually from the sender addresses
-      # page. Log and move on.
-      Rails.logger.warn("[Ses::DomainIdentityChecker] couldn't provision default sender for team #{team.id}: #{e.message}")
     end
   end
 end
