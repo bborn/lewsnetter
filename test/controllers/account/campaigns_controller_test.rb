@@ -428,4 +428,49 @@ class Account::CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Preview Heading/, response.body)
     assert_match(/TEMPLATE CHROME/, response.body)
   end
+
+  test "preview_as preserves the subscriber's company for company variables" do
+    company = @team.companies.create!(
+      name: "Acme Corp",
+      external_id: "co-acme",
+      custom_attributes: {"plan" => "enterprise"}
+    )
+    subscriber = @team.subscribers.create!(
+      email: "alice@acme.com",
+      name: "Alice Smith",
+      company: company
+    )
+    @campaign.update!(
+      email_template: nil,
+      plain_text_only: true,
+      body_markdown: "Company: {{company.name}} Plan: {{company.custom_data.plan}}",
+      body_mjml: nil
+    )
+
+    rendered = nil
+    captured_subscriber = nil
+    original_send_bulk = SesSender.method(:send_bulk)
+    SesSender.define_singleton_method(:send_bulk) do |campaign:, subscribers:|
+      captured_subscriber = subscribers.first
+      rendered = CampaignRenderer.new(campaign: campaign, subscriber: captured_subscriber).call
+      SesSender::Result.new(
+        message_ids: ["stub-preview-1"],
+        failed: [],
+        suppressed: [],
+        delivery_write_errors: 0,
+        already_delivered: []
+      )
+    end
+
+    begin
+      post preview_as_account_campaign_url(@campaign), params: {preview_as: subscriber.email}
+    ensure
+      SesSender.define_singleton_method(:send_bulk, original_send_bulk)
+    end
+
+    assert_redirected_to account_campaign_url(@campaign)
+    assert_equal @user.email, captured_subscriber.email
+    assert_equal company, captured_subscriber.company
+    assert_equal "Company: Acme Corp Plan: enterprise", rendered.text
+  end
 end

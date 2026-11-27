@@ -268,6 +268,7 @@ class Account::CampaignsController < Account::ApplicationController
     #   2) Unsubscribe URL becomes the preview sentinel (unpersisted)
     preview_subscriber = Subscriber.new(
       team: target.team,
+      company: target.company,
       email: current_user.email,
       name: target.name,
       external_id: "preview-as-#{target.id}",
