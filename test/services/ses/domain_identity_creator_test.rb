@@ -69,6 +69,42 @@ class Ses::DomainIdentityCreatorTest < ActiveSupport::TestCase
     assert_not_nil @ses_domain.verified_at
   end
 
+  test "provisions a default noreply@ sender when the existing identity is already verified" do
+    dkim = Struct.new(:tokens, :status).new(%w[reused1 reused2 reused3], "SUCCESS")
+    existing = Struct.new(:verification_status, :dkim_attributes).new("SUCCESS", dkim)
+
+    fake = Object.new
+    fake.define_singleton_method(:create_email_identity) do |_args|
+      raise Aws::SESV2::Errors::AlreadyExistsException.new(nil, "already")
+    end
+    fake.define_singleton_method(:get_email_identity) { |_args| existing }
+    install_client_stub(fake)
+
+    assert_difference -> { @team.sender_addresses.count }, 1 do
+      Ses::DomainIdentityCreator.new(ses_domain: @ses_domain).call
+    end
+
+    sender = @team.sender_addresses.find_by!(email: "noreply@hey.example.com")
+    assert sender.verified?
+    assert_equal "domain_verified", sender.ses_status
+  end
+
+  test "does not provision a sender when the existing identity is still pending" do
+    dkim = Struct.new(:tokens, :status).new(%w[a b c], "PENDING")
+    existing = Struct.new(:verification_status, :dkim_attributes).new("PENDING", dkim)
+
+    fake = Object.new
+    fake.define_singleton_method(:create_email_identity) do |_args|
+      raise Aws::SESV2::Errors::AlreadyExistsException.new(nil, "already")
+    end
+    fake.define_singleton_method(:get_email_identity) { |_args| existing }
+    install_client_stub(fake)
+
+    assert_no_difference -> { @team.sender_addresses.count } do
+      Ses::DomainIdentityCreator.new(ses_domain: @ses_domain).call
+    end
+  end
+
   test "returns unconfigured result when SES isn't set up" do
     Ses::ClientFor.singleton_class.class_eval do
       alias_method :_orig_call, :call unless method_defined?(:_orig_call)
