@@ -53,6 +53,27 @@ class Account::SequenceStepsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "partial update keeps email_template and skip_segment unless explicitly cleared" do
+    template = FactoryBot.create(:email_template, team: @team)
+    skip_segment = @team.segments.create!(name: "Already active", definition: {"predicate" => "subscribers.subscribed = 1"})
+    step = FactoryBot.create(:sequence_step, sequence: @sequence, email_template: template, skip_segment: skip_segment)
+
+    patch account_sequence_step_url(step), params: {sequence_step: {subject: "Updated subject"}}
+    assert_redirected_to account_sequence_url(@sequence)
+    step.reload
+    assert_equal "Updated subject", step.subject
+    assert_equal template.id, step.email_template_id
+    assert_equal skip_segment.id, step.skip_segment_id
+    refute step.campaign.reload.plain_text_only?
+
+    patch account_sequence_step_url(step), params: {sequence_step: {email_template_id: "", skip_segment_id: ""}}
+    assert_redirected_to account_sequence_url(@sequence)
+    step.reload
+    assert_nil step.email_template_id
+    assert_nil step.skip_segment_id
+    assert step.campaign.reload.plain_text_only?
+  end
+
   test "destroying a step pulls later enrollments back so nobody skips an email" do
     first = FactoryBot.create(:sequence_step, sequence: @sequence)
     FactoryBot.create(:sequence_step, sequence: @sequence)
