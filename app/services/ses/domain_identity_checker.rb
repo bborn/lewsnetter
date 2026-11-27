@@ -4,8 +4,8 @@
 # user's DNS CNAMEs have propagated and SES has flipped the domain to
 # SUCCESS. Writes status back onto the Team::SesDomain row.
 #
-# Side effect on first successful verification: provisions a default
-# `SenderAddress` (`noreply@<domain>`) marked `domain_verified` so the
+# On successful verification, ensures the team has a verified
+# `SenderAddress` on the domain (defaulting to `noreply@<domain>`) so the
 # wizard's test step has a sender to send from without asking the user
 # another question.
 #
@@ -31,8 +31,6 @@ module Ses
       dkim_status = identity.dkim_attributes&.status.to_s
       new_status = domain_status_from(verification_status, dkim_status)
 
-      previously_verified = @ses_domain.verified?
-
       attrs = {
         verification_status: verification_status.presence,
         dkim_status: dkim_status.presence,
@@ -47,7 +45,7 @@ module Ses
 
       @ses_domain.update!(attrs)
 
-      @ses_domain.provision_default_sender if !previously_verified && @ses_domain.verified?
+      @ses_domain.provision_default_sender if @ses_domain.verified?
 
       Result.new(ok: true, state: new_status, ses_domain: @ses_domain)
     rescue Aws::SESV2::Errors::NotFoundException

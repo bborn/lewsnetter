@@ -81,19 +81,22 @@ class Team::SesDomain < ApplicationRecord
     end
   end
 
-  # Auto-create a `noreply@<domain>` SenderAddress so the wizard's test
-  # step can send without asking the user another question. Idempotent —
-  # if the team already has any sender on this domain we leave it alone.
-  def provision_default_sender
-    existing = team.sender_addresses.where("LOWER(email) LIKE ?", "%@#{domain}")
-    return if existing.exists?
+  def verified_sender
+    return unless verified?
+    team.sender_addresses.where(verified: true)
+      .where("LOWER(email) LIKE ?", "%@#{domain}").order(:created_at, :id).first
+  end
 
-    team.sender_addresses.create!(
-      email: "#{DEFAULT_SENDER_LOCAL_PART}@#{domain}",
-      name: nil,
-      verified: true,
-      ses_status: "domain_verified"
-    )
+  # Serialize provisioning across concurrent wizard submissions and status polls.
+  def provision_default_sender
+    with_lock do
+      next unless verified?
+      next if verified_sender
+
+      email = "#{DEFAULT_SENDER_LOCAL_PART}@#{domain}"
+      sender = team.sender_addresses.find_by("LOWER(email) = ?", email) || team.sender_addresses.build(email: email)
+      sender.update!(verified: true, ses_status: "domain_verified")
+    end
   rescue ActiveRecord::RecordInvalid => e
     # Don't fail verification because we couldn't provision a default
     # sender — the user can add one manually from the sender addresses
