@@ -6,6 +6,8 @@ class SenderAddress < ApplicationRecord
   belongs_to :team
   # 🚅 add belongs_to associations above.
 
+  has_many :campaigns, dependent: :nullify
+  has_many :sequences, dependent: :nullify
   # 🚅 add has_many associations above.
 
   # 🚅 add has_one associations above.

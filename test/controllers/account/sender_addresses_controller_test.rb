@@ -167,6 +167,22 @@ class Account::SenderAddressesControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/name="sender_address\[ses_status\]"/, response.body)
   end
 
+  test "destroy succeeds when a campaign references the sender address" do
+    sender_address = @team.sender_addresses.create!(
+      email: "used@example.com", name: "Used", verified: true, ses_status: "success"
+    )
+    campaign = FactoryBot.create(:campaign, team: @team, sender_address: sender_address)
+
+    assert_difference -> { SenderAddress.count }, -1 do
+      delete account_sender_address_url(sender_address)
+    end
+
+    assert_redirected_to account_team_sender_addresses_url(@team)
+    assert_nil campaign.reload.sender_address_id
+    get account_campaign_url(campaign)
+    assert_response :success
+  end
+
   private
 
   def install_ses_stub_returning(status)

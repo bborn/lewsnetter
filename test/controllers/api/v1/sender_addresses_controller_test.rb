@@ -134,4 +134,15 @@ class Api::V1::SenderAddressesControllerTest < Api::Test
     delete "/api/v1/sender_addresses/#{@another_sender_address.id}", params: {access_token: another_access_token}
     assert_response :not_found
   end
+
+  test "destroy nullifies campaigns referencing the sender address" do
+    campaign = create(:campaign, team: @team, sender_address: @sender_address)
+
+    assert_difference("SenderAddress.count", -1) do
+      delete "/api/v1/sender_addresses/#{@sender_address.id}", params: {access_token: access_token}
+      assert_response :success
+    end
+
+    assert_nil campaign.reload.sender_address_id
+  end
 end
