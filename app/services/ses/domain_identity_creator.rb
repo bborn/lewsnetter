@@ -102,6 +102,7 @@ module Ses
         last_verification_requested_at: @ses_domain.last_verification_requested_at || Time.current,
         verified_at: (verification_status == "SUCCESS") ? Time.current : @ses_domain.verified_at
       )
+      @ses_domain.provision_default_sender if @ses_domain.verified?
     rescue Aws::SESV2::Errors::NotFoundException
       # Race: SES reported AlreadyExists then 404'd on read. Treat as pending.
       @ses_domain.update!(status: "pending", last_verification_requested_at: Time.current)

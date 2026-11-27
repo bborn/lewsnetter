@@ -120,7 +120,7 @@ class Account::EmailSendingSetupController < Account::ApplicationController
   # Step 4 — fires a real send through the user's SES to their own inbox.
   def send_test
     authorize! :manage, @ses_configuration
-    sender = verified_sender
+    sender = sender_for_test
     if sender.nil?
       redirect_to account_team_setup_email_sending_path(@team), alert: "No verified sender yet — wait for DKIM to finish propagating."
       return
@@ -156,16 +156,15 @@ class Account::EmailSendingSetupController < Account::ApplicationController
     :test
   end
 
-  # First verified sender on the verified domain — auto-provisioned by
-  # Ses::DomainIdentityChecker. May still be nil if the provisioning hit
-  # an unexpected error (rare; the checker logs + carries on).
-  def verified_sender
-    return nil if @ses_domain.nil? || !@ses_domain.verified?
-    @team.sender_addresses
-      .where(verified: true)
-      .where("LOWER(email) LIKE ?", "%@#{@ses_domain.domain}")
-      .order(created_at: :asc)
-      .first
+  def sender_for_test
+    return unless @ses_domain&.verified?
+    sender = @ses_domain.verified_sender
+    return sender if sender
+
+    # Older wizard sessions can reach step four without a sender. Confirm the
+    # domain still belongs to this SES account before provisioning one.
+    result = Ses::DomainIdentityChecker.new(ses_domain: @ses_domain).call
+    @ses_domain.verified_sender if result.ok?
   end
 
   def write_verifier_result(result)

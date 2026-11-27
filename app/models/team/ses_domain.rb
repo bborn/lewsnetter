@@ -27,6 +27,7 @@ class Team::SesDomain < ApplicationRecord
   # 🚅 add has_one associations above.
 
   STATUSES = %w[unverified pending verified failed].freeze
+  DEFAULT_SENDER_LOCAL_PART = "noreply"
 
   scope :verified, -> { where(status: "verified") }
   # 🚅 add scopes above.
@@ -78,6 +79,29 @@ class Team::SesDomain < ApplicationRecord
         type: "CNAME"
       }
     end
+  end
+
+  def verified_sender
+    return unless verified?
+    team.sender_addresses.where(verified: true)
+      .where("LOWER(email) LIKE ?", "%@#{domain}").order(:created_at, :id).first
+  end
+
+  # Serialize provisioning across concurrent wizard submissions and status polls.
+  def provision_default_sender
+    with_lock do
+      next unless verified?
+      next if verified_sender
+
+      email = "#{DEFAULT_SENDER_LOCAL_PART}@#{domain}"
+      sender = team.sender_addresses.find_by("LOWER(email) = ?", email) || team.sender_addresses.build(email: email)
+      sender.update!(verified: true, ses_status: "domain_verified")
+    end
+  rescue ActiveRecord::RecordInvalid => e
+    # Don't fail verification because we couldn't provision a default
+    # sender — the user can add one manually from the sender addresses
+    # page. Log and move on.
+    Rails.logger.warn("[Team::SesDomain] couldn't provision default sender for team #{team_id}: #{e.message}")
   end
 
   # 🚅 add methods above.

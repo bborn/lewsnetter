@@ -48,6 +48,20 @@ class Ses::DomainIdentityCheckerTest < ActiveSupport::TestCase
     assert_equal "domain_verified", sender.ses_status
   end
 
+  test "verifying the domain reuses a pending default sender with the same address" do
+    sender = @team.sender_addresses.create!(email: "NoReply@hey.example.com", name: "News", ses_status: "pending")
+    dkim = Struct.new(:tokens, :status).new(%w[a b c], "SUCCESS")
+    identity = Struct.new(:verification_status, :dkim_attributes).new("SUCCESS", dkim)
+    install_client_stub(get_email_identity: identity)
+
+    assert_no_difference -> { @team.sender_addresses.count } do
+      2.times { assert Ses::DomainIdentityChecker.new(ses_domain: @ses_domain).call.ok? }
+    end
+    assert_predicate sender.reload, :verified?
+    assert_equal "domain_verified", sender.ses_status
+    assert_equal "News", sender.name
+  end
+
   test "stays pending while DKIM is still propagating" do
     dkim = Struct.new(:tokens, :status).new(%w[tokenone tokentwo tokenthree], "PENDING")
     identity = Struct.new(:verification_status, :dkim_attributes).new("PENDING", dkim)

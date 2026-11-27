@@ -67,6 +67,28 @@ class Ses::DomainIdentityCreatorTest < ActiveSupport::TestCase
     assert_equal "verified", @ses_domain.reload.status
     assert_equal %w[reused1 reused2 reused3], @ses_domain.dkim_token_list
     assert_not_nil @ses_domain.verified_at
+    sender = @team.sender_addresses.find_by(email: "noreply@hey.example.com")
+    assert sender.present?, "expected a default noreply@ sender to be provisioned for an already-verified domain"
+    assert sender.verified
+    assert_equal "domain_verified", sender.ses_status
+  end
+
+  test "does not double-provision a sender on AlreadyExistsException when one already exists on this domain" do
+    @team.sender_addresses.create!(email: "marketing@hey.example.com", verified: true, ses_status: "verified")
+    dkim = Struct.new(:tokens, :status).new(%w[reused1 reused2 reused3], "SUCCESS")
+    existing = Struct.new(:verification_status, :dkim_attributes).new("SUCCESS", dkim)
+
+    fake = Object.new
+    fake.define_singleton_method(:create_email_identity) do |_args|
+      raise Aws::SESV2::Errors::AlreadyExistsException.new(nil, "already")
+    end
+    fake.define_singleton_method(:get_email_identity) { |_args| existing }
+    install_client_stub(fake)
+
+    assert_no_difference -> { @team.sender_addresses.count } do
+      result = Ses::DomainIdentityCreator.new(ses_domain: @ses_domain).call
+      assert result.ok?
+    end
   end
 
   test "returns unconfigured result when SES isn't set up" do

@@ -174,7 +174,79 @@ class Account::EmailSendingSetupControllerTest < ActionDispatch::IntegrationTest
     assert_match(/You're set up to send/i, @response.body)
   end
 
+  test "submitting an already-verified SES domain provisions a sender so send_test succeeds" do
+    with_ses_client do |client|
+      submit_verified_domain
+      assert_test_sent_from(client, "noreply@hey.example.com")
+    end
+  end
+
+  test "a pending address on the domain does not block wizard setup" do
+    pending = @team.sender_addresses.create!(email: "marketing@hey.example.com", verified: false, ses_status: "pending")
+    with_ses_client do |client|
+      submit_verified_domain
+      assert @team.sender_addresses.exists?(email: "noreply@hey.example.com", verified: true)
+      assert_test_sent_from(client, "noreply@hey.example.com")
+      refute pending.reload.verified?
+    end
+  end
+
+  test "resuming step four recovers a previously verified domain with no sender" do
+    @team.create_ses_domain!(domain: "hey.example.com", status: "verified")
+    with_ses_client do |client|
+      get account_team_setup_email_sending_path(@team)
+      assert_response :success
+      assert_match(/Send a test/, response.body)
+      assert_test_sent_from(client, "noreply@hey.example.com")
+    end
+  end
+
+  test "resuming step four leaves the sender unprovisioned if SES no longer verifies the domain" do
+    @team.create_ses_domain!(domain: "hey.example.com", status: "verified")
+    with_ses_client(verification_status: "PENDING") do |client|
+      post account_team_setup_test_email_sending_path(@team)
+      assert_redirected_to account_team_setup_email_sending_path(@team)
+      assert_equal "pending", @team.ses_domain.reload.status
+      assert_empty @team.sender_addresses
+      assert_empty client.api_requests.select { |request| request[:operation_name] == :send_email }
+    end
+  end
+
   private
+
+  def with_ses_client(verification_status: "SUCCESS")
+    @team.create_ses_configuration!(region: "us-east-1",
+      encrypted_access_key_id: "AKIA", encrypted_secret_access_key: "s", status: "verified")
+    client = Aws::SESV2::Client.new(region: "us-east-1", stub_responses: true)
+    client.stub_responses(:create_email_identity, "AlreadyExistsException")
+    client.stub_responses(:get_email_identity, verification_status: verification_status,
+      dkim_attributes: {status: verification_status, tokens: %w[a b c]})
+    client.stub_responses(:send_email, message_id: "msg-test-1")
+    original = Ses::ClientFor.method(:call)
+    Ses::ClientFor.define_singleton_method(:call) { |_team| client }
+    begin
+      yield client
+    ensure
+      Ses::ClientFor.define_singleton_method(:call, original)
+    end
+  end
+
+  def submit_verified_domain
+    post account_team_setup_domain_email_sending_path(@team), params: {
+      team_ses_domain: {domain: "hey.example.com"},
+      team_ses_configuration: {physical_postal_address: ""}
+    }
+    assert_redirected_to account_team_setup_email_sending_path(@team)
+  end
+
+  def assert_test_sent_from(client, expected_from)
+    post account_team_setup_test_email_sending_path(@team)
+    assert_redirected_to account_team_setup_email_sending_path(@team)
+    assert_nil flash[:alert]
+    sends = client.api_requests.select { |request| request[:operation_name] == :send_email }
+    assert_equal [expected_from], sends.map { |request| request[:params][:from_email_address] }
+    assert_not_nil @team.ses_configuration.reload.last_test_sent_at
+  end
 
   def stub_domain_identity_creator_ok!
     result_proc = ->(ses_domain) {
