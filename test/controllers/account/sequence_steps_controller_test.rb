@@ -47,6 +47,26 @@ class Account::SequenceStepsControllerTest < ActionDispatch::IntegrationTest
     assert_select "select[name='sequence_step[delay_unit]'] option[selected][value='hours']"
   end
 
+  test "partial update keeps email template and skip segment unless explicitly cleared" do
+    template = FactoryBot.create(:email_template, team: @team)
+    skip_segment = FactoryBot.create(:segment, team: @team)
+    step = FactoryBot.create(:sequence_step, sequence: @sequence, email_template: template, skip_segment: skip_segment)
+    refute step.campaign.reload.plain_text_only?
+
+    patch account_sequence_step_url(step), params: {sequence_step: {subject: "Updated subject"}}
+    step.reload
+    assert_equal "Updated subject", step.subject
+    assert_equal template.id, step.email_template_id
+    assert_equal skip_segment.id, step.skip_segment_id
+    refute step.campaign.reload.plain_text_only?
+
+    patch account_sequence_step_url(step), params: {sequence_step: {email_template_id: "", skip_segment_id: ""}}
+    step.reload
+    assert_nil step.email_template_id
+    assert_nil step.skip_segment_id
+    assert step.campaign.reload.plain_text_only?
+  end
+
   test "update re-renders with errors" do
     step = FactoryBot.create(:sequence_step, sequence: @sequence)
     patch account_sequence_step_url(step), params: {sequence_step: {subject: ""}}

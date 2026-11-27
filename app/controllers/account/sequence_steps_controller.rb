@@ -65,8 +65,8 @@ class Account::SequenceStepsController < Account::ApplicationController
       :subject, :preheader, :body_markdown, :email_template_id, :skip_segment_id,
       :delay_amount, :delay_unit, :sent_tag, :action_trigger, :action_tag, :action_exit
     )
-    permitted[:email_template_id] = nil if permitted[:email_template_id].blank?
-    permitted[:skip_segment_id] = nil if permitted[:skip_segment_id].blank?
+    permitted[:email_template_id] = nil if permitted.key?(:email_template_id) && permitted[:email_template_id].blank?
+    permitted[:skip_segment_id] = nil if permitted.key?(:skip_segment_id) && permitted[:skip_segment_id].blank?
     permitted
   end
 end

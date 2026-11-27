@@ -86,15 +86,23 @@ class Account::SequencesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "activate and pause from the show page" do
-    sequence = FactoryBot.create(:sequence, team: @team, sender_address: @sender)
+    sequence = FactoryBot.create(:sequence, team: @team, sender_address: @sender, reentry_days: 90)
     FactoryBot.create(:sequence_step, sequence: sequence)
 
     patch account_sequence_url(sequence), params: {sequence: {status: "active"}}
     assert_redirected_to account_sequence_url(sequence)
     assert sequence.reload.active?
+    assert_equal 90, sequence.reentry_days
 
     patch account_sequence_url(sequence), params: {sequence: {status: "paused"}}
     assert sequence.reload.paused?
+    assert_equal 90, sequence.reentry_days
+  end
+
+  test "a blank reentry_days from the form clears it" do
+    sequence = FactoryBot.create(:sequence, team: @team, reentry_days: 90)
+    patch account_sequence_url(sequence), params: {sequence: {reentry_days: ""}}
+    assert_nil sequence.reload.reentry_days
   end
 
   test "activating without a sender fails" do
